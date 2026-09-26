@@ -1,3 +1,10 @@
+# [0.24.0](https://github.com/polyxml/PolyXML/compare/v0.23.3...v0.24.0) (2026-09-26)
+
+
+### Features
+
+* **python:** add AOT PyO3 native extension codegen backend (--backend aot) ([cc3e89d](https://github.com/polyxml/PolyXML/commit/cc3e89d2fd26adc67614c96ff0f5923173cd72fa)), closes [#48](https://github.com/polyxml/PolyXML/issues/48)
+
 ## [0.23.3](https://github.com/polyxml/PolyXML/compare/v0.23.2...v0.23.3) (2026-09-26)
 
 
