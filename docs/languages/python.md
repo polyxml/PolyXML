@@ -535,4 +535,46 @@ with open("order.xml", "rb") as f:
     json_bytes = polyxml.xml_to_json(f, indent=2)
 ```
 
+---
+
+## 7. Ahead-of-Time (AOT) Compiled Native Extensions (`--backend aot`)
+
+For ultra-high-throughput pipelines, streaming microservices, or memory-critical environments, PolyXML can compile your XML Schema directly into a standalone, Ahead-of-Time (AOT) compiled Rust PyO3 native extension.
+
+Instead of generating pure-Python `@dataclass` or Pydantic models that parse XML through Python-level reflection, `--backend aot` compiles:
+1. Native Rust `struct` representations with `#[pyclass]` annotations.
+2. Inlined zero-copy XML and JSON parsers (`quick-xml` & `serde_json`).
+3. Complete PEP 561 type stubs (`.pyi` and `py.typed`) for strict IDE autocompletion (Pyright, Mypy).
+
+### Generating & Building an AOT Extension
+
+```bash
+# 1. Generate the standalone PyO3 native extension crate
+polyxml generate schema.xsd -l python -b aot -p my_extension -o ./generated/my_extension
+
+# 2. Compile into your active Python environment using maturin
+cd ./generated/my_extension
+maturin develop --release
+```
+
+### Usage
+
+```python
+import my_extension
+
+# Sub-microsecond native parsing directly into C-extension PyObject:
+reading = my_extension.SensorReadingType.from_xml(xml_bytes)
+print(f"ID: {reading.sensorId}, Temp: {reading.temperature}")
+
+# Native fast serialization:
+xml_bytes = reading.to_xml(indent=2)
+json_bytes = reading.to_json(indent=2)
+```
+
+### Production Reference & Benchmarks
+
+- **Real-World Showcase**: The **[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)** repository showcases an end-to-end AOT C2 telemetry bridge ([`examples/python/bridge_aot.py`](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)) parsing USAF UCI v2.5 schemas at **172,500+ ops/sec**.
+- **Detailed Benchmarks**: See the [Python AOT vs Dataclass Benchmark](../benchmarks/python-aot-vs-dataclass.md) for full metrics showing 3.4x higher throughput and 60.3% lower peak memory.
+
+
 

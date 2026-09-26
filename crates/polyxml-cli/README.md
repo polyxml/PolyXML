@@ -194,7 +194,7 @@ style = "record-struct"
 ## 🌐 Production Reference Repositories
 
 Explore full-scale repositories using PolyXML CLI manifests across all 7 languages:
-- **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**: Anduril Lattice SDK ↔ USAF UCI v2.5 XML
+- **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**: Anduril Lattice SDK ↔ USAF UCI v2.5 XML (includes PyO3 AOT native extension)
 - **[💳 FinTech & Banking](https://github.com/polyxml/polyxml-finance-examples)**: Instant Payments ↔ ISO 20022 pacs.008 XML
 - **[🚍 Smart Cities & Transit](https://github.com/polyxml/polyxml-transit-examples)**: Google GTFS-Realtime ↔ CEN SIRI v2.0 & NeTEx XML
 

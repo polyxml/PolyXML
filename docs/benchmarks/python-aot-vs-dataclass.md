@@ -103,7 +103,7 @@ json_out = reading.to_json()
 ## 4. Architectural Selection Guide: When to Choose AOT
 
 | Scenario | Recommend Dataclass (`-b dataclass`) | Recommend AOT (`-b aot`) |
-| :--- | :---: | :---: |
+| :--- | :--- | :--- |
 | Pure-Python portability (no Rust compiler in CI/CD) | ✅ | |
 | Rapid prototyping / frequent schema iteration | ✅ | |
 | Integration with standard Python tooling (`pydantic`, `dataclasses.asdict`) | ✅ | |
@@ -111,3 +111,13 @@ json_out = reading.to_json()
 | Ultra-low latency microservices / telemetry ingestion | | ✅ |
 | Memory-constrained environments (containers with <512MB RAM) | | ✅ |
 | Cross-language serialization (XML to JSON transcoding at native speed) | | ✅ |
+
+---
+
+## 5. Real-World Defense & Aerospace Showcase
+
+To see a production-scale example of `--backend aot` handling complex military XML schemas (USAF Universal Command and Control Interface / UCI v2.5), check out the **[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)** repository:
+
+- **Manifest Configuration**: Defined in [`polyxml.toml`](https://github.com/polyxml/polyxml-defense-examples/blob/main/polyxml.toml) with `backend = "aot"` and `package = "uci_aot"`.
+- **AOT Telemetry Bridge**: See [`examples/python/bridge_aot.py`](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py), which benchmarks **172,500+ ops/sec (166+ MB/s)** parsing multi-kilobyte USAF UCI XML messages into native PyO3 C-extension objects.
+
