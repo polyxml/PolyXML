@@ -34,6 +34,12 @@ pub struct RustOptions {
     /// string `match` (default: false). Generated crates must depend on `phf`.
     #[serde(default)]
     pub phf: bool,
+    /// Emit PyO3 #[pyclass], #[pymethods], and #[pymodule] bindings for Python AOT extension modules.
+    #[serde(default)]
+    pub pyo3: bool,
+    /// PyO3 module name when `pyo3` is true. Defaults to "models" if None.
+    #[serde(default)]
+    pub pyo3_module_name: Option<String>,
     /// Custom header text to prepend to generated files (default: None).
     pub custom_header: Option<String>,
 }
@@ -49,6 +55,8 @@ impl Default for RustOptions {
             emit_codecs: true,
             emit_rkyv: false,
             phf: false,
+            pyo3: false,
+            pyo3_module_name: None,
             custom_header: None,
         }
     }
@@ -250,7 +258,7 @@ impl RustCodegen {
             self.emit_codec_helpers(&mut out);
         }
 
-        for type_def in sorted_types {
+        for type_def in &sorted_types {
             out.push('\n');
             match type_def {
                 TypeDef::Simple(s) => self.emit_simple_type(&mut out, s, &types_with_lifetime),
@@ -262,6 +270,10 @@ impl RustCodegen {
 
         if self.options.emit_root_aliases {
             self.emit_root_aliases(&mut out, ir, &types_with_lifetime);
+        }
+
+        if self.options.pyo3 {
+            self.emit_pymodule(&mut out, ir, &sorted_types);
         }
 
         out
@@ -351,6 +363,16 @@ impl RustCodegen {
     }
 
     fn emit_imports(&self, out: &mut String, has_borrowed_types: bool) {
+        if self.options.pyo3 {
+            out.push_str("use pyo3::prelude::*;\n");
+            out.push_str("use pyo3::types::PyModule;\n");
+            out.push_str("use serde::{Deserialize, Serialize};\n");
+            out.push_str("use std::str::FromStr;\n");
+            out.push_str("use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};\n");
+            out.push_str("use quick_xml::{Reader, Writer};\n\n");
+            self.emit_pyo3_error_type(out);
+            return;
+        }
         if (self.options.zero_copy && has_borrowed_types)
             || (self.options.zero_copy && self.options.emit_codecs)
         {
@@ -479,6 +501,9 @@ impl RustCodegen {
             );
             let _ = writeln!(out, "#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]");
         }
+        if self.options.pyo3 {
+            let _ = writeln!(out, "#[pyclass(eq, eq_int, from_py_object)]");
+        }
         let _ = writeln!(out, "pub enum {} {{", enum_name);
 
         let mut seen_variants = HashSet::new();
@@ -545,6 +570,17 @@ impl RustCodegen {
         out.push_str("        write!(f, \"{}\", self.as_str())\n");
         out.push_str("    }\n");
         out.push_str("}\n");
+
+        if self.options.pyo3 {
+            let _ = writeln!(out, "\n#[pymethods]\nimpl {} {{", enum_name);
+            out.push_str("    fn __repr__(&self) -> String {\n");
+            out.push_str("        format!(\"{:?}\", self)\n");
+            out.push_str("    }\n");
+            out.push_str("    fn __str__(&self) -> &'static str {\n");
+            out.push_str("        self.as_str()\n");
+            out.push_str("    }\n");
+            out.push_str("}\n");
+        }
     }
 
     fn emit_union(
@@ -650,6 +686,18 @@ impl RustCodegen {
             let _ = writeln!(out, "#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]");
         }
 
+        let has_boxed = flatten_fields(s, ir)
+            .into_iter()
+            .any(|f| f.is_cycle_cut || f.type_ref.is_boxed());
+
+        if self.options.pyo3 {
+            if has_boxed {
+                let _ = writeln!(out, "#[pyclass(from_py_object)]");
+            } else {
+                let _ = writeln!(out, "#[pyclass(get_all, set_all, from_py_object)]");
+            }
+        }
+
         let struct_decl = if needs_lifetime {
             format!("pub struct {}<'a>", struct_name)
         } else {
@@ -661,13 +709,17 @@ impl RustCodegen {
         let mut seen_fields = HashSet::new();
         for field in flatten_fields(s, ir) {
             let rust_name = self.unique_rust_field_name(&field.name, &mut seen_fields);
-            self.emit_struct_field(out, field, &rust_name, types_with_lifetime);
+            self.emit_struct_field(out, field, &rust_name, types_with_lifetime, has_boxed);
         }
 
         out.push_str("}\n");
 
         if self.options.emit_codecs {
             self.emit_struct_codecs(out, s, types_with_lifetime, ir);
+        }
+
+        if self.options.pyo3 {
+            self.emit_struct_pymethods(out, s, has_boxed, ir);
         }
     }
 
@@ -688,6 +740,7 @@ impl RustCodegen {
         field: &FieldDef,
         rust_name: &str,
         types_with_lifetime: &HashSet<QName>,
+        has_boxed: bool,
     ) {
         if let Some(ref doc) = field.documentation {
             let _ = writeln!(out, "    /// {}", doc.trim());
@@ -733,6 +786,9 @@ impl RustCodegen {
         };
 
         let is_boxed = field.is_cycle_cut || field.type_ref.is_boxed();
+        if self.options.pyo3 && has_boxed && !is_boxed {
+            let _ = writeln!(out, "    #[pyo3(get, set)]");
+        }
         let formatted_inner = self.format_rust_type_ref(inner_ref, types_with_lifetime);
 
         let final_type = if is_list {
@@ -2410,6 +2466,208 @@ impl RustCodegen {
         }
         out.push_str("        }\n");
         out.push_str("    }\n");
+        out.push_str("}\n");
+    }
+
+    fn emit_pyo3_error_type(&self, out: &mut String) {
+        out.push_str(r#"
+#[derive(Debug)]
+pub enum PolyXmlError {
+    XmlSyntaxError { position: u64, message: String },
+    Utf8Error(std::str::Utf8Error),
+    ScalarParseError { field: String, expected: &'static str, value: String },
+    SchemaError(String),
+    UnexpectedRootElement { expected: String, actual: String },
+    FacetViolation { field: String, expected: String, actual: String },
+    SerializationError(String),
+    MaxDepthExceeded { max_depth: usize, current: usize },
+    XmlError(quick_xml::Error),
+    AttrError(quick_xml::events::attributes::AttrError),
+    EscapeError(quick_xml::escape::EscapeError),
+    IoError(std::io::Error),
+    JsonError(serde_json::Error),
+}
+
+impl std::fmt::Display for PolyXmlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::XmlSyntaxError { position, message } => write!(f, "XML reader error at position {position}: {message}"),
+            Self::Utf8Error(e) => write!(f, "Invalid UTF-8: {e}"),
+            Self::ScalarParseError { field, expected, value } => write!(f, "Scalar parse error for field '{field}': expected {expected}, got '{value}'"),
+            Self::SchemaError(s) => write!(f, "Schema error: {s}"),
+            Self::UnexpectedRootElement { expected, actual } => write!(f, "Unexpected root element '{actual}', expected '{expected}'"),
+            Self::FacetViolation { field, expected, actual } => write!(f, "Facet violation for field '{field}': expected {expected}, got '{actual}'"),
+            Self::SerializationError(s) => write!(f, "Serialization error: {s}"),
+            Self::MaxDepthExceeded { max_depth, current } => write!(f, "Maximum XML recursion depth exceeded: {current} >= {max_depth}"),
+            Self::XmlError(e) => write!(f, "XML error: {e}"),
+            Self::AttrError(e) => write!(f, "XML attribute error: {e}"),
+            Self::EscapeError(e) => write!(f, "XML escape error: {e}"),
+            Self::IoError(e) => write!(f, "I/O error: {e}"),
+            Self::JsonError(e) => write!(f, "JSON error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for PolyXmlError {}
+
+impl From<std::str::Utf8Error> for PolyXmlError {
+    fn from(e: std::str::Utf8Error) -> Self { Self::Utf8Error(e) }
+}
+impl From<quick_xml::Error> for PolyXmlError {
+    fn from(e: quick_xml::Error) -> Self { Self::XmlError(e) }
+}
+impl From<quick_xml::events::attributes::AttrError> for PolyXmlError {
+    fn from(e: quick_xml::events::attributes::AttrError) -> Self { Self::AttrError(e) }
+}
+impl From<quick_xml::escape::EscapeError> for PolyXmlError {
+    fn from(e: quick_xml::escape::EscapeError) -> Self { Self::EscapeError(e) }
+}
+impl From<std::io::Error> for PolyXmlError {
+    fn from(e: std::io::Error) -> Self { Self::IoError(e) }
+}
+impl From<serde_json::Error> for PolyXmlError {
+    fn from(e: serde_json::Error) -> Self { Self::JsonError(e) }
+}
+
+pub type Result<T> = std::result::Result<T, PolyXmlError>;
+"#);
+    }
+
+    fn emit_struct_pymethods(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        has_boxed: bool,
+        ir: &SchemaIR,
+    ) {
+        let struct_name = type_ident(&s.qname);
+        let fields = flatten_fields(s, ir);
+
+        let mut seen_fields = HashSet::new();
+        let mut py_sig_parts = Vec::new();
+        let mut py_param_parts = Vec::new();
+        let mut py_init_fields = Vec::new();
+        let mut boxed_accessors = Vec::new();
+
+        for field in &fields {
+            let rust_name = self.unique_rust_field_name(&field.name, &mut seen_fields);
+            let raw_name = rust_name.trim_start_matches("r#").to_string();
+            py_sig_parts.push(format!("{raw_name} = None"));
+
+            let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+            let is_optional = field.cardinality.is_optional() || field.nillable;
+            let is_boxed = field.is_cycle_cut || field.type_ref.is_boxed();
+            let inner_ref = match &field.type_ref {
+                TypeRef::List(inner) => inner.as_ref(),
+                other => other,
+            };
+            let formatted_inner = self.format_rust_type_ref(inner_ref, &HashSet::new());
+
+            if is_list {
+                py_param_parts.push(format!("{raw_name}: Option<Vec<{formatted_inner}>>"));
+                py_init_fields.push(format!("{rust_name}: {raw_name}.unwrap_or_default()"));
+            } else if is_optional {
+                py_param_parts.push(format!("{raw_name}: Option<{formatted_inner}>"));
+                if is_boxed {
+                    py_init_fields.push(format!("{rust_name}: {raw_name}.map(Box::new)"));
+                } else {
+                    py_init_fields.push(format!("{rust_name}: {raw_name}"));
+                }
+            } else {
+                py_param_parts.push(format!("{raw_name}: Option<{formatted_inner}>"));
+                if is_boxed {
+                    py_init_fields.push(format!(
+                        "{rust_name}: Box::new({raw_name}.unwrap_or_default())"
+                    ));
+                } else {
+                    py_init_fields.push(format!("{rust_name}: {raw_name}.unwrap_or_default()"));
+                }
+            }
+
+            if has_boxed && is_boxed {
+                if is_optional {
+                    boxed_accessors.push(format!(
+                        "    #[getter]\n    pub fn {raw_name}(&self) -> Option<{formatted_inner}> {{\n        self.{rust_name}.as_ref().map(|b| (**b).clone())\n    }}\n\n    #[setter]\n    pub fn set_{raw_name}(&mut self, val: Option<{formatted_inner}>) {{\n        self.{rust_name} = val.map(Box::new);\n    }}"
+                    ));
+                } else {
+                    boxed_accessors.push(format!(
+                        "    #[getter]\n    pub fn {raw_name}(&self) -> {formatted_inner} {{\n        (*self.{rust_name}).clone()\n    }}\n\n    #[setter]\n    pub fn set_{raw_name}(&mut self, val: {formatted_inner}) {{\n        self.{rust_name} = Box::new(val);\n    }}"
+                    ));
+                }
+            }
+        }
+
+        let _ = writeln!(out, "\n#[pymethods]\nimpl {} {{", struct_name);
+
+        let sig = py_sig_parts.join(", ");
+        let params = py_param_parts.join(", ");
+        let inits = py_init_fields.join(",\n            ");
+
+        let _ = writeln!(out, "    #[new]");
+        let _ = writeln!(out, "    #[pyo3(signature = ({}))]", sig);
+        let _ = writeln!(out, "    pub fn py_new({}) -> Self {{", params);
+        if inits.is_empty() {
+            let _ = writeln!(out, "        Self {{}}");
+        } else {
+            let _ = writeln!(out, "        Self {{\n            {}\n        }}", inits);
+        }
+        let _ = writeln!(out, "    }}\n");
+
+        for accessor in boxed_accessors {
+            let _ = writeln!(out, "{accessor}\n");
+        }
+
+        out.push_str("    #[pyo3(name = \"to_xml\")]\n");
+        out.push_str("    pub fn py_to_xml(&self) -> pyo3::PyResult<String> {\n");
+        out.push_str("        self.to_xml_string().map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    #[staticmethod]\n");
+        out.push_str("    #[pyo3(name = \"from_xml\")]\n");
+        out.push_str("    pub fn py_from_xml(xml: &str) -> pyo3::PyResult<Self> {\n");
+        out.push_str("        Self::from_xml(xml).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    #[pyo3(name = \"to_json\")]\n");
+        out.push_str("    pub fn py_to_json(&self) -> pyo3::PyResult<String> {\n");
+        out.push_str("        self.to_json_string().map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    #[staticmethod]\n");
+        out.push_str("    #[pyo3(name = \"from_json\")]\n");
+        out.push_str("    pub fn py_from_json(json_str: &str) -> pyo3::PyResult<Self> {\n");
+        out.push_str("        Self::from_json_str(json_str).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    fn __repr__(&self) -> String {\n");
+        out.push_str("        format!(\"{:?}\", self)\n");
+        out.push_str("    }\n");
+
+        out.push_str("}\n");
+    }
+
+    fn emit_pymodule(&self, out: &mut String, _ir: &SchemaIR, sorted_types: &[&TypeDef]) {
+        let mod_name = self.options.pyo3_module_name.as_deref().unwrap_or("models");
+        let _ = writeln!(out, "\n#[pymodule]");
+        let _ = writeln!(
+            out,
+            "fn {}(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> pyo3::PyResult<()> {{",
+            mod_name
+        );
+        for td in sorted_types {
+            match td {
+                TypeDef::Struct(s) => {
+                    let struct_name = type_ident(&s.qname);
+                    let _ = writeln!(out, "    m.add_class::<{}>()?;", struct_name);
+                }
+                TypeDef::Enum(e) => {
+                    let enum_name = type_ident(&e.qname);
+                    let _ = writeln!(out, "    m.add_class::<{}>()?;", enum_name);
+                }
+                _ => {}
+            }
+        }
+        out.push_str("    Ok(())\n");
         out.push_str("}\n");
     }
 }

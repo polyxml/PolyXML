@@ -84,6 +84,7 @@ pub fn candidates(kind: &str, words: &[String]) -> Vec<String> {
         "backend" => &[
             "dataclass",
             "pydantic",
+            "aot",
             "interfaces",
             "zod",
             "valibot",

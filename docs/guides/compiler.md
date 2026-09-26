@@ -49,6 +49,9 @@ polyxml generate --lang python --out ./generated/python schema.xsd
 # Generate Pydantic v2 models with runtime facet validation
 polyxml generate --lang python --backend pydantic --out ./generated/python schema.xsd
 
+# Generate high-performance Ahead-of-Time (AOT) PyO3 native extension crate
+polyxml generate --lang python --backend aot --package my_models --out ./generated/native_models schema.xsd
+
 # Generate zero-copy Rust models with inherent streaming codecs
 polyxml generate --lang rust --feature zero-copy --codecs --out ./generated/rust schema.xsd
 
@@ -73,7 +76,7 @@ polyxml generate \
 | **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `generated` |
 | **Model Style** | `--style` | Target-specific type representation; see the table below. | Existing target default |
 | **Enhancements** | `--feature NAME` | Repeatable; also accepts comma-separated names. | None added |
-| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
+| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic`/`aot` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
 | **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
 | **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
@@ -244,7 +247,7 @@ polyxml transcode legacy.xml --out modern.json
 
 | Target | Language Version | Paradigm | Key Highlights |
 |---|---|---|---|
-| **Python** | Python 3.12+ | `@dataclass` & Pydantic v2 | PEP 695 type aliases, PEP 604 unions, zero-copy streaming codecs, native `.to_json()` / `.from_json()` methods |
+| **Python** | Python 3.12+ | `@dataclass`, Pydantic v2 & PyO3 AOT | PEP 695 type aliases, PEP 604 unions, Ahead-of-Time (AOT) PyO3 C-extensions (`--backend aot`), zero-copy streaming codecs, native `.to_json()` / `.from_json()` methods |
 | **Rust** | Rust 2021 / 2024 | Zero-Copy & Owned Structs | Lifetime inference `<'a>`, automatic `Box<T>` cycle breaks, inherent streaming XML codecs, inherent `.to_json_string()` codecs |
 | **C++** | C++20 / C++23 | Header-Only Value Types | `std::variant` choices, `std::unique_ptr` cycle breaks, C++20 concepts, CMake/Meson export |
 | **Java** | Java 22+ | Modern Records & Sealed Interfaces | Exhaustive switch pattern matching, compact constructor facet validation |

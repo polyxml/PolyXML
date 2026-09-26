@@ -151,6 +151,7 @@ fn test_rust_zero_copy_codegen() {
         emit_rkyv: false,
         phf: false,
         custom_header: None,
+        ..Default::default()
     });
 
     let code = codegen.generate_module(&ir);
@@ -204,6 +205,7 @@ fn test_rust_owned_codegen() {
         emit_rkyv: false,
         phf: false,
         custom_header: None,
+        ..Default::default()
     });
 
     let code = codegen.generate_module(&ir);

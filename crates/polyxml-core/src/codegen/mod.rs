@@ -18,7 +18,9 @@ pub use cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
 pub use csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 pub use go::{GoBackend, GoCodegen, GoOptions};
 pub use java::{JavaBackend, JavaCodegen, JavaOptions};
-pub use python::{PythonBackend, PythonCodegen, PythonOptions};
+pub use python::{
+    PythonAotCodegen, PythonAotCrate, PythonAotOptions, PythonBackend, PythonCodegen, PythonOptions,
+};
 pub use rust::{RustCodegen, RustOptions};
 pub use typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 

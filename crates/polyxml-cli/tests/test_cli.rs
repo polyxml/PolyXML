@@ -2020,7 +2020,11 @@ fn python_features_respect_manifest_false_values_and_backend() {
 #[test]
 fn completion_candidates_follow_target_validation() {
     for (kind, words, expected) in [
-        ("backend", vec!["generate"], vec!["dataclass", "pydantic"]),
+        (
+            "backend",
+            vec!["generate"],
+            vec!["dataclass", "pydantic", "aot"],
+        ),
         (
             "backend",
             vec!["generate", "--lang", "ts"],
@@ -2238,4 +2242,121 @@ complete -C 'polyxml generate --lang java --backend '
             .collect::<Vec<_>>(),
         ["jackson", "standard"]
     );
+}
+
+#[test]
+fn test_cli_python_aot_generation() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("flight.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:flight">
+            <xs:element name="Flight">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="callsign" type="xs:string"/>
+                        <xs:element name="altitude" type="xs:int"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    let out_dir = dir.path().join("aot_flight");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "-l",
+            "python",
+            "-b",
+            "aot",
+            "-p",
+            "aot_flight",
+            "-o",
+            out_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute generate");
+
+    assert!(
+        output.status.success(),
+        "CLI generate failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(out_dir.join("Cargo.toml").exists(), "Cargo.toml must exist");
+    assert!(
+        out_dir.join("pyproject.toml").exists(),
+        "pyproject.toml must exist"
+    );
+    assert!(out_dir.join("README.md").exists(), "README.md must exist");
+    assert!(out_dir.join("src/lib.rs").exists(), "src/lib.rs must exist");
+    assert!(
+        out_dir.join("aot_flight.pyi").exists(),
+        "aot_flight.pyi stub must exist"
+    );
+    assert!(
+        out_dir.join("py.typed").exists(),
+        "py.typed marker must exist"
+    );
+
+    let lib_rs = fs::read_to_string(out_dir.join("src/lib.rs")).unwrap();
+    assert!(
+        lib_rs.contains("#[pymodule]"),
+        "lib.rs must have #[pymodule]"
+    );
+    assert!(lib_rs.contains("#[pyclass"), "lib.rs must have #[pyclass]");
+}
+
+#[test]
+fn test_cli_python_aot_rejects_dataclass_style_and_slots() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("test.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test">
+            <xs:element name="Root" type="xs:string"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    // --style dataclass with --backend aot must fail
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "-l",
+            "python",
+            "-b",
+            "aot",
+            "--style",
+            "dataclass",
+        ])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("style 'dataclass' requires the Python dataclass backend"));
+
+    // --slots with --backend aot must fail
+    let output2 = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "-l",
+            "python",
+            "-b",
+            "aot",
+            "--feature",
+            "slots",
+        ])
+        .output()
+        .unwrap();
+    assert!(!output2.status.success());
+    assert!(String::from_utf8_lossy(&output2.stderr)
+        .contains("slots and kw-only require the Python dataclass backend"));
 }

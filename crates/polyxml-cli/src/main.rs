@@ -14,7 +14,9 @@ use polyxml::codegen::cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
 use polyxml::codegen::csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 use polyxml::codegen::go::{GoBackend, GoCodegen, GoOptions};
 use polyxml::codegen::java::{JavaBackend, JavaCodegen, JavaOptions};
-use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
+use polyxml::codegen::python::{
+    PythonAotCodegen, PythonAotOptions, PythonBackend, PythonCodegen, PythonOptions,
+};
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
 use polyxml::codegen::typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 use polyxml::ir::{SchemaIR, TypeDef};
@@ -504,6 +506,39 @@ fn emit_target_code(
                 .and_then(PythonBackend::from_str_loose)
                 .unwrap_or(PythonBackend::Dataclass);
 
+            if py_backend == PythonBackend::Aot {
+                let file_stem = schema_path
+                    .file_stem()
+                    .map(|s| heck::AsSnakeCase(s.to_string_lossy().as_ref()).to_string())
+                    .unwrap_or_else(|| "models".into());
+                let module_name = opts
+                    .package
+                    .map(|p| heck::AsSnakeCase(p).to_string())
+                    .unwrap_or(file_stem);
+
+                let aot_opts = PythonAotOptions {
+                    module_name: module_name.clone(),
+                    custom_header: opts.custom_header.map(|s| s.to_string()),
+                };
+                let aot_codegen = PythonAotCodegen::new(aot_opts);
+                let aot_crate = aot_codegen.generate_crate(ir);
+
+                fs::write(out_dir.join("Cargo.toml"), aot_crate.cargo_toml)?;
+                fs::write(out_dir.join("pyproject.toml"), aot_crate.pyproject_toml)?;
+                fs::write(out_dir.join("README.md"), aot_crate.readme)?;
+
+                let src_dir = out_dir.join("src");
+                fs::create_dir_all(&src_dir)?;
+                fs::write(src_dir.join("lib.rs"), aot_crate.lib_rs)?;
+
+                fs::write(
+                    out_dir.join(format!("{}.pyi", module_name)),
+                    aot_crate.pyi_stub,
+                )?;
+                fs::write(out_dir.join("py.typed"), "")?;
+                return Ok(());
+            }
+
             let options = PythonOptions {
                 backend: py_backend,
                 slots: opts.slots.unwrap_or(true),
@@ -543,6 +578,8 @@ fn emit_target_code(
                 emit_codecs: opts.codecs.unwrap_or(true),
                 emit_rkyv: opts.rkyv.unwrap_or(false),
                 phf: opts.phf.unwrap_or(false),
+                pyo3: false,
+                pyo3_module_name: None,
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
 

@@ -28,12 +28,16 @@ const PATTERN_VALIDATOR_HELPER: &str = r#"def _polyxml_patterns(*patterns: str):
     return _validate
 "#;
 
+pub mod aot;
+pub use aot::{PythonAotCodegen, PythonAotCrate, PythonAotOptions};
+
 /// Target backend for Python code emission.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum PythonBackend {
     #[default]
     Dataclass,
     Pydantic,
+    Aot,
 }
 
 impl PythonBackend {
@@ -41,6 +45,7 @@ impl PythonBackend {
         match s.to_lowercase().trim() {
             "dataclass" | "dataclasses" | "std" | "stdlib" => Some(Self::Dataclass),
             "pydantic" | "pydantic_v2" | "pydantic-v2" | "pydantic2" => Some(Self::Pydantic),
+            "aot" | "native" | "pyo3" => Some(Self::Aot),
             _ => None,
         }
     }
@@ -223,6 +228,14 @@ impl PythonCodegen {
     }
 
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
+        if self.options.backend == PythonBackend::Aot {
+            let aot = PythonAotCodegen::new(PythonAotOptions {
+                module_name: "models".to_string(),
+                custom_header: self.options.custom_header.clone(),
+            });
+            return aot.generate_crate(ir).lib_rs;
+        }
+
         set_type_name_map(build_type_name_map(ir, |local| {
             AsPascalCase(local).to_string()
         }));
@@ -517,7 +530,7 @@ impl PythonCodegen {
             .map(type_ident);
 
         match self.options.backend {
-            PythonBackend::Dataclass => {
+            PythonBackend::Dataclass | PythonBackend::Aot => {
                 let slots_arg = if self.options.slots {
                     "slots=True"
                 } else {
@@ -657,7 +670,7 @@ impl PythonCodegen {
         let meta_dict = self.build_field_metadata(field);
 
         let (field_type, field_call) = match self.options.backend {
-            PythonBackend::Dataclass => {
+            PythonBackend::Dataclass | PythonBackend::Aot => {
                 self.format_dataclass_field(field, is_list, &inner_type, &meta_dict)
             }
             PythonBackend::Pydantic => {

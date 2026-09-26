@@ -109,6 +109,7 @@ Bridge legacy enterprise XML (ISO 20022 banking, HL7 healthcare, FIXM aviation) 
 Headline numbers ([full methodology & reproduction steps →](docs/benchmarks/index.md)):
 
 - **10x–24x faster** than legacy Python bindings: 10.0x faster deserialization & 23.5x faster serialization than `xsdata` on 10,000-item catalogs.
+- **Ahead-of-Time PyO3 Native Extensions (`--backend aot`)**: 3.4x faster throughput (585k ops/sec) and 60.3% less memory than slotted dataclasses via compiled Rust C-extensions ([AOT benchmark →](docs/benchmarks/python-aot-vs-dataclass.md)).
 - **3.2 μs per telemetry packet** (13.9x vs pure Python) — neck-and-neck with the C-based `lxml.etree` while still returning fully typed dataclasses.
 - **Binary KV-store & IPC pipelines**: 163k dumps ops/s, 53.9% smaller payloads than CloudPickle+LZ4, and 3.2x faster transactional MDBX writes.
 

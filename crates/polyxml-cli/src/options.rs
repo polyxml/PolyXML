@@ -42,7 +42,7 @@ impl<'a> TargetEmitOptions<'a> {
             _ => return Err(invalid(format!("Unknown target '{lang}'. Supported targets: python, rust, cpp, java, typescript, go, csharp."))),
         };
         let supported_backends = match target {
-            "python" => "dataclass, pydantic",
+            "python" => "dataclass, pydantic, aot",
             "typescript" => "interfaces, zod, valibot, typebox",
             "java" => "standard, jackson",
             "csharp" => "standard, source-gen",
@@ -84,7 +84,10 @@ impl<'a> TargetEmitOptions<'a> {
             }
             if target == "python"
                 && self.backend.is_some_and(|v| {
-                    PythonBackend::from_str_loose(v) == Some(PythonBackend::Pydantic)
+                    matches!(
+                        PythonBackend::from_str_loose(v),
+                        Some(PythonBackend::Pydantic | PythonBackend::Aot)
+                    )
                 })
             {
                 return Err(invalid(
@@ -131,9 +134,12 @@ impl<'a> TargetEmitOptions<'a> {
             *option = Some(true);
         }
         if target == "python"
-            && self
-                .backend
-                .is_some_and(|v| PythonBackend::from_str_loose(v) == Some(PythonBackend::Pydantic))
+            && self.backend.is_some_and(|v| {
+                matches!(
+                    PythonBackend::from_str_loose(v),
+                    Some(PythonBackend::Pydantic | PythonBackend::Aot)
+                )
+            })
             && (self.slots.is_some() || self.kw_only.is_some())
         {
             return Err(invalid(

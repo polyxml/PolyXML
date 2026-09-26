@@ -481,3 +481,156 @@ fn test_python_abstract_meta_emission() {
         "concrete derivation must inherit the base:\n{code}"
     );
 }
+
+#[test]
+fn test_python_aot_codegen() {
+    assert_eq!(
+        PythonBackend::from_str_loose("aot"),
+        Some(PythonBackend::Aot)
+    );
+    assert_eq!(
+        PythonBackend::from_str_loose("native"),
+        Some(PythonBackend::Aot)
+    );
+    assert_eq!(
+        PythonBackend::from_str_loose("pyo3"),
+        Some(PythonBackend::Aot)
+    );
+
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/aero");
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/aero"), "FlightStatus"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "Scheduled".into(),
+                value: "Scheduled".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "Active".into(),
+                value: "Active".into(),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/aero"), "FlightPlan"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "flightId".into(),
+                xml_name: "flightId".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "altitude".into(),
+                xml_name: "altitude".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "status".into(),
+                xml_name: "status".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(
+                    Some("https://example.com/aero"),
+                    "FlightStatus",
+                )),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: Some("Flight plan information".into()),
+    }));
+
+    use polyxml::codegen::python::{PythonAotCodegen, PythonAotOptions};
+    let aot = PythonAotCodegen::new(PythonAotOptions {
+        module_name: "aero_models".to_string(),
+        custom_header: None,
+    });
+    let generated = aot.generate_crate(&ir);
+
+    // Verify Cargo.toml
+    assert!(generated.cargo_toml.contains("name = \"aero_models\""));
+    assert!(generated.cargo_toml.contains("crate-type = [\"cdylib\"]"));
+    assert!(generated.cargo_toml.contains("pyo3 = { version = \"0.29\""));
+
+    // Verify pyproject.toml
+    assert!(generated
+        .pyproject_toml
+        .contains("build-backend = \"maturin\""));
+    assert!(generated
+        .pyproject_toml
+        .contains("module-name = \"aero_models\""));
+
+    // Verify lib.rs
+    assert!(generated.lib_rs.contains("use pyo3::prelude::*;"));
+    assert!(generated
+        .lib_rs
+        .contains("#[pyclass(eq, eq_int, from_py_object)]"));
+    assert!(generated.lib_rs.contains("pub enum FlightStatus {"));
+    assert!(generated
+        .lib_rs
+        .contains("#[pyclass(get_all, set_all, from_py_object)]"));
+    assert!(generated.lib_rs.contains("pub struct FlightPlan {"));
+    assert!(generated.lib_rs.contains("#[pyo3(name = \"to_xml\")]"));
+    assert!(generated
+        .lib_rs
+        .contains("pub fn py_to_xml(&self) -> pyo3::PyResult<String>"));
+    assert!(generated.lib_rs.contains("#[pyo3(name = \"from_xml\")]"));
+    assert!(generated
+        .lib_rs
+        .contains("pub fn py_from_xml(xml: &str) -> pyo3::PyResult<Self>"));
+    assert!(generated.lib_rs.contains("#[pyo3(name = \"to_json\")]"));
+    assert!(generated
+        .lib_rs
+        .contains("pub fn py_to_json(&self) -> pyo3::PyResult<String>"));
+    assert!(generated.lib_rs.contains("#[pyo3(name = \"from_json\")]"));
+    assert!(generated
+        .lib_rs
+        .contains("pub fn py_from_json(json_str: &str) -> pyo3::PyResult<Self>"));
+    assert!(generated.lib_rs.contains(
+        "fn aero_models(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> pyo3::PyResult<()>"
+    ));
+    assert!(generated.lib_rs.contains("m.add_class::<FlightPlan>()?;"));
+    assert!(generated.lib_rs.contains("m.add_class::<FlightStatus>()?;"));
+
+    // Verify pyi stub
+    assert!(generated
+        .pyi_stub
+        .contains("class FlightStatus(enum.IntEnum):"));
+    assert!(generated.pyi_stub.contains("class FlightPlan:"));
+    assert!(generated.pyi_stub.contains("flight_id: str"));
+    assert!(generated.pyi_stub.contains("altitude: int"));
+    assert!(generated.pyi_stub.contains("def to_xml(self) -> str: ..."));
+    assert!(generated
+        .pyi_stub
+        .contains("def from_xml(xml: str) -> FlightPlan: ..."));
+}

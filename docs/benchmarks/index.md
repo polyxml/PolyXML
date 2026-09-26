@@ -7,6 +7,7 @@ description: Reproducible performance benchmarks comparing PolyXML against nativ
 
 The [WebAssembly vs JavaScript benchmark](wasm-vs-js.md) compares the Wasm
 runtime with JavaScript parsers in Node, Bun, and Chromium.
+The [Python AOT vs Dataclass benchmark](python-aot-vs-dataclass.md) details the throughput and memory advantages of Ahead-of-Time compiled PyO3 native extensions (`--backend aot`).
 
 PolyXML is engineered to process gigabytes of XML per second by leveraging Rust's zero-cost abstractions, `quick-xml` streaming events, and `lexical-core` numeric conversions.
 
@@ -20,6 +21,8 @@ The repository includes fully reusable, automated benchmark suites covering the 
 ## 1. Python Deserialization & Serialization Throughput
 
 Benchmarks conducted using Python 3.12 (`abi3-py312`) across 10,000-element streaming payloads (~724 KB XML), micro sensor payloads (~100B), and enterprise orders:
+
+> ⚡ **AOT Native Compilation**: In addition to standard dataclasses, PolyXML can compile schemas directly into native C-extensions via `--backend aot`. See the full [Python AOT Native Extension vs Dataclass Benchmark](python-aot-vs-dataclass.md) (3.4x faster throughput, 60.3% less memory).
 
 ### Batch Catalog Workload (10,000 items, ~724 KB XML)
 
