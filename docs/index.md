@@ -116,12 +116,11 @@ flowchart TD
 
 Explore complete, production-ready example repositories showcasing PolyXML in mission-critical industries across **all 7 supported languages**:
 
-- **[🛸 Defense & Aerospace (polyxml-defense-examples)](https://github.com/polyxml/polyxml-defense-examples)**:
-  Bridges autonomous edge telemetry from the **Anduril Lattice SDK** (Protobuf/JSON) with the **USAF Universal Command and Control Interface (UCI v2.5)** XML standard. Demonstrates sub-10μs telemetry transcoding and C2 mission routing in flight software.
-- **[💳 Global Finance & Banking (polyxml-finance-examples)](https://github.com/polyxml/polyxml-finance-examples)**:
-  Bridges real-time **FinTech payment webhooks (FedNow, Stripe, Plaid JSON)** with the global banking standard **ISO 20022 `pacs.008` (Customer Credit Transfer XML)**. Demonstrates high-throughput interbank settlement, Java 22 Jackson models, and C# source-gen.
-- **[🚍 Smart Cities & Public Transit (polyxml-transit-examples)](https://github.com/polyxml/polyxml-transit-examples)**:
-  Bridges live **Google GTFS-Realtime** (Protobuf/JSON) feeds with European **CEN SIRI v2.0 (EN 15531)** & **NeTEx (CEN/TS 16614)** XML standards. Demonstrates live passenger vehicle positioning and TypeScript schema validation.
+| Showcase Repository | Domain & Standards | Key PolyXML Features Highlighted |
+| :--- | :--- | :--- |
+| **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**<br>`polyxml-defense-examples` | **USAF UCI v2.5** (8.3 MB XML)<br>↔ **Anduril Lattice SDK** (Protobuf/JSON) | • **`features = ["rkyv"]`**: Opt-in zero-copy binary serialization in Rust for telemetry & tactical radio links<br>• **`xsd:extension` Inlining**: Base headers (`SecurityInformation`, `MessageHeader`) inlined into derived commands<br>• **Massive Schema Validation**: `polyxml validate` on 8.3 MB, 5,558-type Open-Arsenal schemas<br>• **Standard Library Java 22+**: Zero-dependency immutable records with `java.time.Instant`<br>• **Edge C2 Streaming**: Browser/Node WebAssembly streaming drone swarm telemetry via `parseStream` |
+| **[💳 Global Finance & Banking](https://github.com/polyxml/polyxml-finance-examples)**<br>`polyxml-finance-examples` | **ISO 20022 `pacs.008`** (Interbank XML)<br>↔ **FinTech Intents** (FedNow/Stripe JSON) | • **`backend = "jackson"`**: Enterprise Jackson XML/JSON annotations for Spring Boot / Jakarta EE banking<br>• **`backend = "source-gen"`**: C# 12 / .NET 8 `System.Text.Json` source generation for Native AOT<br>• **Strict Facets & Attributes**: XML attributes on simple content (`Ccy="USD"`) & `xs:pattern` regexes (UETR, IBAN)<br>• **Batch Payment Streaming**: WebAssembly `parseStream` consuming high-volume `<Document>` payment batches |
+| **[🚍 Smart Cities & Transit](https://github.com/polyxml/polyxml-transit-examples)**<br>`polyxml-transit-examples` | **CEN SIRI v2.0 & NeTEx** (European Norm)<br>↔ **Google GTFS-RT** (Protobuf/JSON) | • **`backend = "sonic"`**: ByteDance's JIT/AVX-accelerated JSON engine for high-throughput Go microservices<br>• **Deeply Nested Collections**: Hierarchical arrays (`VehicleActivity[]`, `MonitoredCall[]`)<br>• **C++20 Concepts & Value Equality**: `XmlModel` concept verification and `operator==` structural comparisons<br>• **Client-Side Map Streaming**: WebAssembly streaming transit vehicle deliveries into passenger maps |
 
 ---
 

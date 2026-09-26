@@ -428,8 +428,8 @@ After compiling your schema with `polyxml generate`, each target ships ready-to-
 
 Looking for production-grade project repositories with complete build setups across all 7 languages? Explore our open-source reference implementations:
 
-| Domain | Repository | Standards & Integration |
+| Domain & Repository | Standards & Integration | Key PolyXML Features Highlighted |
 |---|---|---|
-| **Defense & Avionics** | [polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) |
-| **Banking & FinTech** | [polyxml-finance-examples](https://github.com/polyxml/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) |
-| **Public Transit & Mobility** | [polyxml-transit-examples](https://github.com/polyxml/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) |
+| **Defense & Avionics**<br>[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) | • `features = ["rkyv"]` zero-copy binary serialization in Rust<br>• `xsd:extension` inheritance & base-field inlining<br>• Large schema validation (`polyxml validate` on 8.3 MB schema)<br>• Standard Library Java 22+ immutable records<br>• Edge C2 Wasm streaming via `@polyxml/wasm` |
+| **Banking & FinTech**<br>[polyxml-finance-examples](https://github.com/polyxml/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) | • `backend = "jackson"` Java annotations for enterprise microservices<br>• `backend = "source-gen"` C# 12 / .NET 8 Native AOT source-gen<br>• Strict facets & attributes on simple content (`Ccy="USD"`)<br>• Batch payment streaming via `@polyxml/wasm` |
+| **Public Transit & Mobility**<br>[polyxml-transit-examples](https://github.com/polyxml/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) | • `backend = "sonic"` ByteDance JIT/AVX JSON engine for Go<br>• Deeply nested arrays & complex recursive collections<br>• C++20 `XmlModel` concept verification & `operator==` equality<br>• Passenger map live streaming via `@polyxml/wasm` |

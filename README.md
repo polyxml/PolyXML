@@ -116,11 +116,13 @@ Headline numbers ([full methodology & reproduction steps →](docs/benchmarks/in
 
 ## 🌐 Real-World Industry Showcases & Polyglot Bridges
 
-Production repositories across **all 7 languages**:
+All three production showcase repositories demonstrate core PolyXML capabilities across **all 7 languages** (Rust, Python, Go, C++20, Java 22+, TypeScript 5+, C# 12) with dual XML ↔ JSON data-binding, CLI streaming transcoding, and WebAssembly (`@polyxml/wasm`) integration. In addition, each repository is purpose-built to highlight distinct advanced compiler flags, backends, and schema features:
 
-- 🛸 **Defense & Aerospace** ([polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)): Anduril Lattice SDK (Protobuf/JSON) ↔ USAF UCI v2.5 (C2 XML).
-- 💳 **Global Finance** ([polyxml-finance-examples](https://github.com/polyxml/polyxml-finance-examples)): FinTech payments (FedNow, Stripe, Plaid JSON) ↔ ISO 20022 `pacs.008` (XML).
-- 🚍 **Smart Cities & Transit** ([polyxml-transit-examples](https://github.com/polyxml/polyxml-transit-examples)): Google GTFS-Realtime (Protobuf/JSON) ↔ CEN SIRI v2.0 & NeTEx (XML).
+| Showcase Repository | Domain & Schemas | Distinct PolyXML Features Highlighted |
+| :--- | :--- | :--- |
+| **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**<br>`polyxml-defense-examples` | **USAF UCI v2.5** (8.3 MB XML)<br>↔ **Anduril Lattice SDK** (Protobuf/JSON) | • **`features = ["rkyv"]`**: Opt-in zero-copy binary serialization in Rust for telemetry & tactical radio links<br>• **`xsd:extension` Inlining**: Base headers (`SecurityInformation`, `MessageHeader`) inlined into derived commands<br>• **Massive Schema Validation**: `polyxml validate` on 8.3 MB, 5,558-type Open-Arsenal schemas<br>• **Standard Library Java 22+**: Zero-dependency immutable records with `java.time.Instant`<br>• **Edge C2 Streaming**: Browser/Node WebAssembly streaming drone swarm telemetry via `parseStream` |
+| **[💳 Global Finance & Banking](https://github.com/polyxml/polyxml-finance-examples)**<br>`polyxml-finance-examples` | **ISO 20022 `pacs.008`** (Interbank XML)<br>↔ **FinTech Intents** (FedNow/Stripe JSON) | • **`backend = "jackson"`**: Enterprise Jackson XML/JSON annotations for Spring Boot / Jakarta EE banking<br>• **`backend = "source-gen"`**: C# 12 / .NET 8 `System.Text.Json` source generation for Native AOT<br>• **Strict Facets & Attributes**: XML attributes on simple content (`Ccy="USD"`) & `xs:pattern` regexes (UETR, IBAN)<br>• **Batch Payment Streaming**: WebAssembly `parseStream` consuming high-volume `<Document>` payment batches |
+| **[🚍 Smart Cities & Transit](https://github.com/polyxml/polyxml-transit-examples)**<br>`polyxml-transit-examples` | **CEN SIRI v2.0 & NeTEx** (European Norm)<br>↔ **Google GTFS-RT** (Protobuf/JSON) | • **`backend = "sonic"`**: ByteDance's JIT/AVX-accelerated JSON engine for high-throughput Go microservices<br>• **Deeply Nested Collections**: Hierarchical arrays (`VehicleActivity[]`, `MonitoredCall[]`)<br>• **C++20 Concepts & Value Equality**: `XmlModel` concept verification and `operator==` structural comparisons<br>• **Client-Side Map Streaming**: WebAssembly streaming transit vehicle deliveries into passenger maps |
 
 ---
 
