@@ -11,6 +11,7 @@ adapter only handles this fixed fixture and does not escape arbitrary XML text;
 the fixture uses safe alphanumeric values. It measures batches of 1 and 1,000
 sensors. **Do not interpret these timings as PolyXML C++
 XML codec throughput or as a general XML parser comparison.**
+Reads use the [shared byte-for-byte XML fixtures](../workloads/sensor-batch/README.md).
 
 Use `BENCH_ITERATIONS=2 ./benchmarks/cpp/run.sh` for smoke. For reportable
 adapter measurements, repeat on an idle host and record raw output, Git

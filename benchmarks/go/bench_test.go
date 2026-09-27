@@ -3,6 +3,7 @@ package bench
 import (
 	"encoding/xml"
 	"fmt"
+	"os"
 	"testing"
 
 	models "polyxml-bench-go/target/generated"
@@ -35,7 +36,7 @@ func BenchmarkXML(b *testing.B) {
 					if err := xml.Unmarshal(data, &v); err != nil {
 						return err
 					}
-					if len(v.Items) != count || v.Items[count-1].ID != generated[count-1].ID {
+					if len(v.Items) != count || v.Items[count-1].ID != generated[count-1].ID || v.Items[count-1].Value != generated[count-1].Value {
 						return fmt.Errorf("generated round trip mismatch")
 					}
 					return nil
@@ -47,16 +48,13 @@ func BenchmarkXML(b *testing.B) {
 					if err := xml.Unmarshal(data, &v); err != nil {
 						return err
 					}
-					if len(v.Items) != count || v.Items[count-1].ID != plain[count-1].ID {
+					if len(v.Items) != count || v.Items[count-1].ID != plain[count-1].ID || v.Items[count-1].Value != plain[count-1].Value {
 						return fmt.Errorf("baseline round trip mismatch")
 					}
 					return nil
 				}},
 			} {
-				input, err := xml.Marshal(struct {
-					XMLName xml.Name `xml:"Batch"`
-					Items   any      `xml:"Sensor"`
-				}{Items: tc.values})
+				input, err := os.ReadFile(fmt.Sprintf("../workloads/sensor-batch/sensor-%d.xml", count))
 				if err != nil {
 					b.Fatal(err)
 				}

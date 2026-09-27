@@ -2,7 +2,9 @@
 #include <charconv>
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -49,7 +51,10 @@ template<class T> void measure(const char* name, std::size_t size, int iteration
     std::vector<T> values;
     values.reserve(size);
     for (std::size_t i = 0; i < size; ++i) values.push_back(T{"sensor-" + std::to_string(i), static_cast<int>(i)});
-    const auto xml = write_batch(values);
+    std::ifstream file("../workloads/sensor-batch/sensor-" + std::to_string(size) + ".xml");
+    if (!file) throw std::runtime_error("Shared XML fixture not found");
+    const std::string xml((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    if (xml != write_batch(values)) throw std::runtime_error("Writer differs from shared fixture");
     const auto roundtrip = read_batch<T>(xml);
     if (roundtrip.size() != size || roundtrip.back().id != values.back().id || roundtrip.back().value != values.back().value) throw std::runtime_error("Round trip failed");
     for (int i = 0; i < 100; ++i) { (void)read_batch<T>(xml); (void)write_batch(values); }

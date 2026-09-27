@@ -25,13 +25,15 @@ public static class Program
         var value = make(count);
         using var initial = new StringWriter();
         serializer.Serialize(initial, value);
-        var xml = initial.ToString();
+        var xml = File.ReadAllText($"../workloads/sensor-batch/sensor-{count}.xml");
         using (var check = new StringReader(xml))
         {
             var decoded = serializer.Deserialize(check) as T ?? throw new Exception("Round trip failed");
+            if (decoded is Batch<Sensor> generated && (generated.Sensors.Length != count || generated.Sensors[^1].Id != $"sensor-{count-1}" || generated.Sensors[^1].Value != count-1)) throw new Exception("Generated batch mismatch");
+            if (decoded is Batch<BaselineSensor> baseline && (baseline.Sensors.Length != count || baseline.Sensors[^1].Id != $"sensor-{count-1}" || baseline.Sensors[^1].Value != count-1)) throw new Exception("Baseline batch mismatch");
             using var verify = new StringWriter();
             serializer.Serialize(verify, decoded);
-            if (verify.ToString() != xml) throw new Exception("Round trip mismatch");
+            if (verify.ToString() != initial.ToString()) throw new Exception("Round trip mismatch");
         }
         for (var i = 0; i < 100; i++) { using var reader = new StringReader(xml); _ = serializer.Deserialize(reader); using var writer = new StringWriter(); serializer.Serialize(writer, value); }
         foreach (var operation in new[] { "read", "write" })

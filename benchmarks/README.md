@@ -17,6 +17,8 @@ benchmarks/
 ├── go/              # Go generated models vs handwritten structs
 ├── cpp/             # C++ generated-model XML adapter
 ├── csharp/          # C# generated models vs handwritten classes
+├── rust-phf-e2e/    # Generated Rust match vs phf XML decoding
+├── workloads/       # Shared XML input fixtures for cross-language runs
 └── typescript-wasm/ # Node, Bun, and browser Wasm comparisons
 ```
 
@@ -30,6 +32,7 @@ equivalent) and never at this root.
 | :--- | :--- | :--- | :--- |
 | Rust core engine | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) | `cargo bench --bench core_benchmarks` |
 | Rust tag dispatch | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) + `perf stat` | `cargo bench --bench tag_dispatch` ([results](../docs/benchmarks/rust-phf-dispatch.md)) |
+| Rust end-to-end dispatch | [`rust-phf-e2e/`](rust-phf-e2e/README.md) | Generated decoders | `./benchmarks/rust-phf-e2e/run.sh` |
 | Python comparative | [`python/`](python/README.md) | Custom CLI suite | `python -m benchmarks.python` or `./benchmarks/run_all.sh` |
 | CLI startup | [`cli/`](cli/README.md) | hyperfine | `./benchmarks/cli/benchmark.sh` |
 | Java four-runtime | [`java/`](java/README.md) | JMH (Maven) | See [`java/README.md`](java/README.md) |
@@ -37,6 +40,9 @@ equivalent) and never at this root.
 | C++ XML adapter | [`cpp/`](cpp/README.md) | C++20 chrono | `./benchmarks/cpp/run.sh` |
 | C# models | [`csharp/`](csharp/README.md) | .NET Stopwatch | `./benchmarks/csharp/run.sh` |
 | TypeScript/Wasm | [`typescript-wasm/`](typescript-wasm/README.md) | Node, Bun, Chromium | See [`typescript-wasm/README.md`](typescript-wasm/README.md) and [methodology](../docs/benchmarks/wasm-vs-js.md) |
+
+The Go, C++, and C# readers use the [same byte-for-byte sensor XML fixtures](workloads/sensor-batch/README.md).
+Their different runtimes and serializers still require separate interpretation.
 
 The Rust Criterion suite lives inside its crate because `cargo bench` requires
 `benches/` next to the crate manifest — it is the one deliberate exception to the
