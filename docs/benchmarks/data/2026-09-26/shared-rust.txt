@@ -1,0 +1,14 @@
+Parsing schema: batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+rust,size=1,repeat=0,ns/op=528.1,xml_bytes=65
+rust,size=1,repeat=1,ns/op=524.5,xml_bytes=65
+rust,size=1,repeat=2,ns/op=521.0,xml_bytes=65
+rust,size=1,repeat=3,ns/op=520.2,xml_bytes=65
+rust,size=1,repeat=4,ns/op=523.5,xml_bytes=65
+rust,size=1000,repeat=0,ns/op=353230.5,xml_bytes=53795
+rust,size=1000,repeat=1,ns/op=354908.3,xml_bytes=53795
+rust,size=1000,repeat=2,ns/op=371288.3,xml_bytes=53795
+rust,size=1000,repeat=3,ns/op=374478.5,xml_bytes=53795
+rust,size=1000,repeat=4,ns/op=351026.8,xml_bytes=53795

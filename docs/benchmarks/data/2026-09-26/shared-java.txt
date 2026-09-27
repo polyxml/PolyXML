@@ -1,0 +1,15 @@
+Parsing schema: batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+java_version=25.0.4.1
+java,size=1,repeat=0,ns/op=7999.9,xml_bytes=65,sink=200000
+java,size=1,repeat=1,ns/op=7335.5,xml_bytes=65,sink=300000
+java,size=1,repeat=2,ns/op=7405.4,xml_bytes=65,sink=400000
+java,size=1,repeat=3,ns/op=7421.1,xml_bytes=65,sink=500000
+java,size=1,repeat=4,ns/op=7521.1,xml_bytes=65,sink=600000
+java,size=1000,repeat=0,ns/op=510631.1,xml_bytes=53795,sink=2600000
+java,size=1000,repeat=1,ns/op=504740.9,xml_bytes=53795,sink=3600000
+java,size=1000,repeat=2,ns/op=505395.8,xml_bytes=53795,sink=4600000
+java,size=1000,repeat=3,ns/op=543890.6,xml_bytes=53795,sink=5600000
+java,size=1000,repeat=4,ns/op=528461.9,xml_bytes=53795,sink=6600000

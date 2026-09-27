@@ -1,0 +1,10 @@
+native,read,repeat=0,ns/op=981,input_bytes=50,output_bytes=50,sink=800000
+native,read,repeat=1,ns/op=974,input_bytes=50,output_bytes=50,sink=800000
+native,read,repeat=2,ns/op=965,input_bytes=50,output_bytes=50,sink=800000
+native,read,repeat=3,ns/op=1006,input_bytes=50,output_bytes=50,sink=800000
+native,read,repeat=4,ns/op=966,input_bytes=50,output_bytes=50,sink=800000
+native,write,repeat=0,ns/op=329,input_bytes=50,output_bytes=50,sink=5000000
+native,write,repeat=1,ns/op=333,input_bytes=50,output_bytes=50,sink=5000000
+native,write,repeat=2,ns/op=336,input_bytes=50,output_bytes=50,sink=5000000
+native,write,repeat=3,ns/op=333,input_bytes=50,output_bytes=50,sink=5000000
+native,write,repeat=4,ns/op=338,input_bytes=50,output_bytes=50,sink=5000000

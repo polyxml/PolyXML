@@ -1,0 +1,14 @@
+Parsing schema: batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+python,size=1,repeat=0,ns/op=5013.3,xml_bytes=65,last_id=sensor-0
+python,size=1,repeat=1,ns/op=5522.1,xml_bytes=65,last_id=sensor-0
+python,size=1,repeat=2,ns/op=5417.7,xml_bytes=65,last_id=sensor-0
+python,size=1,repeat=3,ns/op=4897.3,xml_bytes=65,last_id=sensor-0
+python,size=1,repeat=4,ns/op=4594.5,xml_bytes=65,last_id=sensor-0
+python,size=1000,repeat=0,ns/op=2571034.3,xml_bytes=53795,last_id=sensor-999
+python,size=1000,repeat=1,ns/op=2456845.1,xml_bytes=53795,last_id=sensor-999
+python,size=1000,repeat=2,ns/op=2469844.4,xml_bytes=53795,last_id=sensor-999
+python,size=1000,repeat=3,ns/op=2346834.3,xml_bytes=53795,last_id=sensor-999
+python,size=1000,repeat=4,ns/op=2864233.8,xml_bytes=53795,last_id=sensor-999

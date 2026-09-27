@@ -1,0 +1,51 @@
+Parsing schema: sensor.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+goos: linux
+goarch: amd64
+pkg: polyxml-bench-go
+cpu: AMD Ryzen 5 4500 6-Core Processor              
+BenchmarkXML/size=1/generated/read-12         	  500426	      4381 ns/op	  14.84 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/generated/read-12         	  511773	      4410 ns/op	  14.74 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/generated/read-12         	  493801	      4436 ns/op	  14.65 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/generated/read-12         	  518935	      4401 ns/op	  14.77 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/generated/read-12         	  534392	      4364 ns/op	  14.90 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/generated/write-12        	  810408	      2934 ns/op	  22.15 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/generated/write-12        	  773796	      2943 ns/op	  22.09 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/generated/write-12        	  763924	      2950 ns/op	  22.03 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/generated/write-12        	  801583	      2964 ns/op	  21.93 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/generated/write-12        	  823204	      2943 ns/op	  22.09 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/baseline/read-12          	  525352	      4437 ns/op	  14.65 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/baseline/read-12          	  513417	      4419 ns/op	  14.71 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/baseline/read-12          	  523926	      4388 ns/op	  14.81 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/baseline/read-12          	  530822	      4422 ns/op	  14.70 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/baseline/read-12          	  533833	      4404 ns/op	  14.76 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/baseline/write-12         	  813612	      2955 ns/op	  21.99 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/baseline/write-12         	  778838	      2940 ns/op	  22.11 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/baseline/write-12         	  726360	      2963 ns/op	  21.94 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/baseline/write-12         	  853840	      2951 ns/op	  22.02 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1/baseline/write-12         	  786135	      3002 ns/op	  21.65 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1000/generated/read-12      	     764	   3189692 ns/op	  16.87 MB/s	 1035655 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/generated/read-12      	     757	   3228290 ns/op	  16.66 MB/s	 1035655 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/generated/read-12      	     754	   3160810 ns/op	  17.02 MB/s	 1035653 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/generated/read-12      	     753	   3156440 ns/op	  17.04 MB/s	 1035656 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/generated/read-12      	     750	   3201079 ns/op	  16.81 MB/s	 1035651 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/generated/write-12     	    3375	    705193 ns/op	  76.28 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/generated/write-12     	    3110	    711681 ns/op	  75.59 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/generated/write-12     	    3313	    705992 ns/op	  76.20 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/generated/write-12     	    3349	    702841 ns/op	  76.54 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/generated/write-12     	    3334	    706294 ns/op	  76.17 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/baseline/read-12       	     736	   3173209 ns/op	  16.95 MB/s	 1035655 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/baseline/read-12       	     751	   3208840 ns/op	  16.76 MB/s	 1035656 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/baseline/read-12       	     760	   3258398 ns/op	  16.51 MB/s	 1035654 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/baseline/read-12       	     751	   3172084 ns/op	  16.96 MB/s	 1035656 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/baseline/read-12       	     759	   3176602 ns/op	  16.93 MB/s	 1035653 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/baseline/write-12      	    3273	    699469 ns/op	  76.91 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/baseline/write-12      	    3487	    698544 ns/op	  77.01 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/baseline/write-12      	    3399	    701435 ns/op	  76.69 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/baseline/write-12      	    3448	    703302 ns/op	  76.49 MB/s	  134609 B/op	     916 allocs/op
+BenchmarkXML/size=1000/baseline/write-12      	    3444	    697126 ns/op	  77.17 MB/s	  134609 B/op	     916 allocs/op
+PASS
+ok  	polyxml-bench-go	98.779s
+?   	polyxml-bench-go/target/generated	[no test files]

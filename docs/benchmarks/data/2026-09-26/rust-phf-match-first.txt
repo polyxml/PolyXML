@@ -1,0 +1,36 @@
+Parsing schema: target/16/record.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+Parsing schema: target/16/record.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+Parsing schema: target/120/record.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+Parsing schema: target/120/record.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+16/match,repeat=0,ns/op=2638.8,MB/s=188.34,xml_bytes=497
+16/match,repeat=1,ns/op=2602.8,MB/s=190.95,xml_bytes=497
+16/match,repeat=2,ns/op=2677.2,MB/s=185.64,xml_bytes=497
+16/match,repeat=3,ns/op=2633.1,MB/s=188.75,xml_bytes=497
+16/match,repeat=4,ns/op=2669.6,MB/s=186.17,xml_bytes=497
+16/phf,repeat=0,ns/op=3095.1,MB/s=160.58,xml_bytes=497
+16/phf,repeat=1,ns/op=3151.7,MB/s=157.69,xml_bytes=497
+16/phf,repeat=2,ns/op=2970.7,MB/s=167.30,xml_bytes=497
+16/phf,repeat=3,ns/op=3109.3,MB/s=159.84,xml_bytes=497
+16/phf,repeat=4,ns/op=2974.6,MB/s=167.08,xml_bytes=497
+120/match,repeat=0,ns/op=21517.6,MB/s=168.10,xml_bytes=3617
+120/match,repeat=1,ns/op=21075.8,MB/s=171.62,xml_bytes=3617
+120/match,repeat=2,ns/op=21451.6,MB/s=168.61,xml_bytes=3617
+120/match,repeat=3,ns/op=21095.4,MB/s=171.46,xml_bytes=3617
+120/match,repeat=4,ns/op=21056.0,MB/s=171.78,xml_bytes=3617
+120/phf,repeat=0,ns/op=24018.0,MB/s=150.60,xml_bytes=3617
+120/phf,repeat=1,ns/op=22442.2,MB/s=161.17,xml_bytes=3617
+120/phf,repeat=2,ns/op=23533.1,MB/s=153.70,xml_bytes=3617
+120/phf,repeat=3,ns/op=22355.0,MB/s=161.80,xml_bytes=3617
+120/phf,repeat=4,ns/op=22689.4,MB/s=159.41,xml_bytes=3617

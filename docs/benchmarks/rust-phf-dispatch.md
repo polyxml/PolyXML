@@ -54,10 +54,38 @@ Consuming crates must add `phf = "0.14"` to their `Cargo.toml`.
 * **Hit and miss paths** are measured separately per strategy
   (`*_hit` = full-tier sweep, throughput reported in tags/s;
   `*_miss` = lookup of an unknown sentinel tag).
-* **Tokenization is intentionally excluded** to isolate lookup cost. An
-  end-to-end XML decoding comparison remains open in #57, so the lookup-only
-  crossover is not a proven decoder-throughput crossover. Throughput below
-  reports tags/s from the measured lookup sweeps.
+* **Tokenization is intentionally excluded** to isolate lookup cost. A
+  small/medium generated-decoder check appears below; larger decoder tiers
+  remain open in #57. The lookup-only crossover is not a proven
+  decoder-throughput crossover. Throughput below reports tags/s from the
+  measured lookup sweeps.
+
+## Generated decoder check (September 2026)
+
+The [end-to-end runner](https://github.com/polyxml/PolyXML/tree/main/benchmarks/rust-phf-e2e)
+generated `match` and `phf` decoders from identical **16- and 120-field**
+schemas. Each decoder parsed the same complete XML document through its
+generated `from_xml` method, including tokenization, dispatch, and field
+decoding. It verified the last field before timing. After 1,000 warmup calls,
+each strategy ran five repetitions of 100,000 documents (16 fields) or 10,000
+documents (120 fields). We also reversed strategy order in a second process.
+
+Host: AMD Ryzen 5 4500, Ubuntu 26.04.1 on WSL2, rustc 1.98.1. Times below
+are median microseconds per document; lower is faster.
+
+| Fields | XML bytes | Match first: `match` / `phf` | Phf first: `match` / `phf` |
+| :--- | ---: | ---: | ---: |
+| 16 | 497 | 2.639 / 3.095 µs | 2.474 / 2.962 µs |
+| 120 | 3,617 | 21.095 / 22.689 µs | 20.241 / 22.317 µs |
+
+The default `match` decoder remained faster at both sizes and in both orders.
+These dense all-fields documents do not establish a crossover for larger,
+sparser, or unknown-tag workloads. No automatic threshold is justified by
+this experiment; `phf` remains explicit opt-in. The 600/1500-element
+compile-time and binary-size work remains deferred in #55. Allocation and
+hardware counters were not captured for this end-to-end run; see the
+[match-first raw output](data/2026-09-26/rust-phf-match-first.txt) and
+[phf-first raw output](data/2026-09-26/rust-phf-phf-first.txt).
 
 ## Results — throughput (Criterion)
 

@@ -114,11 +114,11 @@ flowchart TD
 
 ## Benchmarks across all seven languages
 
-Find the [benchmark guide](benchmarks/index.md) for a side-by-side map of the
-Rust, Python, Java, Go, C++, C#, and TypeScript/Wasm suites. It links published
-studies, run commands, and methodology for each target. New suites without a
-full published run are identified as such, so smoke checks are not mistaken for
-performance results.
+Find the [benchmark guide](benchmarks/index.md) for a map of the Rust, Python,
+Java, Go, C++, C#, and TypeScript/Wasm suites. It links published studies, run
+commands, and a shared XML input that all seven readers can consume. The guide
+keeps different serializer and return-value measurements separate, and
+distinguishes smoke checks from repeated results.
 
 [Explore benchmarks and results →](benchmarks/index.md)
 

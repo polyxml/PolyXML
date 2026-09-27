@@ -14,13 +14,19 @@ suite works; it is not a performance result.
 
 | Target | What it measures | Suite and instructions | Published results |
 | :--- | :--- | :--- | :--- |
-| Rust | Core XML read/write; tag dispatch | [Criterion suites](https://github.com/polyxml/PolyXML/tree/main/crates/polyxml-core/benches) | [Core results](#2-pure-rust-core-throughput-cratespolyxml-core), [dispatch study](rust-phf-dispatch.md) |
+| Rust | Core XML read/write; tag dispatch and generated decoder check | [Criterion suites](https://github.com/polyxml/PolyXML/tree/main/crates/polyxml-core/benches), [generated decoder runner](https://github.com/polyxml/PolyXML/tree/main/benchmarks/rust-phf-e2e) | [Core results](#2-pure-rust-core-throughput-cratespolyxml-core), [dispatch study](rust-phf-dispatch.md) |
 | Python | Typed binding vs Python XML libraries; AOT vs dataclasses | [Python suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python) | [Comparative results](#1-python-deserialization-serialization-throughput), [AOT study](python-aot-vs-dataclass.md) |
-| Java | Generated records/POJOs, JAXB, Jackson, and Panama | [JMH suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java) | Run the suite; no consolidated result page yet |
-| Go | Generated structs vs equivalent handwritten structs, both using `encoding/xml` | [Go suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/go) | Run the suite; no published result table yet |
-| C++ | XML adapter into generated vs handwritten models | [C++ suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cpp) | Run the suite; no published result table yet |
-| C# | Generated vs handwritten classes, both using `XmlSerializer` | [C# suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/csharp) | Run the suite; no published result table yet |
-| TypeScript & Wasm | Wasm vs JavaScript parsers in Node, Bun, and Chromium | [TypeScript/Wasm suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/typescript-wasm) | [Wasm vs JavaScript study](wasm-vs-js.md) |
+| Java | Generated POJOs, JAXB, Jackson, and Panama | [JMH suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java) | [September 2026 measurements](language-results-2026-09.md#java-jmh-binding-comparison) |
+| Go | Generated structs vs equivalent handwritten structs, both using `encoding/xml` | [Go suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/go) | [September 2026 measurements](language-results-2026-09.md#go-generated-model-vs-handwritten-model) |
+| C++ | Native binding plus generated-model XML adapter | [C++ suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cpp) | [September 2026 measurements](language-results-2026-09.md#c-native-binding-and-model-adapter) |
+| C# | Generated vs handwritten classes, both using `XmlSerializer` | [C# suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/csharp) | [September 2026 measurements](language-results-2026-09.md#c-generated-model-vs-handwritten-model) |
+| TypeScript & Wasm | Wasm vs JavaScript parsers in Node, Bun, and Chromium | [TypeScript/Wasm suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/typescript-wasm) | [Wasm vs JavaScript study](wasm-vs-js.md), [shared sensor run](language-results-2026-09.md#shared-sensor-readers) |
+
+The [shared sensor workload](https://github.com/polyxml/PolyXML/tree/main/benchmarks/workloads/sensor-batch)
+feeds the **same XML bytes** to readers in all seven targets. Its
+[September 2026 results](language-results-2026-09.md#shared-sensor-readers)
+identify each binding layer and explain why a shared input alone does not
+justify a cross-language speed ranking.
 
 The [CLI startup suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cli)
 measures command startup and argument validation separately from language
@@ -29,11 +35,14 @@ lists every entry point.
 
 !!! note "Reading the C++ numbers"
     The C++ generator emits model types but does not yet emit an XML codec. Its
-    suite measures a fixture-specific adapter. Those timings are **not**
-    PolyXML C++ XML codec throughput or a general XML parser comparison.
+    generated-model lane measures a fixture-specific adapter, while the native
+    lane measures the actual C++ binding over the Rust C ABI. Keep their
+    timings separate; the adapter is **not** PolyXML C++ codec throughput.
 
 ## Published studies
 
+- [September 2026 language runs](language-results-2026-09.md): repeated Java,
+  Go, C#, and C++ measurements with raw output and workload limits.
 - [WebAssembly vs JavaScript](wasm-vs-js.md): Node, Bun, and Chromium workloads.
 - [Python AOT vs dataclasses](python-aot-vs-dataclass.md): throughput and memory.
 - [Rust tag dispatch](rust-phf-dispatch.md): dispatch strategies and their tradeoffs.

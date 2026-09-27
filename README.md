@@ -43,12 +43,12 @@
 
 **PolyXML turns W3C XML Schemas (`.xsd`) into production-ready, type-safe data models with built-in streaming parsers and serializers.**
 
-If you have ever used `xjc` (JAXB), `CodeSynthesis XSD`, or `xsdata`, PolyXML is their modern, safe-Rust replacement. It compiles your schema once and generates idiomatic, zero-overhead code across **7 languages simultaneously**—with direct `.from_xml()` and `.to_xml()` methods running **10x–24x faster** than traditional Python and C DOM parsers.
+If you have ever used `xjc` (JAXB), `CodeSynthesis XSD`, or `xsdata`, PolyXML is their modern, safe-Rust replacement. It compiles your schema once and generates idiomatic code across **7 languages simultaneously**. In the published 10,000-item Python catalog benchmark, PolyXML's typed binding is **10.0x faster to read and 23.5x faster to write than `xsdata`**; other runtimes and parsers have different results.
 
 Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary serialization, **PolyXML brings modern software engineering to XML**:
 
 1. **🛠️ Universal XSD-to-Code Generator (`polyxml`)**: Ingests W3C XSD 1.0 and 1.1 schemas, resolves cyclic types with Tarjan's SCC algorithm, and compiles production-ready, strongly-typed data contracts across **7 modern ecosystems** simultaneously (**Python**, **Rust**, **C++**, **Java**, **TypeScript**, **Go**, and **C#**).
-2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **10x–24x faster than traditional tools** with **zero intermediate DOM allocations**.
+2. **⚡ Ultra-Fast Streaming Runtime**: The Rust core deserializes and serializes directly with `quick-xml` and `lexical-core`, without an intermediate DOM. See the [benchmark methods and per-language coverage](docs/benchmarks/index.md) for measured comparisons.
 3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 5. **🛡️ Controlled XML Entity Handling**: The native streaming runtime resolves standard and numeric character references in memory and does not fetch external entities while parsing XML. Schema compilation separately reads local XSD includes and imports.

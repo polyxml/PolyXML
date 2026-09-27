@@ -1,0 +1,11 @@
+node_version=v26.8.2
+wasm,size=1,repeat=0,ns/op=6547.1,xml_bytes=65,last_id=sensor-0
+wasm,size=1,repeat=1,ns/op=5506.6,xml_bytes=65,last_id=sensor-0
+wasm,size=1,repeat=2,ns/op=5412.3,xml_bytes=65,last_id=sensor-0
+wasm,size=1,repeat=3,ns/op=5379.8,xml_bytes=65,last_id=sensor-0
+wasm,size=1,repeat=4,ns/op=5497.4,xml_bytes=65,last_id=sensor-0
+wasm,size=1000,repeat=0,ns/op=1780934.4,xml_bytes=53795,last_id=sensor-999
+wasm,size=1000,repeat=1,ns/op=1813337.1,xml_bytes=53795,last_id=sensor-999
+wasm,size=1000,repeat=2,ns/op=1735259.1,xml_bytes=53795,last_id=sensor-999
+wasm,size=1000,repeat=3,ns/op=1730213.0,xml_bytes=53795,last_id=sensor-999
+wasm,size=1000,repeat=4,ns/op=1753237.3,xml_bytes=53795,last_id=sensor-999
