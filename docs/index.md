@@ -112,6 +112,18 @@ flowchart TD
 
 ---
 
+## Benchmarks across all seven languages
+
+Find the [benchmark guide](benchmarks/index.md) for a side-by-side map of the
+Rust, Python, Java, Go, C++, C#, and TypeScript/Wasm suites. It links published
+studies, run commands, and methodology for each target. New suites without a
+full published run are identified as such, so smoke checks are not mistaken for
+performance results.
+
+[Explore benchmarks and results →](benchmarks/index.md)
+
+---
+
 ## 🌐 Real-World Industry Showcases
 
 Explore complete, production-ready example repositories showcasing PolyXML in mission-critical industries across **all 7 supported languages**:

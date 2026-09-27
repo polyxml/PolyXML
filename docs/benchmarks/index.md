@@ -1,17 +1,45 @@
 ---
-title: Performance & Benchmarks
-description: Reproducible performance benchmarks comparing PolyXML against native and pure-language XML engines.
+title: Benchmarks
+description: Benchmark coverage, published results, methods, and reproduction commands for every PolyXML target language.
 ---
 
-# Performance & Benchmarks
+# Benchmarks
 
-The [WebAssembly vs JavaScript benchmark](wasm-vs-js.md) compares the Wasm
-runtime with JavaScript parsers in Node, Bun, and Chromium.
-The [Python AOT vs Dataclass benchmark](python-aot-vs-dataclass.md) details the throughput and memory advantages of Ahead-of-Time compiled PyO3 native extensions (`--backend aot`).
+PolyXML has benchmark suites for all seven target languages, plus WebAssembly
+and CLI startup. The suites answer different questions, so compare numbers
+**within the same workload and runtime**. A quick smoke run confirms that a
+suite works; it is not a performance result.
 
-PolyXML is engineered to process gigabytes of XML per second by leveraging Rust's zero-cost abstractions, `quick-xml` streaming events, and `lexical-core` numeric conversions.
+## Choose a benchmark
 
-The repository includes reusable benchmark suites for [Rust, Python, Java, Go, C++, C#, and TypeScript/Wasm](https://github.com/polyxml/PolyXML/blob/main/benchmarks/README.md). The Go and C# suites compare generated models with handwritten equivalents using the same standard XML serializer. The C++ suite measures a narrow XML adapter into generated models because the C++ generator does not yet emit an XML codec; its numbers must not be presented as PolyXML C++ codec throughput. The [suite catalog](https://github.com/polyxml/PolyXML/blob/main/benchmarks/README.md) gives each entry point and methodology.
+| Target | What it measures | Suite and instructions | Published results |
+| :--- | :--- | :--- | :--- |
+| Rust | Core XML read/write; tag dispatch | [Criterion suites](https://github.com/polyxml/PolyXML/tree/main/crates/polyxml-core/benches) | [Core results](#2-pure-rust-core-throughput-cratespolyxml-core), [dispatch study](rust-phf-dispatch.md) |
+| Python | Typed binding vs Python XML libraries; AOT vs dataclasses | [Python suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python) | [Comparative results](#1-python-deserialization-serialization-throughput), [AOT study](python-aot-vs-dataclass.md) |
+| Java | Generated records/POJOs, JAXB, Jackson, and Panama | [JMH suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java) | Run the suite; no consolidated result page yet |
+| Go | Generated structs vs equivalent handwritten structs, both using `encoding/xml` | [Go suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/go) | Run the suite; no published result table yet |
+| C++ | XML adapter into generated vs handwritten models | [C++ suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cpp) | Run the suite; no published result table yet |
+| C# | Generated vs handwritten classes, both using `XmlSerializer` | [C# suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/csharp) | Run the suite; no published result table yet |
+| TypeScript & Wasm | Wasm vs JavaScript parsers in Node, Bun, and Chromium | [TypeScript/Wasm suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/typescript-wasm) | [Wasm vs JavaScript study](wasm-vs-js.md) |
+
+The [CLI startup suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cli)
+measures command startup and argument validation separately from language
+bindings. The [repository suite catalog](https://github.com/polyxml/PolyXML/blob/main/benchmarks/README.md)
+lists every entry point.
+
+!!! note "Reading the C++ numbers"
+    The C++ generator emits model types but does not yet emit an XML codec. Its
+    suite measures a fixture-specific adapter. Those timings are **not**
+    PolyXML C++ XML codec throughput or a general XML parser comparison.
+
+## Published studies
+
+- [WebAssembly vs JavaScript](wasm-vs-js.md): Node, Bun, and Chromium workloads.
+- [Python AOT vs dataclasses](python-aot-vs-dataclass.md): throughput and memory.
+- [Rust tag dispatch](rust-phf-dispatch.md): dispatch strategies and their tradeoffs.
+
+The older Python and Rust result tables below preserve their original workloads.
+Use each linked method and environment when interpreting those figures.
 
 > 🚀 **Looking for architectural comparisons with legacy compilers?**
 > Check out **[Why PolyXML? (The Architecture of Modern XML)](../why-polyxml.md)** for in-depth comparisons against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
@@ -113,7 +141,7 @@ The benchmark suite is reusable and version-controlled.
 > `cargo bench --release` the same way; tune with `POLYXML_MEMCAP_PCT`, opt
 > out with `POLYXML_MEMCAP_DISABLE=1`.
 
-### Run All Benchmarks (Rust + Python)
+### Run the unified Rust and Python suites
 
 ```bash
 ./benchmarks/run_all.sh
@@ -139,3 +167,31 @@ mvn -f benchmarks/java/pom.xml clean package
 ```
 
 See the [Java benchmark README](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java) for the Panama profile, workload definitions, and interpretation caveats.
+
+### Run the Go, C++, and C# suites
+
+Build the local CLI once, then run each suite from the repository root:
+
+```bash
+cargo build -p polyxml-cli
+./benchmarks/go/run.sh
+./benchmarks/cpp/run.sh
+./benchmarks/csharp/run.sh
+```
+
+Each runner generates its model into an ignored `target/` directory, checks a
+round trip, and measures small and 1,000-sensor batches. See the linked suite
+READMEs above for toolchain requirements and interpretation limits. Use their
+short-iteration settings only to check that they execute.
+
+### Run the TypeScript/Wasm suite
+
+The [TypeScript/Wasm README](https://github.com/polyxml/PolyXML/tree/main/benchmarks/typescript-wasm)
+has separate commands for Node, Bun, and headless Chromium, plus instructions
+for the larger fixture. These lanes are intentionally separate from the unified
+Rust/Python runner.
+
+For publishable measurements, run on an otherwise idle host, repeat the full
+suite, and keep raw output with the Git revision, CPU/OS, and toolchain versions.
+Compare read with read and write with write on the same payload; generated
+models, DOM parsers, and transcoding pipelines can return different values.
