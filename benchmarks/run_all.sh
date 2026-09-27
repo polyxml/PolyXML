@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# PolyXML Unified Benchmarking Suite
+# PolyXML Rust and Python Benchmarking Suite
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,7 +17,7 @@ if [ -z "${POLYXML_MEMCAP_LEVEL:-}" ]; then
 fi
 
 echo "======================================================================"
-echo "⚡ PolyXML Performance & Benchmarking Suite"
+echo "⚡ PolyXML Rust & Python Benchmarking Suite"
 echo "======================================================================"
 
 # 1. Ensure Rust toolchain
@@ -70,4 +70,5 @@ echo "✅ Benchmarking Complete!"
 echo "   - Rust reports: target/criterion/"
 echo "   - Python Markdown: benchmarks/python/results.md"
 echo "   - Python JSON: benchmarks/python/results.json"
+echo "   - Other language suites: see benchmarks/README.md"
 echo "======================================================================"

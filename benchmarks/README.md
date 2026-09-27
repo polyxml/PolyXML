@@ -12,8 +12,12 @@ benchmarks/
 ├── run_all.sh       # Orchestrator: builds the extension, runs Rust + Python suites
 ├── __init__.py      # Package marker for `python -m benchmarks.python`
 ├── cli/             # CLI startup and argument validation (hyperfine)
-├── python/          # Python bindings vs the Python XML ecosystem (custom CLI suite)
-└── java/            # Java bindings vs JAXB, Jackson, and the Panama native binding (JMH)
+├── python/          # Python bindings vs the Python XML ecosystem
+├── java/            # Java bindings vs JAXB, Jackson, and Panama (JMH)
+├── go/              # Go generated models vs handwritten structs
+├── cpp/             # C++ generated-model XML adapter
+├── csharp/          # C# generated models vs handwritten classes
+└── typescript-wasm/ # Node, Bun, and browser Wasm comparisons
 ```
 
 Each suite directory owns its `README.md`, runner, dependencies, and generated
@@ -29,6 +33,10 @@ equivalent) and never at this root.
 | Python comparative | [`python/`](python/README.md) | Custom CLI suite | `python -m benchmarks.python` or `./benchmarks/run_all.sh` |
 | CLI startup | [`cli/`](cli/README.md) | hyperfine | `./benchmarks/cli/benchmark.sh` |
 | Java four-runtime | [`java/`](java/README.md) | JMH (Maven) | See [`java/README.md`](java/README.md) |
+| Go models | [`go/`](go/README.md) | `go test -bench` | `./benchmarks/go/run.sh` |
+| C++ XML adapter | [`cpp/`](cpp/README.md) | C++20 chrono | `./benchmarks/cpp/run.sh` |
+| C# models | [`csharp/`](csharp/README.md) | .NET Stopwatch | `./benchmarks/csharp/run.sh` |
+| TypeScript/Wasm | [`typescript-wasm/`](typescript-wasm/README.md) | Node, Bun, Chromium | See [`typescript-wasm/README.md`](typescript-wasm/README.md) and [methodology](../docs/benchmarks/wasm-vs-js.md) |
 
 The Rust Criterion suite lives inside its crate because `cargo bench` requires
 `benches/` next to the crate manifest — it is the one deliberate exception to the
@@ -39,7 +47,7 @@ cargo bench --bench core_benchmarks -- deserialization
 # Report: target/criterion/report/index.html
 ```
 
-### Run everything (Rust + Python)
+### Run the unified Rust and Python suites
 
 ```bash
 ./benchmarks/run_all.sh
@@ -47,7 +55,9 @@ cargo bench --bench core_benchmarks -- deserialization
 
 Requires Rust 1.80+ and Python 3.12+ (or `uv`). The script compiles
 `polyxml-python` in `--release`, runs Criterion, then runs the Python suite and
-writes `benchmarks/python/results.md` / `results.json`.
+writes `benchmarks/python/results.md` / `results.json`. The Java, Go, C++, C#,
+TypeScript/Wasm, and CLI suites have separate entry points shown in the catalog;
+their runtime dependencies and workloads differ substantially.
 
 ---
 
