@@ -497,7 +497,7 @@ endif()
 
     fn emit_includes(&self, out: &mut String, ir: &SchemaIR) {
         if self.options.validate_facets
-            && ir.types.values().any(|t| match t {
+            && ir.emitted_types().any(|t| match t {
                 TypeDef::Simple(s) => !s.facets.patterns.is_empty(),
                 TypeDef::Struct(s) => s
                     .fields
@@ -528,7 +528,7 @@ endif()
         writeln!(out, "\n// Glaze compile-time reflection metadata\n").unwrap();
 
         // 1. Enums
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             if let TypeDef::Enum(enum_def) = type_def {
                 let enum_name = type_ident(&enum_def.qname);
                 let full_type = format!("{}::{}", ns, enum_name);
@@ -635,8 +635,7 @@ concept XmlModel = requires(T a) {{
 
     fn emit_forward_declarations(&self, out: &mut String, ir: &SchemaIR) {
         let mut structs: Vec<String> = ir
-            .types
-            .values()
+            .emitted_types()
             .filter_map(|t| {
                 if let TypeDef::Struct(s) = t {
                     Some(type_ident(&s.qname))
@@ -658,14 +657,14 @@ concept XmlModel = requires(T a) {{
 
     fn emit_types(&self, out: &mut String, ir: &SchemaIR) {
         // Emit simple type aliases first
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             if let TypeDef::Simple(simple) = type_def {
                 self.emit_simple_type(out, simple, ir);
             }
         }
 
         // Emit enums next
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             if let TypeDef::Enum(enum_def) = type_def {
                 self.emit_enum(out, enum_def);
             }
@@ -675,6 +674,9 @@ concept XmlModel = requires(T a) {{
         let sorted_qnames = self.topological_sort_types(ir);
 
         for qname in sorted_qnames {
+            if ir.is_external_type(&qname) {
+                continue;
+            }
             if let Some(type_def) = ir.types.get(&qname) {
                 match type_def {
                     TypeDef::Union(u) => self.emit_union(out, u),

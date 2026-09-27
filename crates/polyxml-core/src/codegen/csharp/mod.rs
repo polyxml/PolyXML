@@ -307,7 +307,7 @@ impl CSharpCodegen {
         };
 
         // Emit SimpleTypes / Enums
-        for def in ir.types.values() {
+        for def in ir.emitted_types() {
             if let TypeDef::Enum(e) = def {
                 self.emit_enum(&mut out, e, indent);
             } else if let TypeDef::Simple(s) = def {
@@ -320,14 +320,14 @@ impl CSharpCodegen {
         }
 
         // Emit Unions (Choices)
-        for def in ir.types.values() {
+        for def in ir.emitted_types() {
             if let TypeDef::Union(u) = def {
                 self.emit_union(&mut out, u, ir, indent);
             }
         }
 
         // Emit Structs (ComplexTypes)
-        for def in ir.types.values() {
+        for def in ir.emitted_types() {
             if let TypeDef::Struct(s) = def {
                 self.emit_struct(&mut out, s, ir, indent);
             }
@@ -373,7 +373,7 @@ impl CSharpCodegen {
         .unwrap();
 
         // Enums
-        for def in ir.types.values() {
+        for def in ir.emitted_types() {
             if let TypeDef::Enum(e) = def {
                 let name = type_ident(&e.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
@@ -381,7 +381,7 @@ impl CSharpCodegen {
         }
 
         // Simple types
-        for def in ir.types.values() {
+        for def in ir.emitted_types() {
             if let TypeDef::Simple(s) = def {
                 let name = type_ident(&s.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
@@ -389,7 +389,7 @@ impl CSharpCodegen {
         }
 
         // Unions
-        for def in ir.types.values() {
+        for def in ir.emitted_types() {
             if let TypeDef::Union(u) = def {
                 let name = type_ident(&u.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
@@ -398,7 +398,7 @@ impl CSharpCodegen {
         }
 
         // Structs
-        for def in ir.types.values() {
+        for def in ir.emitted_types() {
             if let TypeDef::Struct(s) = def {
                 let name = type_ident(&s.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();

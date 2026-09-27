@@ -255,7 +255,7 @@ impl GoCodegen {
         set_type_name_map(build_type_name_map(ir, to_go_type_name));
         let mut body = String::new();
         let mut has_time = false;
-        let lexical_patterns = ir.types.values().any(|def| match def {
+        let lexical_patterns = ir.emitted_types().any(|def| match def {
             TypeDef::Union(u) if u.is_lexical() => u.branches.iter().any(|branch| {
                 matches!(&branch.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Simple(s)) if !s.facets.patterns.is_empty()))
             }),
@@ -263,7 +263,7 @@ impl GoCodegen {
         });
         let has_patterns = lexical_patterns
             || (self.options.validate_facets
-                && ir.types.values().any(|t| match t {
+                && ir.emitted_types().any(|t| match t {
                     TypeDef::Simple(s) => !s.facets.patterns.is_empty(),
                     TypeDef::Struct(s) => s
                         .fields
@@ -276,7 +276,7 @@ impl GoCodegen {
         let mut has_xml = self.options.emit_xml_tags;
 
         // Check types for time.Time
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             match type_def {
                 TypeDef::Struct(s) => {
                     if s.is_mixed && self.options.emit_xml_tags {
@@ -421,28 +421,28 @@ impl GoCodegen {
 
     fn emit_types(&self, out: &mut String, ir: &SchemaIR) {
         // Emit simple types
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             if let TypeDef::Simple(simple) = type_def {
                 self.emit_simple_type(out, simple, ir);
             }
         }
 
         // Emit enums
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             if let TypeDef::Enum(enum_def) = type_def {
                 self.emit_enum(out, enum_def);
             }
         }
 
         // Emit choices (unions)
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             if let TypeDef::Union(u) = type_def {
                 self.emit_union(out, u, ir);
             }
         }
 
         // Emit structs
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             if let TypeDef::Struct(s) = type_def {
                 self.emit_struct(out, s, ir);
             }

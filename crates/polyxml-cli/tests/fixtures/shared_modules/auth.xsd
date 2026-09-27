@@ -1,0 +1,15 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:polyxml:auth" xmlns:a="urn:polyxml:auth"
+           xmlns:c="urn:polyxml:common" elementFormDefault="qualified">
+  <xs:import namespace="urn:polyxml:common" schemaLocation="common.xsd"/>
+  <xs:complexType name="Person">
+    <xs:sequence><xs:element name="nickname" type="xs:string"/></xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="AuthMessage">
+    <xs:sequence>
+      <xs:element name="shared" type="c:Person"/>
+      <xs:element name="local" type="a:Person"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="auth" type="a:AuthMessage"/>
+</xs:schema>

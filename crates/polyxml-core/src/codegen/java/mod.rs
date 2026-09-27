@@ -260,7 +260,7 @@ impl JavaCodegen {
         set_type_name_map(build_type_name_map(ir, to_java_type_name));
         let mut files = Vec::new();
 
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             let (type_name, content) = self.generate_single_type(type_def, false, ir);
             let filename = format!("{}.java", type_name);
             files.push((filename, content));
@@ -285,7 +285,7 @@ impl JavaCodegen {
         let _ = writeln!(out, "public final class {} {{", outer_class_name);
         let _ = writeln!(out, "    private {}() {{}}\n", outer_class_name);
 
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             let (_, body) = self.generate_type_body(type_def, "    ", ir);
             out.push_str(&body);
             out.push('\n');
@@ -316,7 +316,7 @@ impl JavaCodegen {
         }
 
         if self.options.emit_direct_codec {
-            for def in ir.types.values() {
+            for def in ir.emitted_types() {
                 let codec = self.generate_codec(def, ir);
                 let body = &codec[codec.find("public final class ").unwrap()..];
                 out.push_str(&body.replacen(

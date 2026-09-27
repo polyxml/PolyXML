@@ -85,7 +85,9 @@ pub fn build_type_name_map<F: Fn(&str) -> String>(
 ) -> HashMap<QName, String> {
     let mut taken: HashSet<String> = HashSet::new();
     let mut map = HashMap::new();
-    for qname in ir.types.keys() {
+    let mut keys: Vec<&QName> = ir.types.keys().collect();
+    keys.sort_by_key(|q| (ir.is_external_type(q), *q));
+    for qname in keys {
         let base = name_of(&qname.local);
         let mut name = base.clone();
         let mut n = 2u32;

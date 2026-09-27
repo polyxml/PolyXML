@@ -1,0 +1,9 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:polyxml:billing" xmlns:b="urn:polyxml:billing"
+           xmlns:c="urn:polyxml:common" elementFormDefault="qualified">
+  <xs:import namespace="urn:polyxml:common" schemaLocation="common.xsd"/>
+  <xs:complexType name="BillingMessage">
+    <xs:sequence><xs:element name="customer" type="c:Person"/></xs:sequence>
+  </xs:complexType>
+  <xs:element name="billing" type="b:BillingMessage"/>
+</xs:schema>

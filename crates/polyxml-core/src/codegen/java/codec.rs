@@ -20,8 +20,8 @@ impl JavaCodegen {
                 _ => Ok(()),
             }
         }
-        let names: HashSet<_> = ir.types.values().map(|d| type_ident(d.qname())).collect();
-        for def in ir.types.values() {
+        let names: HashSet<_> = ir.emitted_types().map(|d| type_ident(d.qname())).collect();
+        for def in ir.emitted_types() {
             let name = type_ident(def.qname());
             if names.contains(&format!("{name}Codec")) {
                 return Err(format!(

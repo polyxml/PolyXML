@@ -221,6 +221,9 @@ impl TypeScriptCodegen {
 
         let ordered = self.order_types(ir);
         for type_def in ordered {
+            if ir.is_external_type(type_def.qname()) {
+                continue;
+            }
             match type_def {
                 TypeDef::Simple(s) => {
                     let mut simple = s.clone();

@@ -2360,3 +2360,164 @@ fn test_cli_python_aot_rejects_dataclass_style_and_slots() {
     assert!(String::from_utf8_lossy(&output2.stderr)
         .contains("slots and kw-only require the Python dataclass backend"));
 }
+
+#[test]
+fn test_cli_shared_modules_deduplication() {
+    let dir = tempdir().unwrap();
+    let fixtures =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/shared_modules");
+    fs::copy(fixtures.join("common.xsd"), dir.path().join("common.xsd")).unwrap();
+    fs::copy(fixtures.join("auth.xsd"), dir.path().join("auth.xsd")).unwrap();
+    fs::copy(fixtures.join("billing.xsd"), dir.path().join("billing.xsd")).unwrap();
+
+    let manifest_file = dir.path().join("polyxml.toml");
+    let manifest_content = r#"
+[workspace]
+name = "enterprise_services"
+output_base_dir = "./out"
+go_module = "enterprise/models"
+
+[modules.common]
+schemas = ["common.xsd"]
+
+[modules.auth]
+schemas = ["auth.xsd"]
+depends_on = ["common"]
+
+[modules.billing]
+schemas = ["billing.xsd"]
+depends_on = ["common"]
+
+[[generate]]
+target = "rust"
+output = "rs"
+
+[[generate]]
+target = "python"
+output = "py"
+
+[[generate]]
+target = "typescript"
+output = "ts"
+
+[[generate]]
+target = "go"
+output = "go"
+
+[[generate]]
+target = "csharp"
+output = "cs"
+
+[[generate]]
+target = "java"
+output = "java"
+package = "com.enterprise.models"
+
+[[generate]]
+target = "cpp"
+output = "cpp"
+package = "enterprise::models"
+"#;
+    fs::write(&manifest_file, manifest_content).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest_file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "build failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let out_dir = dir.path().join("out");
+
+    // 1. Rust: common has Person, billing imports common::Person without duplicate definition
+    let common_rs = fs::read_to_string(out_dir.join("rs/common/common.rs")).unwrap();
+    assert!(common_rs.contains("pub struct Person"));
+    let billing_rs = fs::read_to_string(out_dir.join("rs/billing/billing.rs")).unwrap();
+    assert!(billing_rs.contains("pub struct BillingMessage"));
+    assert!(!billing_rs.contains("pub struct Person {"));
+    assert!(billing_rs.contains("use super::super::common::{Person};"));
+
+    // 2. Python: common has Person, billing imports Person from common without redefining
+    let common_py = fs::read_to_string(out_dir.join("py/common/common.py")).unwrap();
+    assert!(common_py.contains("class Person"));
+    let billing_py = fs::read_to_string(out_dir.join("py/billing/billing.py")).unwrap();
+    assert!(billing_py.contains("class BillingMessage"));
+    assert!(!billing_py.contains("class Person("));
+    assert!(billing_py.contains("from ..common.common import Person as Person"));
+
+    // 3. TypeScript: common has Person, billing imports Person from common
+    let common_ts = fs::read_to_string(out_dir.join("ts/common/common.ts")).unwrap();
+    assert!(common_ts.contains("export interface Person"));
+    let billing_ts = fs::read_to_string(out_dir.join("ts/billing/billing.ts")).unwrap();
+    assert!(billing_ts.contains("export interface BillingMessage"));
+    assert!(!billing_ts.contains("export interface Person {"));
+    assert!(billing_ts.contains("import { type Person } from \"../common/common\";"));
+
+    // 4. Go: common has Person, billing has BillingMessage with common.Person alias
+    let common_go = fs::read_to_string(out_dir.join("go/common/common.go")).unwrap();
+    assert!(common_go.contains("type Person struct"));
+    let billing_go = fs::read_to_string(out_dir.join("go/billing/billing.go")).unwrap();
+    assert!(billing_go.contains("type BillingMessage struct"));
+    assert!(billing_go.contains("common \"enterprise/models/common\""));
+    assert!(billing_go.contains("type Person = common.Person"));
+
+    // 5. C#: common has Person, billing imports common namespace
+    let common_cs = fs::read_to_string(out_dir.join("cs/common/Common.cs")).unwrap();
+    assert!(common_cs.contains("public record Person"));
+    let billing_cs = fs::read_to_string(out_dir.join("cs/billing/Billing.cs")).unwrap();
+    assert!(billing_cs.contains("public record BillingMessage"));
+    assert!(!billing_cs.contains("public record Person("));
+    assert!(billing_cs.contains("using Generated.Common;"));
+
+    // 6. Java: common has Person.java, billing has BillingMessage.java importing common.Person
+    assert!(out_dir.join("java/common/Person.java").exists());
+    let billing_java =
+        fs::read_to_string(out_dir.join("java/billing/BillingMessage.java")).unwrap();
+    assert!(billing_java.contains("import com.enterprise.models.common.Person;"));
+
+    // 7. C++: common has Person, billing includes common.hpp and aliases using enterprise::models::common::Person
+    let common_cpp = fs::read_to_string(out_dir.join("cpp/common/common.hpp")).unwrap();
+    assert!(common_cpp.contains("struct Person"));
+    let billing_cpp = fs::read_to_string(out_dir.join("cpp/billing/billing.hpp")).unwrap();
+    assert!(billing_cpp.contains("struct BillingMessage"));
+    assert!(!billing_cpp.contains("struct Person {"));
+    assert!(billing_cpp.contains("#include \"../common/common.hpp\""));
+    assert!(billing_cpp.contains("using enterprise::models::common::Person;"));
+
+    // 8. Collision disambiguation in auth: local Person kept as Person, imported common:Person aliased to Person2
+    let auth_rs = fs::read_to_string(out_dir.join("rs/auth/auth.rs")).unwrap();
+    assert!(auth_rs.contains("pub struct Person<'a>"));
+    assert!(auth_rs.contains("pub struct AuthMessage<'a>"));
+    assert!(auth_rs.contains("pub shared: Person2<'a>"));
+    assert!(auth_rs.contains("pub local: Person<'a>"));
+    assert!(auth_rs.contains("use super::super::common::{Person as Person2};"));
+
+    let auth_py = fs::read_to_string(out_dir.join("py/auth/auth.py")).unwrap();
+    assert!(auth_py.contains("class Person:"));
+    assert!(auth_py.contains("class AuthMessage:"));
+    assert!(auth_py.contains("from ..common.common import Person as Person2"));
+
+    let auth_ts = fs::read_to_string(out_dir.join("ts/auth/auth.ts")).unwrap();
+    assert!(auth_ts.contains("export interface Person {"));
+    assert!(auth_ts.contains("export interface AuthMessage {"));
+    assert!(auth_ts.contains("import { type Person as Person2 } from \"../common/common\";"));
+
+    let auth_go = fs::read_to_string(out_dir.join("go/auth/auth.go")).unwrap();
+    assert!(auth_go.contains("type Person struct"));
+    assert!(auth_go.contains("type AuthMessage struct"));
+    assert!(auth_go.contains("type Person2 = common.Person"));
+
+    let auth_cs = fs::read_to_string(out_dir.join("cs/auth/Auth.cs")).unwrap();
+    assert!(auth_cs.contains("public record Person"));
+    assert!(auth_cs.contains("public record AuthMessage"));
+    assert!(auth_cs.contains("using Person2 = Generated.Common.Person;"));
+
+    let auth_cpp = fs::read_to_string(out_dir.join("cpp/auth/auth.hpp")).unwrap();
+    assert!(auth_cpp.contains("struct Person"));
+    assert!(auth_cpp.contains("struct AuthMessage"));
+    assert!(auth_cpp.contains("using Person2 = enterprise::models::common::Person;"));
+}

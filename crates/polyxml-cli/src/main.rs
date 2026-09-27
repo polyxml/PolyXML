@@ -3,13 +3,15 @@ pub mod config;
 mod options;
 use options::target_options;
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
 use clap::{Args, CommandFactory, Parser, Subcommand};
-use config::WorkspaceManifest;
+use config::{TargetConfig, WorkspaceManifest};
 use heck::AsPascalCase;
+use polyxml::codegen::build_type_name_map;
 use polyxml::codegen::cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
 use polyxml::codegen::csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 use polyxml::codegen::go::{GoBackend, GoCodegen, GoOptions};
@@ -19,7 +21,7 @@ use polyxml::codegen::python::{
 };
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
 use polyxml::codegen::typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
-use polyxml::ir::{SchemaIR, TypeDef};
+use polyxml::ir::{QName, SchemaIR, TypeDef, TypeRef};
 use polyxml::schema_parser::XsdParser;
 
 #[derive(Debug, Parser)]
@@ -333,6 +335,10 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
         target_options(target).resolve(&target.target)?;
     }
 
+    if !manifest.modules.is_empty() {
+        return run_module_build(&manifest, base_dir, &targets, args.dry_run, args.format);
+    }
+
     let schema_files = manifest.expand_schemas(base_dir)?;
     if schema_files.is_empty() {
         println!("No schema files matched workspace schema patterns.");
@@ -397,6 +403,553 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("Build finished successfully.");
+    Ok(())
+}
+
+fn visible_modules_for(module: &str, manifest: &WorkspaceManifest) -> BTreeSet<String> {
+    let mut visible = BTreeSet::new();
+    visible.insert(module.to_string());
+    let mut queue = vec![module.to_string()];
+    while let Some(current) = queue.pop() {
+        if let Some(config) = manifest.modules.get(&current) {
+            for dep in &config.depends_on {
+                if visible.insert(dep.clone()) {
+                    queue.push(dep.clone());
+                }
+            }
+        }
+    }
+    visible
+}
+
+fn run_module_build(
+    manifest: &WorkspaceManifest,
+    base_dir: &Path,
+    targets: &[TargetConfig],
+    dry_run: bool,
+    format: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let order = manifest.module_order()?;
+    let mut global = SchemaIR::new();
+    let mut owners = BTreeMap::<QName, String>::new();
+    let mut module_types = BTreeMap::<String, BTreeSet<QName>>::new();
+    let mut module_elements = BTreeMap::new();
+    let mut module_namespaces = BTreeMap::new();
+
+    for name in &order {
+        let paths = manifest.expand_module_schemas(name, base_dir)?;
+        if paths.is_empty() {
+            return Err(format!("Module '{name}' has no matching schema files").into());
+        }
+        let mut owned = BTreeSet::new();
+        let mut elements = BTreeMap::new();
+        for path in paths {
+            println!("Compiling module [{name}]: {}", path.display());
+            let mut parser = XsdParser::new();
+            let ir = parser.parse_file(&path)?;
+            module_namespaces
+                .entry(name.clone())
+                .or_insert_with(|| ir.target_namespace.clone());
+            for (qname, def) in &ir.types {
+                if qname.namespace == ir.target_namespace {
+                    if let Some(existing) = owners.insert(qname.clone(), name.clone()) {
+                        if existing != *name {
+                            return Err(format!(
+                                "Type {qname} is owned by both '{existing}' and '{name}'"
+                            )
+                            .into());
+                        }
+                    }
+                    owned.insert(qname.clone());
+                }
+                global
+                    .types
+                    .entry(qname.clone())
+                    .or_insert_with(|| def.clone());
+            }
+            for (qname, def) in &ir.elements {
+                if qname.namespace == ir.target_namespace {
+                    elements.insert(qname.clone(), def.clone());
+                }
+            }
+            global.namespaces.extend(ir.namespaces);
+            for (head, members) in ir.substitution_groups {
+                global
+                    .substitution_groups
+                    .entry(head)
+                    .or_default()
+                    .extend(members);
+            }
+        }
+        module_types.insert(name.clone(), owned);
+        module_elements.insert(name.clone(), elements);
+    }
+
+    for qname in global.types.keys() {
+        if !owners.contains_key(qname) {
+            return Err(
+                format!("Imported type {qname} has no owning [modules.<name>] entry").into(),
+            );
+        }
+    }
+
+    if dry_run {
+        for name in &order {
+            println!("Module [{name}]: {} owned types", module_types[name].len());
+        }
+        return Ok(());
+    }
+
+    let output_base = manifest
+        .workspace
+        .as_ref()
+        .and_then(|workspace| workspace.output_base_dir.as_ref())
+        .map(|dir| {
+            if Path::new(dir).is_absolute() {
+                PathBuf::from(dir)
+            } else {
+                base_dir.join(dir)
+            }
+        })
+        .unwrap_or_else(|| base_dir.to_path_buf());
+
+    for target in targets {
+        let target_root = output_base.join(&target.output);
+        fs::create_dir_all(&target_root)?;
+        let language = target.target.to_ascii_lowercase();
+        if language == "go" {
+            let go_module = manifest
+                .workspace
+                .as_ref()
+                .and_then(|workspace| workspace.go_module.as_deref())
+                .unwrap_or("polyxml/generated");
+            let go_mod = target_root.join("go.mod");
+            if !go_mod.exists() {
+                fs::write(&go_mod, format!("module {go_module}\n\ngo 1.22\n"))?;
+            }
+        }
+        if language == "python" || language == "py" {
+            fs::write(
+                target_root.join("__init__.py"),
+                "# Generated workspace modules\n",
+            )?;
+        }
+
+        // Precompute canonical exported type names for all types in their owning modules.
+        let mut owner_exported_names: BTreeMap<QName, String> = BTreeMap::new();
+        for module_name in &order {
+            let visible = visible_modules_for(module_name, manifest);
+            let mut ir = global.clone();
+            ir.target_namespace = module_namespaces[module_name].clone();
+            ir.elements = module_elements[module_name].clone();
+            ir.types.retain(|qname, _| {
+                owners
+                    .get(qname)
+                    .is_some_and(|owner| visible.contains(owner))
+            });
+            ir.external_types = owners
+                .iter()
+                .filter(|(_qname, owner)| *owner != module_name && visible.contains(*owner))
+                .map(|(qname, owner)| (qname.clone(), owner.clone()))
+                .collect();
+            let names = match language.as_str() {
+                "go" => build_type_name_map(&ir, polyxml::codegen::go::to_go_type_name),
+                "java" => build_type_name_map(&ir, polyxml::codegen::java::to_java_type_name),
+                "csharp" | "cs" | "c#" => {
+                    build_type_name_map(&ir, polyxml::codegen::csharp::to_csharp_type_name)
+                }
+                "cpp" | "c++" => build_type_name_map(&ir, polyxml::codegen::cpp::to_cpp_type_name),
+                "typescript" | "ts" => {
+                    build_type_name_map(&ir, polyxml::codegen::typescript::to_ts_type_name)
+                }
+                _ => build_type_name_map(&ir, |n| AsPascalCase(n).to_string()),
+            };
+            for (qname, owner) in &owners {
+                if owner == module_name {
+                    if let Some(n) = names.get(qname) {
+                        owner_exported_names.insert(qname.clone(), n.clone());
+                    }
+                }
+            }
+        }
+
+        let mut rust_root = String::new();
+        for name in &order {
+            let visible = visible_modules_for(name, manifest);
+            let mut ir = global.clone();
+            ir.target_namespace = module_namespaces[name].clone();
+            ir.elements = module_elements[name].clone();
+            ir.types.retain(|qname, _| {
+                owners
+                    .get(qname)
+                    .is_some_and(|owner| visible.contains(owner))
+            });
+            ir.external_types = owners
+                .iter()
+                .filter(|(_qname, owner)| *owner != name && visible.contains(*owner))
+                .map(|(qname, owner)| (qname.clone(), owner.clone()))
+                .collect();
+
+            let module_dir = target_root.join(name);
+            fs::create_dir_all(&module_dir)?;
+            let mut module_target = target.clone();
+            let package_root = target.package.as_deref().or(target.namespace.as_deref());
+            module_target.package = match language.as_str() {
+                "go" => Some(name.clone()),
+                "java" => Some(format!(
+                    "{}.{}",
+                    package_root.unwrap_or("generated.models"),
+                    name
+                )),
+                "csharp" | "c#" | "cs" => {
+                    Some(format!("{}.{}", package_root.unwrap_or("Generated"), name))
+                }
+                "cpp" | "c++" => Some(format!(
+                    "{}::{}",
+                    package_root.unwrap_or("polyxml::generated"),
+                    name
+                )),
+                _ => target.package.clone(),
+            };
+            module_target.namespace = None;
+            let opts = target_options(&module_target).resolve(&module_target.target)?;
+            let fake_schema = PathBuf::from(format!("{name}.xsd"));
+            emit_target_code(&language, opts, &module_dir, &fake_schema, &ir)?;
+            let references = referenced_external_types(&ir);
+            inject_module_imports(
+                &language,
+                &module_dir,
+                name,
+                &references,
+                &owners,
+                &owner_exported_names,
+                &ir,
+                target,
+                manifest,
+                &target_root,
+            )?;
+            if format {
+                run_language_formatter(&language, &module_dir);
+            }
+            if language == "rust" || language == "rs" {
+                rust_root.push_str(&format!("pub mod {name};\n"));
+            }
+        }
+        if !rust_root.is_empty() {
+            fs::write(target_root.join("mod.rs"), rust_root)?;
+        }
+    }
+    println!("Module build finished successfully.");
+    Ok(())
+}
+
+fn referenced_external_types(ir: &SchemaIR) -> BTreeSet<QName> {
+    fn collect(reference: &TypeRef, names: &mut BTreeSet<QName>) {
+        match reference {
+            TypeRef::Named(qname) => {
+                names.insert(qname.clone());
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => collect(inner, names),
+            TypeRef::Primitive(_) => {}
+        }
+    }
+    let mut names = BTreeSet::new();
+    for def in ir.emitted_types() {
+        match def {
+            TypeDef::Struct(structure) => {
+                if let Some(base) = &structure.base_type {
+                    names.insert(base.clone());
+                }
+                for field in &structure.fields {
+                    collect(&field.type_ref, &mut names);
+                }
+            }
+            TypeDef::Union(union) => {
+                for branch in &union.branches {
+                    collect(&branch.type_ref, &mut names);
+                }
+            }
+            TypeDef::Simple(simple) => collect(&simple.base_type, &mut names),
+            TypeDef::Enum(_) => {}
+        }
+    }
+    for element in ir.elements.values() {
+        collect(&element.type_ref, &mut names);
+    }
+    names.retain(|name| ir.is_external_type(name));
+    names
+}
+
+#[derive(Debug)]
+struct ModuleImportedType {
+    orig_name: String,
+    local_name: String,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn inject_module_imports(
+    language: &str,
+    module_dir: &Path,
+    module_name: &str,
+    references: &BTreeSet<QName>,
+    owners: &BTreeMap<QName, String>,
+    owner_exported_names: &BTreeMap<QName, String>,
+    ir: &SchemaIR,
+    target: &TargetConfig,
+    manifest: &WorkspaceManifest,
+    target_root: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if references.is_empty() {
+        return Ok(());
+    }
+    let names = match language {
+        "go" => build_type_name_map(ir, polyxml::codegen::go::to_go_type_name),
+        "java" => build_type_name_map(ir, polyxml::codegen::java::to_java_type_name),
+        "csharp" | "cs" | "c#" => {
+            build_type_name_map(ir, polyxml::codegen::csharp::to_csharp_type_name)
+        }
+        "cpp" | "c++" => build_type_name_map(ir, polyxml::codegen::cpp::to_cpp_type_name),
+        "typescript" | "ts" => {
+            build_type_name_map(ir, polyxml::codegen::typescript::to_ts_type_name)
+        }
+        _ => build_type_name_map(ir, |name| AsPascalCase(name).to_string()),
+    };
+    let mut by_owner = BTreeMap::<String, Vec<ModuleImportedType>>::new();
+    for qname in references {
+        let owner = &owners[qname];
+        let local_name = names[qname].clone();
+        let orig_name = owner_exported_names
+            .get(qname)
+            .cloned()
+            .unwrap_or_else(|| local_name.clone());
+        by_owner
+            .entry(owner.clone())
+            .or_default()
+            .push(ModuleImportedType {
+                orig_name,
+                local_name,
+            });
+    }
+    let package_root = target.package.as_deref().or(target.namespace.as_deref());
+    let go_module = manifest
+        .workspace
+        .as_ref()
+        .and_then(|workspace| workspace.go_module.as_deref())
+        .unwrap_or("polyxml/generated");
+    for entry in fs::read_dir(module_dir)? {
+        let path = entry?.path();
+        if !path.is_file() {
+            continue;
+        }
+        let extension = path
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or("");
+        let expected = match language {
+            "python" | "py" => "py",
+            "rust" | "rs" => "rs",
+            "typescript" | "ts" => "ts",
+            "java" => "java",
+            "cpp" | "c++" => "hpp",
+            "go" => "go",
+            "csharp" | "cs" | "c#" => "cs",
+            _ => continue,
+        };
+        if extension != expected
+            || path
+                .file_stem()
+                .is_some_and(|stem| stem == "mod" || stem == "index" || stem == "__init__")
+        {
+            continue;
+        }
+        let mut code = fs::read_to_string(&path)?;
+        match language {
+            "python" | "py" => {
+                let imports = by_owner
+                    .iter()
+                    .map(|(owner, types)| {
+                        format!(
+                            "from ..{owner}.{owner} import {}\n",
+                            types
+                                .iter()
+                                .map(|t| format!("{} as {}", t.orig_name, t.local_name))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    })
+                    .collect::<String>();
+                code = code.replacen(
+                    "from __future__ import annotations\n",
+                    &format!("from __future__ import annotations\n\n{imports}"),
+                    1,
+                );
+            }
+            "rust" | "rs" => {
+                let imports = by_owner
+                    .iter()
+                    .map(|(owner, types)| {
+                        let items = types
+                            .iter()
+                            .map(|t| {
+                                if t.orig_name == t.local_name {
+                                    t.orig_name.clone()
+                                } else {
+                                    format!("{} as {}", t.orig_name, t.local_name)
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        format!("use super::super::{owner}::{{{items}}};\n")
+                    })
+                    .collect::<String>();
+                if let Some(pos) = code.find("\n\n") {
+                    code.insert_str(pos + 2, &imports);
+                }
+            }
+            "typescript" | "ts" => {
+                let imports = by_owner
+                    .iter()
+                    .map(|(owner, types)| {
+                        let mut names = types
+                            .iter()
+                            .map(|t| {
+                                if t.orig_name == t.local_name {
+                                    format!("type {}", t.orig_name)
+                                } else {
+                                    format!("type {} as {}", t.orig_name, t.local_name)
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        for t in types {
+                            if code.contains(&format!("{}Schema", t.local_name)) {
+                                if t.orig_name == t.local_name {
+                                    names.push(format!("{}Schema", t.orig_name));
+                                } else {
+                                    names.push(format!(
+                                        "{}Schema as {}Schema",
+                                        t.orig_name, t.local_name
+                                    ));
+                                }
+                            }
+                        }
+                        format!(
+                            "import {{ {} }} from \"../{owner}/{owner}\";\n",
+                            names.join(", ")
+                        )
+                    })
+                    .collect::<String>();
+                code = format!("{imports}{code}");
+            }
+            "java" => {
+                let root = package_root.unwrap_or("generated.models");
+                let direct_codec = target
+                    .features
+                    .iter()
+                    .any(|feature| feature == "direct-codec");
+                let imports = by_owner
+                    .iter()
+                    .flat_map(|(owner, types)| {
+                        types.iter().flat_map(move |t| {
+                            let mut imports =
+                                vec![format!("import {root}.{owner}.{};\n", t.orig_name)];
+                            if direct_codec {
+                                imports
+                                    .push(format!("import {root}.{owner}.{}Codec;\n", t.orig_name));
+                            }
+                            imports
+                        })
+                    })
+                    .collect::<String>();
+                if let Some(pos) = code.find(";\n") {
+                    code.insert_str(pos + 2, &imports);
+                }
+            }
+            "cpp" | "c++" => {
+                let root = package_root.unwrap_or("polyxml::generated");
+                let includes = by_owner
+                    .keys()
+                    .map(|owner| format!("#include \"../{owner}/{owner}.hpp\"\n"))
+                    .collect::<String>();
+                let aliases = by_owner
+                    .iter()
+                    .flat_map(|(owner, types)| {
+                        types.iter().map(move |t| {
+                            if t.orig_name == t.local_name {
+                                format!("using {root}::{owner}::{};\n", t.orig_name)
+                            } else {
+                                format!(
+                                    "using {} = {root}::{owner}::{};\n",
+                                    t.local_name, t.orig_name
+                                )
+                            }
+                        })
+                    })
+                    .collect::<String>();
+                code = format!("{includes}{code}");
+                let ns = format!("namespace {root}::{module_name} {{");
+                code = code.replacen(&ns, &format!("{ns}\n{aliases}"), 1);
+            }
+            "go" => {
+                let imports = by_owner
+                    .keys()
+                    .map(|owner| format!("    {owner} \"{go_module}/{owner}\"\n"))
+                    .collect::<String>();
+                if let Some(pos) = code.find("import (\n") {
+                    code.insert_str(pos + "import (\n".len(), &imports);
+                } else if let Some(pos) = code
+                    .find("\npackage ")
+                    .and_then(|start| code[start + 1..].find('\n').map(|end| start + 1 + end))
+                {
+                    code.insert_str(pos + 1, &format!("\nimport (\n{imports})\n"));
+                }
+                let aliases = by_owner
+                    .iter()
+                    .flat_map(|(owner, types)| {
+                        types.iter().map(move |t| {
+                            format!("type {} = {owner}.{}\n", t.local_name, t.orig_name)
+                        })
+                    })
+                    .collect::<String>();
+                code.push_str(&format!("\n{aliases}"));
+            }
+            "csharp" | "cs" | "c#" => {
+                let root = package_root.unwrap_or("Generated");
+                let imports = by_owner
+                    .keys()
+                    .map(|owner| {
+                        format!(
+                            "using {};\n",
+                            polyxml::codegen::csharp::to_csharp_namespace(&format!(
+                                "{root}.{owner}"
+                            ))
+                        )
+                    })
+                    .collect::<String>();
+                let aliases = by_owner
+                    .iter()
+                    .flat_map(|(owner, types)| {
+                        let owner_ns = polyxml::codegen::csharp::to_csharp_namespace(&format!(
+                            "{root}.{owner}"
+                        ));
+                        types.iter().filter_map(move |t| {
+                            if t.orig_name != t.local_name {
+                                Some(format!(
+                                    "using {} = {owner_ns}.{};\n",
+                                    t.local_name, t.orig_name
+                                ))
+                            } else {
+                                None
+                            }
+                        })
+                    })
+                    .collect::<String>();
+                code = format!("{imports}{aliases}{code}");
+            }
+            _ => {}
+        }
+        fs::write(path, code)?;
+    }
+    let _ = target_root;
     Ok(())
 }
 

@@ -457,9 +457,22 @@ pub struct SchemaIR {
     pub types: BTreeMap<QName, TypeDef>,
     pub elements: BTreeMap<QName, ElementDef>,
     pub substitution_groups: HashMap<QName, Vec<QName>>,
+    /// Type owners outside the module currently being emitted. Definitions
+    /// remain in `types` so generators can resolve their field semantics.
+    #[serde(default)]
+    pub external_types: BTreeMap<QName, String>,
 }
 
 impl SchemaIR {
+    pub fn is_external_type(&self, qname: &QName) -> bool {
+        self.external_types.contains_key(qname)
+    }
+
+    pub fn emitted_types(&self) -> impl Iterator<Item = &TypeDef> {
+        self.types
+            .values()
+            .filter(|ty| !self.is_external_type(ty.qname()))
+    }
     pub fn new() -> Self {
         Self::default()
     }

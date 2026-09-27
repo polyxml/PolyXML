@@ -276,6 +276,9 @@ impl PythonCodegen {
         let sorted_types = self.order_types(ir);
 
         for type_def in sorted_types {
+            if ir.is_external_type(type_def.qname()) {
+                continue;
+            }
             out.push('\n');
             match type_def {
                 TypeDef::Simple(s) => self.emit_simple_type(&mut out, s),
@@ -298,7 +301,7 @@ impl PythonCodegen {
         let mut has_decimal = false;
         let mut has_annotated = false;
 
-        for type_def in ir.types.values() {
+        for type_def in ir.emitted_types() {
             match type_def {
                 TypeDef::Struct(_) => has_structs = true,
                 TypeDef::Enum(_) => has_enums = true,

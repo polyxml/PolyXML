@@ -259,6 +259,9 @@ impl RustCodegen {
         }
 
         for type_def in &sorted_types {
+            if ir.is_external_type(type_def.qname()) {
+                continue;
+            }
             out.push('\n');
             match type_def {
                 TypeDef::Simple(s) => self.emit_simple_type(&mut out, s, &types_with_lifetime),
