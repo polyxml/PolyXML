@@ -1,3 +1,10 @@
+# [0.28.0](https://github.com/polyxml/PolyXML/compare/v0.27.0...v0.28.0) (2026-09-27)
+
+
+### Features
+
+* support lexical XSD unions across targets ([8cfb0dc](https://github.com/polyxml/PolyXML/commit/8cfb0dcb92986b9008e5e157ab9e024b2907adcd)), closes [#85](https://github.com/polyxml/PolyXML/issues/85)
+
 # [0.27.0](https://github.com/polyxml/PolyXML/compare/v0.26.0...v0.27.0) (2026-09-27)
 
 
