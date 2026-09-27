@@ -355,6 +355,14 @@ impl XmlDeserializer {
                                     }
                                 }
                                 ValueType::Nested(sub_schema) => {
+                                    if is_nil {
+                                        stack
+                                            .last_mut()
+                                            .unwrap()
+                                            .push_list_item(field_idx, PolyValue::Null);
+                                        unknown_depth = 1;
+                                        continue;
+                                    }
                                     let frame_schema = resolve_record_schema(
                                         sub_schema,
                                         e,
@@ -367,6 +375,12 @@ impl XmlDeserializer {
                                 _ => {}
                             },
                             ValueType::Nested(sub_schema) => {
+                                if is_nil {
+                                    stack.last_mut().unwrap().values[field_idx] =
+                                        Some(PolyValue::Null);
+                                    unknown_depth = 1;
+                                    continue;
+                                }
                                 let frame_schema = resolve_record_schema(
                                     sub_schema,
                                     e,
@@ -414,6 +428,13 @@ impl XmlDeserializer {
                                     stack.last_mut().unwrap().push_list_item(field_idx, val);
                                 }
                                 ValueType::Nested(sub_schema) => {
+                                    if is_nil {
+                                        stack
+                                            .last_mut()
+                                            .unwrap()
+                                            .push_list_item(field_idx, PolyValue::Null);
+                                        continue;
+                                    }
                                     let frame_schema =
                                         resolve_record_schema(sub_schema, e, &scope)?;
                                     let mut frame = StackFrame::new(frame_schema);
@@ -427,6 +448,11 @@ impl XmlDeserializer {
                                 _ => {}
                             },
                             ValueType::Nested(sub_schema) => {
+                                if is_nil {
+                                    stack.last_mut().unwrap().values[field_idx] =
+                                        Some(PolyValue::Null);
+                                    continue;
+                                }
                                 let frame_schema = resolve_record_schema(sub_schema, e, &scope)?;
                                 let mut frame = StackFrame::new(frame_schema);
                                 Self::parse_attributes(e, &mut frame)?;

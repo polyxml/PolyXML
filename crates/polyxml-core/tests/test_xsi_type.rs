@@ -42,9 +42,9 @@ const VEHICLE_XSD: &str = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSche
     <xs:element name="Root">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="vehicle" type="t:Vehicle"/>
+                <xs:element name="vehicle" type="t:Vehicle" nillable="true"/>
                 <xs:element name="spare" type="t:Vehicle"
-                            minOccurs="0" maxOccurs="unbounded"/>
+                            minOccurs="0" maxOccurs="unbounded" nillable="true"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
@@ -327,6 +327,19 @@ fn abstract_type_requires_concrete_selector() {
     ] {
         let err = polyxml::deserialize(xml, Arc::clone(&root)).unwrap_err();
         assert!(err.to_string().contains("requires xsi:type"), "{err}");
+    }
+}
+
+#[test]
+fn nil_abstract_complex_type_skips_concrete_dispatch() {
+    let root = schema_for(Some("Root"));
+    for xml in [
+        br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:nil="true"/><spare xsi:nil="true"/></Root>"#.as_slice(),
+        br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:nil="true"></vehicle><spare xsi:nil="true"></spare></Root>"#.as_slice(),
+    ] {
+        let value = polyxml::deserialize(xml, Arc::clone(&root)).expect("nil abstract field");
+        assert!(matches!(rec_field(&value, "vehicle"), Some(PolyValue::Null)));
+        assert!(matches!(rec_field(&value, "spare"), Some(PolyValue::List(items)) if matches!(items.as_slice(), [PolyValue::Null])));
     }
 }
 

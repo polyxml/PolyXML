@@ -59,6 +59,17 @@ class Fleet:
 
 
 @dataclass
+class NullableFleet:
+    class Meta:
+        name = "Fleet"
+
+    vehicle: Vehicle | None = field(
+        default=None,
+        metadata={"type": "Element", "name": "vehicle", "nillable": True},
+    )
+
+
+@dataclass
 class LonelyBase:
     class Meta:
         name = "LonelyBase"
@@ -83,6 +94,14 @@ FLEET_XML = (
     b'<spare xsi:type="Car"><id>S2</id><doors>2</doors></spare>'
     b"</Fleet>"
 )
+
+
+def test_nil_abstract_complex_type_without_selector():
+    xml = (
+        b'<Fleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+        b'<vehicle xsi:nil="true"/></Fleet>'
+    )
+    assert polyxml.deserialize(xml, NullableFleet).vehicle is None
 
 
 def make_fleet() -> Fleet:
