@@ -1,3 +1,10 @@
+# [0.25.0](https://github.com/polyxml/PolyXML/compare/v0.24.2...v0.25.0) (2026-09-27)
+
+
+### Features
+
+* **codegen:** preserve document order in unbounded xs:choice ([#79](https://github.com/polyxml/PolyXML/issues/79)) ([19ed893](https://github.com/polyxml/PolyXML/commit/19ed893594f98274ce64a5b7a393cd05bc4cc063))
+
 ## [0.24.2](https://github.com/polyxml/PolyXML/compare/v0.24.1...v0.24.2) (2026-09-27)
 
 
