@@ -53,6 +53,19 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 5. **🛡️ Controlled XML Entity Handling**: The native streaming runtime resolves standard and numeric character references in memory and does not fetch external entities while parsing XML. Schema compilation separately reads local XSD includes and imports.
 
+### PolyXML vs. Existing Solutions
+
+| Feature / Capability | PolyXML | `xsdata` | JAXB (`xjc`) | CodeSynthesis XSD |
+| :--- | :---: | :---: | :---: | :---: |
+| **Supported Ecosystems** | **7 languages simultaneously**<br>*(Rust, Python, Go, C++, Java, TS, C#)* | Python only | Java only | C++ only |
+| **Streaming XML Engine** | **⚡ Zero-copy native streaming**<br>*(sub-microsecond per packet)* | Interpreted DOM / tree | StAX / DOM | Pull parser |
+| **Python XML Performance** | **⚡ 10.0x faster read / 23.5x write** | Baseline | N/A | N/A |
+| **Ahead-of-Time Native PyO3** | **⚡ 8.4x faster AOT extensions**<br>*(134k ops/s @ 7.4 µs on USAF UCI)* | ❌ No | ❌ No | ❌ No |
+| **Dual XML ↔ JSON Binding** | **✅ Built-in on exact same models**<br>*(9x–15x faster than xsdata JSON)* | Slow reflection | Third-party Jackson | ❌ No |
+| **Massive Complex Schemas** | **✅ Tarjan cycle-cutting**<br>*(USAF UCI: 8.3 MB, 5,558 types)* | Fails / OOM on large schemas | High memory overhead | High compilation RAM |
+| **W3C XSTS Conformance** | **✅ >99.8% schema compilation** | Partial | High | High |
+| **Open Source License** | **✅ Permissive MIT** | MIT | CDDL / GPL | **⚠️ Commercial / GPL dual-license** |
+
 ---
 
 ## ⚡ Quick Start: From XSD to Code in Seconds
@@ -106,11 +119,22 @@ Bridge legacy enterprise XML (ISO 20022 banking, HL7 healthcare, FIXM aviation) 
 
 ## 🚀 Performance Benchmarks
 
-Headline numbers ([full methodology & reproduction steps →](docs/benchmarks/index.md)):
+Every published metric is backed by committed raw execution logs, deterministic fixtures, and automated reproduction harnesses ([full methodology & index →](docs/benchmarks/index.md)):
 
-- **10.0x faster to read and 23.5x faster to write** than `xsdata` on the 10,000-item Python catalog ([raw results](benchmarks/python/results.md), [method](benchmarks/python/README.md)).
-- **Ahead-of-Time PyO3 Native Extensions (`--backend aot`)**: 3.4x faster throughput (585k ops/sec) and 60.3% less memory than slotted dataclasses via compiled Rust C-extensions ([AOT benchmark →](docs/benchmarks/python-aot-vs-dataclass.md)).
-- **3.2 μs per telemetry packet** (13.9x vs `xsdata`) while returning typed dataclasses ([raw results](benchmarks/python/results.md)).
+### ⚡ Python XML Data-Binding
+- **10.0x faster reads & 23.5x faster writes** vs `xsdata` on a 10,000-item catalog ([raw results](benchmarks/python/results.md), [methodology](benchmarks/python/README.md)).
+- **3.2 μs per telemetry packet** (13.9x faster vs `xsdata`) while returning fully-typed Python dataclasses.
+
+### ⚡ Ahead-of-Time (AOT) PyO3 Native Extensions (`--backend aot`)
+- **8.4x faster reads & 10.3x faster writes** on real-world USAF UCI mission telemetry: parses XML in **7.44 μs (134,336 ops/sec, 193.5 MB/s)** vs 62.5 μs in standard dataclasses ([AOT benchmark report](docs/benchmarks/python-json-binary-aot-2026-09.md)).
+- **60.3% memory reduction**: Retaining 10,000 telemetry objects consumes only 1.02 MB under AOT vs 2.57 MB with slotted dataclasses ([AOT architecture breakdown](docs/benchmarks/python-aot-vs-dataclass.md)).
+
+### ⚡ Built-in Dual JSON & Binary Bindings
+- **9.2x to 15.5x faster JSON deserialization** than `xsdata` on identical Python dataclass models (12.8 μs vs 156.5 μs for sensor data; 1.3 ms vs 20.5 ms for 100-item batches).
+- **2.3x faster binary decoding** than standard library `pickle` on sensor packets with 36% smaller wire payloads (118 B vs 185 B).
+
+### ⚡ Multi-Language Streaming Core
+- Deserializing 1,000-sensor XML batches across native targets: **0.355 ms** in Rust, **0.511 ms** in Java (StAX direct codec), **0.556 ms** in C# (.NET 8), and **1.079 ms** in native C++20 ([7-target language results](docs/benchmarks/language-results-2026-09.md)).
 
 ---
 
