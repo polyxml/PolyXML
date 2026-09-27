@@ -3,7 +3,8 @@
 The **native binding lane** exercises PolyXML's actual C++ API over the Rust
 C ABI. Run `./benchmarks/cpp/run_runtime.sh` after installing a C++20 compiler
 and Rust. It builds `polyxml-c`, creates a scalar `Sensor` schema once, checks
-an XML round trip, and measures read and write for a 50-byte sensor message.
+an XML round trip, and measures read and write for the 50-byte sensor message
+extracted from the [shared one-sensor fixture](../workloads/sensor-batch/README.md).
 Five repeated timings are printed per operation. The native API currently
 supports scalar schema fields through `SchemaBuilder`; this lane does not
 materialize generated C++ models or the 1,000-sensor shared batch.

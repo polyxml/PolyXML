@@ -1,12 +1,22 @@
 #include "polyxml.hpp"
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 #include <string>
 
 int main() {
-    const std::string xml = "<Sensor><Id>sensor-0</Id><Value>0</Value></Sensor>";
+    std::ifstream file("../workloads/sensor-batch/sensor-1.xml");
+    if (!file) throw std::runtime_error("Shared XML fixture not found");
+    const std::string batch((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto start_tag = batch.find("<Sensor>");
+    const auto end_tag = batch.find("</Sensor>");
+    if (start_tag == std::string::npos || end_tag == std::string::npos) {
+        throw std::runtime_error("Invalid shared XML fixture");
+    }
+    const std::string xml = batch.substr(start_tag, end_tag + 9 - start_tag);
     const auto schema = polyxml::SchemaBuilder("Sensor")
         .add_element("Id", "Id", POLYXML_SCALAR_STRING)
         .add_element("Value", "Value", POLYXML_SCALAR_INT)

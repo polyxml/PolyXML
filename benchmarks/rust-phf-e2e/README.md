@@ -5,6 +5,8 @@ Run `./benchmarks/rust-phf-e2e/run.sh` from the repository root after
 schemas with the default `match` and opt-in `--feature phf`, then decodes the
 same XML document through the generated `from_xml` methods. It checks the last
 field before measuring and reports five repetitions in ns/document and MB/s.
+Set `POLYXML_PHF_FIRST=1` for a second run with the strategy order reversed;
+compare both runs before interpreting a small difference.
 
 These are small and medium schemas only. The 600/1500-element compile-time and
 binary-size study remains deferred in issue #55, and no automatic `phf`

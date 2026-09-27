@@ -47,16 +47,31 @@ fn main() {
         phf_120::Record::from_xml(medium).unwrap().field119,
         "value-119"
     );
-    measure("16/match", small, 100_000, |xml| {
-        match_16::Record::from_xml(xml).unwrap()
-    });
-    measure("16/phf", small, 100_000, |xml| {
-        phf_16::Record::from_xml(xml).unwrap()
-    });
-    measure("120/match", medium, 10_000, |xml| {
-        match_120::Record::from_xml(xml).unwrap()
-    });
-    measure("120/phf", medium, 10_000, |xml| {
-        phf_120::Record::from_xml(xml).unwrap()
-    });
+    if std::env::var_os("POLYXML_PHF_FIRST").is_some() {
+        measure("16/phf", small, 100_000, |xml| {
+            phf_16::Record::from_xml(xml).unwrap()
+        });
+        measure("16/match", small, 100_000, |xml| {
+            match_16::Record::from_xml(xml).unwrap()
+        });
+        measure("120/phf", medium, 10_000, |xml| {
+            phf_120::Record::from_xml(xml).unwrap()
+        });
+        measure("120/match", medium, 10_000, |xml| {
+            match_120::Record::from_xml(xml).unwrap()
+        });
+    } else {
+        measure("16/match", small, 100_000, |xml| {
+            match_16::Record::from_xml(xml).unwrap()
+        });
+        measure("16/phf", small, 100_000, |xml| {
+            phf_16::Record::from_xml(xml).unwrap()
+        });
+        measure("120/match", medium, 10_000, |xml| {
+            match_120::Record::from_xml(xml).unwrap()
+        });
+        measure("120/phf", medium, 10_000, |xml| {
+            phf_120::Record::from_xml(xml).unwrap()
+        });
+    }
 }
