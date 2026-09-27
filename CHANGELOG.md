@@ -1,3 +1,10 @@
+## [0.30.1](https://github.com/polyxml/PolyXML/compare/v0.30.0...v0.30.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **cli:** treat synthetic builtins as local across module boundaries ([ce0a0c6](https://github.com/polyxml/PolyXML/commit/ce0a0c651a4a3d67c954d1256b377fe12adc4c2b))
+
 # [0.30.0](https://github.com/polyxml/PolyXML/compare/v0.29.0...v0.30.0) (2026-09-27)
 
 
