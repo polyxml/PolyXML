@@ -15,7 +15,7 @@ suite works; it is not a performance result.
 | Target | What it measures | Suite and instructions | Published results |
 | :--- | :--- | :--- | :--- |
 | Rust | Core XML read/write; tag dispatch and generated decoder check | [Criterion suites](https://github.com/polyxml/PolyXML/tree/main/crates/polyxml-core/benches), [generated decoder runner](https://github.com/polyxml/PolyXML/tree/main/benchmarks/rust-phf-e2e) | [Core results](#2-pure-rust-core-throughput-cratespolyxml-core), [dispatch study](rust-phf-dispatch.md) |
-| Python | Typed binding vs Python XML libraries; AOT vs dataclasses | [Python suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python) | [Comparative results](#1-python-deserialization-serialization-throughput), [AOT study](python-aot-vs-dataclass.md) |
+| Python | Typed binding vs Python XML libraries; JSON vs `xsdata`; binary vs `pickle`; AOT | [Python suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python), [JSON](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python-json), [Binary](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python-binary), [AOT](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python-aot) | [XML results](#1-python-deserialization-serialization-throughput), [JSON, binary & AOT study](python-json-binary-aot-2026-09.md), [AOT study](python-aot-vs-dataclass.md) |
 | Java | Generated POJOs, JAXB, Jackson, and Panama | [JMH suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java) | [September 2026 measurements](language-results-2026-09.md#java-jmh-binding-comparison) |
 | Go | Generated structs vs equivalent handwritten structs, both using `encoding/xml` | [Go suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/go) | [September 2026 measurements](language-results-2026-09.md#go-generated-model-vs-handwritten-model) |
 | C++ | Native binding plus generated-model XML adapter | [C++ suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cpp) | [September 2026 measurements](language-results-2026-09.md#c-native-binding-and-model-adapter) |
@@ -43,6 +43,8 @@ lists every entry point.
 
 - [September 2026 language runs](language-results-2026-09.md): repeated Java,
   Go, C#, and C++ measurements with raw output and workload limits.
+- [Python JSON, binary, and real-world AOT runs](python-json-binary-aot-2026-09.md):
+  verified `xsdata` JSON, `pickle`/`cloudpickle` binary, and USAF UCI AOT measurements with raw outputs.
 - [WebAssembly vs JavaScript](wasm-vs-js.md): Node, Bun, and Chromium workloads.
 - [Python AOT vs dataclasses](python-aot-vs-dataclass.md): throughput and memory.
 - [Rust tag dispatch](rust-phf-dispatch.md): dispatch strategies and their tradeoffs.

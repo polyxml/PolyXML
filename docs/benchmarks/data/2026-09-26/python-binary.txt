@@ -1,0 +1,39 @@
+Running Python binary benchmarks (iterations=50, warmup=10)...
+
+# Python Binary Serialization Benchmarks
+
+- **Date**: 2026-09-27T03:05:21Z
+- **Python**: 3.12.14
+- **Iterations**: 50 (after 10 warmup runs)
+- **Semantic Check**: Verified `assert loads(dumps(obj)) == obj` for all serializers.
+
+## 1. Uncompressed Serialization & Deserialization
+
+| Workload | Serializer | Payload Size | Encode Median | Decode Median | Encode Ops/s | Decode Ops/s |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| Sensor (Small) | **PolyXML Binary** | 118 B | 5.3 μs | 3.6 μs | 188,147 | 276,129 |
+| Sensor (Small) | Pickle 5 (Stdlib C) | 185 B | 5.1 μs | 8.2 μs | 195,695 | 121,721 |
+| Sensor (Small) | CloudPickle | 185 B | 18.8 μs | 8.1 μs | 53,233 | 123,678 |
+| Order (Nested) | **PolyXML Binary** | 642 B | 23.6 μs | 16.7 μs | 42,382 | 59,893 |
+| Order (Nested) | Pickle 5 (Stdlib C) | 684 B | 24.2 μs | 27.3 μs | 41,328 | 36,668 |
+| Order (Nested) | CloudPickle | 684 B | 92.7 μs | 27.3 μs | 10,792 | 36,621 |
+| Batch (100 Items) | **PolyXML Binary** | 11,853 B | 180.4 μs | 331.0 μs | 5,544 | 3,022 |
+| Batch (100 Items) | Pickle 5 (Stdlib C) | 7,192 B | 248.7 μs | 275.2 μs | 4,021 | 3,634 |
+| Batch (100 Items) | CloudPickle | 7,192 B | 718.1 μs | 282.2 μs | 1,392 | 3,544 |
+
+## 2. Compressed (LZ4) Serialization & Deserialization
+
+| Workload | Serializer | LZ4 Size | Encode+LZ4 Median | Decode+LZ4 Median | Encode+LZ4 Ops/s | Decode+LZ4 Ops/s |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| Sensor (Small) | **PolyXML Binary** | 138 B | 6.9 μs | 4.2 μs | 144,959 | 239,349 |
+| Sensor (Small) | Pickle 5 (Stdlib C) | 198 B | 6.9 μs | 9.7 μs | 144,020 | 103,157 |
+| Sensor (Small) | CloudPickle | 198 B | 20.5 μs | 9.9 μs | 48,807 | 100,873 |
+| Order (Nested) | **PolyXML Binary** | 344 B | 26.9 μs | 17.4 μs | 37,236 | 57,511 |
+| Order (Nested) | Pickle 5 (Stdlib C) | 443 B | 27.6 μs | 30.3 μs | 36,294 | 33,055 |
+| Order (Nested) | CloudPickle | 443 B | 90.2 μs | 31.0 μs | 11,086 | 32,218 |
+| Batch (100 Items) | **PolyXML Binary** | 1,937 B | 203.5 μs | 341.9 μs | 4,913 | 2,925 |
+| Batch (100 Items) | Pickle 5 (Stdlib C) | 1,986 B | 265.2 μs | 508.1 μs | 3,771 | 1,968 |
+| Batch (100 Items) | CloudPickle | 1,986 B | 721.9 μs | 301.8 μs | 1,385 | 3,314 |
+
+Saved JSON results to docs/benchmarks/data/2026-09-26/python-binary.json
+Saved Markdown report to docs/benchmarks/data/2026-09-26/python-binary.md

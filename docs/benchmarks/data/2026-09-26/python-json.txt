@@ -1,0 +1,27 @@
+Running Python JSON benchmarks (iterations=50, warmup=10)...
+
+# Python JSON Benchmarks: PolyXML vs xsdata
+
+- **Date**: 2026-09-27T03:05:18Z
+- **Python**: 3.12.14
+- **Iterations**: 50 (after 10 warmup runs)
+- **Semantic Check**: Verified `assert parsed == expected` for every runner and model.
+
+## 1. JSON Deserialization (Read into Typed Dataclass)
+
+| Workload | Payload | xsdata Median | PolyXML Native Median | Speedup vs xsdata | PolyXML Throughput |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **Sensor (Small)** | 128 B | 156.5 μs | **12.8 μs** | **12.2x faster** | 9.5 MB/s |
+| **Order (Nested)** | 793 B | 1,284.5 μs | **140.2 μs** | **9.2x faster** | 5.4 MB/s |
+| **Batch (100 Items)** | 12,842 B | 20,570.3 μs | **1,326.7 μs** | **15.5x faster** | 9.2 MB/s |
+
+## 2. JSON Serialization (Write from Typed Dataclass)
+
+| Workload | Payload | xsdata Median | PolyXML Native Median | Speedup vs xsdata | PolyXML Throughput |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **Sensor (Small)** | 128 B | 86.4 μs | **10.3 μs** | **8.4x faster** | 11.9 MB/s |
+| **Order (Nested)** | 793 B | 505.6 μs | **60.4 μs** | **8.4x faster** | 12.5 MB/s |
+| **Batch (100 Items)** | 12,842 B | 6,586.1 μs | **711.7 μs** | **9.3x faster** | 17.2 MB/s |
+
+Saved JSON results to docs/benchmarks/data/2026-09-26/python-json.json
+Saved Markdown report to docs/benchmarks/data/2026-09-26/python-json.md

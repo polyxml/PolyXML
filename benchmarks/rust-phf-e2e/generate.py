@@ -16,8 +16,10 @@ for count in (16, 120):
         '<xs:complexType name="RecordType"><xs:sequence>'
         f"{fields}</xs:sequence></xs:complexType></xs:schema>"
     )
-    document = "<Record>" + "".join(
-        f"<Field{i:03}>value-{i:03}</Field{i:03}>" for i in range(count)
-    ) + "</Record>"
+    document = (
+        "<Record>"
+        + "".join(f"<Field{i:03}>value-{i:03}</Field{i:03}>" for i in range(count))
+        + "</Record>"
+    )
     (folder / "record.xsd").write_text(schema)
     (folder / "record.xml").write_text(document)

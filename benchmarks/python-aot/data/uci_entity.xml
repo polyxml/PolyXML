@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uci:Entity xmlns:uci="https://www.vdl.afrl.af.mil/programs/oam">
+  <uci:SecurityInformation>
+    <uci:Classification>UNCLASSIFIED</uci:Classification>
+    <uci:OwnerProducer>USA</uci:OwnerProducer>
+  </uci:SecurityInformation>
+  <uci:MessageHeader>
+    <uci:MessageID>MSG-E4A71D80</uci:MessageID>
+    <uci:Timestamp>2026-09-20T11:00:00Z</uci:Timestamp>
+    <uci:OriginatorID>LATTICE_MESH_NODE_DELTA</uci:OriginatorID>
+  </uci:MessageHeader>
+  <uci:ObjectState>ACTIVE</uci:ObjectState>
+  <uci:MessageData>
+    <uci:EntityID>
+      <uci:UUID>e4a71d80-86d1-4cb3-91f9-8d07e600572b</uci:UUID>
+      <uci:Callsign>FURY-UAV-01</uci:Callsign>
+    </uci:EntityID>
+    <uci:CreationTimestamp>2026-09-20T11:00:00Z</uci:CreationTimestamp>
+    <uci:EntityStatus>CONFIRMED</uci:EntityStatus>
+    <uci:Kinematics>
+      <uci:Latitude>34.9125</uci:Latitude>
+      <uci:Longitude>-117.8833</uci:Longitude>
+      <uci:Altitude>4500.0</uci:Altitude>
+      <uci:Heading>285.5</uci:Heading>
+      <uci:GroundSpeed>165.2</uci:GroundSpeed>
+      <uci:VerticalSpeed>-1.5</uci:VerticalSpeed>
+      <uci:Airspeed>172.4</uci:Airspeed>
+      <uci:Pitch>2.1</uci:Pitch>
+      <uci:Roll>-1.4</uci:Roll>
+    </uci:Kinematics>
+    <uci:SourceSystem>LATTICE_MESH_NODE_DELTA</uci:SourceSystem>
+    <uci:FlightMode>AUTONOMOUS_WAYPOINT_NAVIGATION</uci:FlightMode>
+    <uci:ActiveWaypoint>WP-DELTA-04</uci:ActiveWaypoint>
+    <uci:FuelPercentage>84.6</uci:FuelPercentage>
+  </uci:MessageData>
+</uci:Entity>

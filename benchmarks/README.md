@@ -13,6 +13,9 @@ benchmarks/
 ├── __init__.py      # Package marker for `python -m benchmarks.python`
 ├── cli/             # CLI startup and argument validation (hyperfine)
 ├── python/          # Python bindings vs the Python XML ecosystem
+├── python-json/     # Python JSON data-binding vs xsdata (msgspec)
+├── python-binary/   # Python binary serialization vs pickle and cloudpickle
+├── python-aot/      # Python Ahead-of-Time (AOT) PyO3 C-extensions vs Dataclasses
 ├── java/            # Java bindings vs JAXB, Jackson, and Panama (JMH)
 ├── go/              # Go generated models vs handwritten structs
 ├── cpp/             # C++ generated-model XML adapter
@@ -33,7 +36,10 @@ equivalent) and never at this root.
 | Rust core engine | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) | `cargo bench --bench core_benchmarks` |
 | Rust tag dispatch | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) + `perf stat` | `cargo bench --bench tag_dispatch` ([results](../docs/benchmarks/rust-phf-dispatch.md)) |
 | Rust end-to-end dispatch | [`rust-phf-e2e/`](rust-phf-e2e/README.md) | Generated decoders | `./benchmarks/rust-phf-e2e/run.sh` |
-| Python comparative | [`python/`](python/README.md) | Custom CLI suite | `python -m benchmarks.python` or `./benchmarks/run_all.sh` |
+| Python XML comparative | [`python/`](python/README.md) | Custom CLI suite | `python -m benchmarks.python` or `./benchmarks/run_all.sh` |
+| Python JSON comparative | [`python-json/`](python-json/README.md) | Custom CLI suite | `./benchmarks/python-json/run.sh` |
+| Python binary serialization | [`python-binary/`](python-binary/README.md) | Custom CLI suite | `./benchmarks/python-binary/run.sh` |
+| Python AOT native extensions | [`python-aot/`](python-aot/README.md) | Custom CLI suite | `./benchmarks/python-aot/run.sh` |
 | CLI startup | [`cli/`](cli/README.md) | hyperfine | `./benchmarks/cli/benchmark.sh` |
 | Java four-runtime | [`java/`](java/README.md) | JMH (Maven) | See [`java/README.md`](java/README.md) |
 | Go models | [`go/`](go/README.md) | `go test -bench` | `./benchmarks/go/run.sh` |
