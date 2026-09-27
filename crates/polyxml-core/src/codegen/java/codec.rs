@@ -191,7 +191,12 @@ impl JavaCodegen {
         } else {
             String::new()
         };
-        let _=writeln!(out,"    public static void writeXml({name} value, XMLStreamWriter writer, String local, String ns) throws XMLStreamException {{\n{concrete_check}        start(writer, local, ns);\n        if (value == null) {{\n            writer.writeNamespace(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\");\n            writer.writeAttribute(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\", \"nil\", \"true\");\n            writer.writeEndElement(); return;\n        }}");
+        let is_union = matches!(def, TypeDef::Union(_));
+        if is_union {
+            let _ = writeln!(out, "    public static void writeXml({name} value, XMLStreamWriter writer, String local, String ns) throws XMLStreamException {{\n        boolean hasLocal = local != null && !local.isEmpty();\n        if (hasLocal) start(writer, local, ns);\n        if (value == null) {{\n            if (hasLocal) {{\n                writer.writeNamespace(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\");\n                writer.writeAttribute(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\", \"nil\", \"true\");\n                writer.writeEndElement();\n            }}\n            return;\n        }}");
+        } else {
+            let _=writeln!(out,"    public static void writeXml({name} value, XMLStreamWriter writer, String local, String ns) throws XMLStreamException {{\n{concrete_check}        start(writer, local, ns);\n        if (value == null) {{\n            writer.writeNamespace(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\");\n            writer.writeAttribute(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\", \"nil\", \"true\");\n            writer.writeEndElement(); return;\n        }}");
+        }
         match def {
             TypeDef::Struct(s) => self.emit_write_struct(&mut out, s, ir),
             TypeDef::Enum(_) => out.push_str("        writer.writeCharacters(value.getValue());\n"),
@@ -238,7 +243,11 @@ impl JavaCodegen {
                 }
             }
         }
-        out.push_str("        writer.writeEndElement();\n    }\n}\n");
+        if is_union {
+            out.push_str("        if (hasLocal) writer.writeEndElement();\n    }\n}\n");
+        } else {
+            out.push_str("        writer.writeEndElement();\n    }\n}\n");
+        }
         out
     }
 
@@ -278,6 +287,26 @@ impl JavaCodegen {
         for (f, id) in &fields {
             if f.kind != FieldKind::Element {
                 continue;
+            }
+            if f.xml_name.is_empty() {
+                if let Some(u) = self.resolve_union_def(&f.type_ref, ir) {
+                    let union_name = type_ident(&u.qname);
+                    for branch in &u.branches {
+                        let _ = writeln!(
+                            out,
+                            "                {}if (reader.getLocalName().equals({:?})) {{",
+                            if first { "" } else { "else " },
+                            branch.xml_name
+                        );
+                        first = false;
+                        let expr = self.read_value(&branch.type_ref, ir);
+                        let variant = to_java_type_name(&branch.variant_name);
+                        let union_val = format!("new {union_name}.{variant}({expr})");
+                        self.assign_value(out, f, id, &union_val, "                    ");
+                        out.push_str("                }\n");
+                    }
+                    continue;
+                }
             }
             let _=writeln!(out,"                {}if (reader.getLocalName().equals({:?}) && java.util.Objects.equals(reader.getNamespaceURI() == null ? \"\" : reader.getNamespaceURI(), {:?})) {{",if first {""} else {"else "},f.xml_name,f.namespace.as_deref().unwrap_or(""));
             first = false;
@@ -429,6 +458,20 @@ impl JavaCodegen {
                 let text = self.format_scalar(ty, value, ir);
                 let _=writeln!(out,"{indent}start(writer, {local:?}, {ns:?});\n{indent}if (java.util.Objects.isNull({value})) writeNil(writer); else writer.writeCharacters({text});\n{indent}writer.writeEndElement();");
             }
+        }
+    }
+
+    fn resolve_union_def<'a>(&self, ty: &'a TypeRef, ir: &'a SchemaIR) -> Option<&'a UnionDef> {
+        match ty {
+            TypeRef::Named(q) => {
+                if let Some(TypeDef::Union(u)) = ir.types.get(q) {
+                    Some(u)
+                } else {
+                    None
+                }
+            }
+            TypeRef::Boxed(t) | TypeRef::List(t) => self.resolve_union_def(t, ir),
+            _ => None,
         }
     }
 

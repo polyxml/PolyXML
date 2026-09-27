@@ -46,6 +46,22 @@ struct PendingGroupRef {
     group: QName,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CompositorKind {
+    Sequence,
+    All,
+    Choice,
+}
+
+#[derive(Debug, Clone)]
+struct CompositorFrame {
+    kind: CompositorKind,
+    is_unbounded: bool,
+    min_occurs: usize,
+    fields_start: usize,
+    choice_branches: Vec<UnionBranch>,
+}
+
 /// A pure-Rust XSD 1.0/1.1 Schema Parser.
 pub struct XsdParser {
     /// Raw (pre-merge) IR per canonical file path, keyed so chameleon includes
@@ -422,15 +438,14 @@ impl XsdParser {
         let mut fields = Vec::new();
         let mut base_type = None;
         let mut documentation = None;
-        let mut is_choice_model = false;
-        let mut choice_is_unbounded = false;
-        let mut choice_branches = Vec::new();
         let mut in_simple_content = false;
         let mut value_field_pushed = false;
         let mut group_refs: Vec<(usize, QName)> = Vec::new();
         let mut buf = Vec::new();
 
-        let mut compositor_stack: Vec<bool> = Vec::new();
+        let mut is_top_level_choice = false;
+        let mut top_level_choice_branches: Vec<UnionBranch> = Vec::new();
+        let mut compositor_stack: Vec<CompositorFrame> = Vec::new();
         let mut depth = 1;
         while depth > 0 {
             match reader.read_event_into(&mut buf)? {
@@ -488,45 +503,66 @@ impl XsdParser {
                                         || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
                                 })
                                 .unwrap_or(false);
-                            compositor_stack.push(is_unbounded);
+                            let min_occurs = get_attr_value(e, "minOccurs")
+                                .and_then(|v| v.parse::<usize>().ok())
+                                .unwrap_or(1);
+                            compositor_stack.push(CompositorFrame {
+                                kind: if local == "sequence" {
+                                    CompositorKind::Sequence
+                                } else {
+                                    CompositorKind::All
+                                },
+                                is_unbounded,
+                                min_occurs,
+                                fields_start: fields.len(),
+                                choice_branches: Vec::new(),
+                            });
                         }
                         "choice" => {
-                            // If direct child or main compositor is choice, record choice branches
-                            is_choice_model = true;
                             let is_unbounded = get_attr_value(e, "maxOccurs")
                                 .map(|v| {
                                     v == "unbounded"
                                         || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
                                 })
                                 .unwrap_or(false);
-                            if is_unbounded {
-                                choice_is_unbounded = true;
-                            }
-                            compositor_stack.push(is_unbounded);
+                            let min_occurs = get_attr_value(e, "minOccurs")
+                                .and_then(|v| v.parse::<usize>().ok())
+                                .unwrap_or(1);
+                            compositor_stack.push(CompositorFrame {
+                                kind: CompositorKind::Choice,
+                                is_unbounded,
+                                min_occurs,
+                                fields_start: fields.len(),
+                                choice_branches: Vec::new(),
+                            });
                         }
                         "element" => {
-                            let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            if let Some(mut field) = parse_element_field(
-                                e,
-                                target_ns,
-                                prefixes,
-                                is_choice_model,
-                                in_unbounded,
-                            ) {
+                            let in_unbounded = compositor_stack.iter().any(|c| c.is_unbounded);
+                            let in_choice = compositor_stack
+                                .last()
+                                .map(|c| c.kind == CompositorKind::Choice)
+                                .unwrap_or(false);
+                            if let Some(mut field) =
+                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
+                            {
                                 // Consume inline type definitions so nested
                                 // fields cannot leak into the parent struct;
                                 // extracted types are registered in `ir`.
                                 self.consume_inline_element_type(
                                     reader, e, target_ns, prefixes, &name, &mut field, ir,
                                 )?;
-                                if is_choice_model {
-                                    choice_branches.push(UnionBranch {
-                                        variant_name: field.name.clone(),
-                                        xml_name: field.xml_name.clone(),
-                                        namespace: field.namespace.clone(),
-                                        type_ref: field.type_ref.clone(),
-                                        documentation: field.documentation.clone(),
-                                    });
+                                if in_choice {
+                                    if let Some(frame) = compositor_stack.last_mut() {
+                                        if frame.kind == CompositorKind::Choice {
+                                            frame.choice_branches.push(UnionBranch {
+                                                variant_name: field.name.clone(),
+                                                xml_name: field.xml_name.clone(),
+                                                namespace: field.namespace.clone(),
+                                                type_ref: field.type_ref.clone(),
+                                                documentation: field.documentation.clone(),
+                                            });
+                                        }
+                                    }
                                 }
                                 fields.push(field);
                             }
@@ -567,22 +603,26 @@ impl XsdParser {
                             }
                         }
                         "element" => {
-                            let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            if let Some(field) = parse_element_field(
-                                e,
-                                target_ns,
-                                prefixes,
-                                is_choice_model,
-                                in_unbounded,
-                            ) {
-                                if is_choice_model {
-                                    choice_branches.push(UnionBranch {
-                                        variant_name: field.name.clone(),
-                                        xml_name: field.xml_name.clone(),
-                                        namespace: field.namespace.clone(),
-                                        type_ref: field.type_ref.clone(),
-                                        documentation: field.documentation.clone(),
-                                    });
+                            let in_unbounded = compositor_stack.iter().any(|c| c.is_unbounded);
+                            let in_choice = compositor_stack
+                                .last()
+                                .map(|c| c.kind == CompositorKind::Choice)
+                                .unwrap_or(false);
+                            if let Some(field) =
+                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
+                            {
+                                if in_choice {
+                                    if let Some(frame) = compositor_stack.last_mut() {
+                                        if frame.kind == CompositorKind::Choice {
+                                            frame.choice_branches.push(UnionBranch {
+                                                variant_name: field.name.clone(),
+                                                xml_name: field.xml_name.clone(),
+                                                namespace: field.namespace.clone(),
+                                                type_ref: field.type_ref.clone(),
+                                                documentation: field.documentation.clone(),
+                                            });
+                                        }
+                                    }
                                 }
                                 fields.push(field);
                             }
@@ -601,7 +641,48 @@ impl XsdParser {
                 Event::End(ref e) => {
                     let local = strip_prefix(e.name().into_inner());
                     if local == "sequence" || local == "choice" || local == "all" {
-                        compositor_stack.pop();
+                        if let Some(frame) = compositor_stack.pop() {
+                            if frame.kind == CompositorKind::Choice {
+                                let choice_is_unbounded = frame.is_unbounded
+                                    || compositor_stack.iter().any(|c| c.is_unbounded);
+                                if choice_is_unbounded && !frame.choice_branches.is_empty() {
+                                    let choice_name =
+                                        unique_type_name(ir, target_ns, &format!("{}Choice", name));
+                                    let choice_qname = QName::new(target_ns, choice_name);
+                                    let choice_def = UnionDef {
+                                        qname: choice_qname.clone(),
+                                        branches: frame.choice_branches,
+                                        documentation: None,
+                                    };
+                                    ir.add_type(TypeDef::Union(choice_def));
+
+                                    fields.truncate(frame.fields_start);
+                                    let mut item_field_name = "items".to_string();
+                                    let mut counter = 2;
+                                    while fields.iter().any(|f| f.name == item_field_name) {
+                                        item_field_name = format!("items_{}", counter);
+                                        counter += 1;
+                                    }
+                                    fields.push(FieldDef {
+                                        name: item_field_name,
+                                        xml_name: String::new(),
+                                        namespace: None,
+                                        kind: FieldKind::Element,
+                                        type_ref: TypeRef::Named(choice_qname),
+                                        cardinality: Cardinality::unbounded(frame.min_occurs),
+                                        nillable: false,
+                                        default_value: None,
+                                        fixed_value: None,
+                                        documentation: None,
+                                        facets: None,
+                                        is_cycle_cut: false,
+                                    });
+                                } else if !choice_is_unbounded && compositor_stack.is_empty() {
+                                    top_level_choice_branches = frame.choice_branches;
+                                    is_top_level_choice = true;
+                                }
+                            }
+                        }
                     }
                     depth -= 1;
                 }
@@ -613,11 +694,10 @@ impl XsdParser {
 
         // Group references inside a bounded choice are not spliceable into a
         // union's branch list, so keep such types as structs.
-        let is_union = is_choice_model
-            && !choice_is_unbounded
-            && !choice_branches.is_empty()
+        let is_union = is_top_level_choice
+            && !top_level_choice_branches.is_empty()
             && group_refs.is_empty()
-            && fields.len() == choice_branches.len();
+            && fields.len() == top_level_choice_branches.len();
 
         // Record group refs for post-parse expansion.
         if !is_union {
@@ -633,7 +713,7 @@ impl XsdParser {
         if is_union {
             Ok(Some(TypeDef::Union(UnionDef {
                 qname,
-                branches: choice_branches,
+                branches: top_level_choice_branches,
                 documentation,
             })))
         } else {

@@ -589,6 +589,20 @@ impl GoCodegen {
                 choice_name
             )
             .unwrap();
+            writeln!(out, "    switch start.Name.Local {{").unwrap();
+            for (branch, field_name) in u.branches.iter().zip(&branch_field_names) {
+                let mapped_type = self.context.map_type_ref(&branch.type_ref);
+                writeln!(out, "    case \"{}\":", branch.xml_name).unwrap();
+                writeln!(out, "        var v {}", mapped_type).unwrap();
+                writeln!(
+                    out,
+                    "        if err := d.DecodeElement(&v, &start); err != nil {{ return err }}"
+                )
+                .unwrap();
+                writeln!(out, "        c.{} = &v", field_name).unwrap();
+                writeln!(out, "        return nil").unwrap();
+            }
+            writeln!(out, "    }}\n").unwrap();
             writeln!(out, "    var raw {}", choice_name).unwrap();
             writeln!(out, "    count := 0\n").unwrap();
             writeln!(out, "    for {{").unwrap();
@@ -651,6 +665,23 @@ impl GoCodegen {
             .unwrap();
             writeln!(out, "    if err := c.Validate(); err != nil {{").unwrap();
             writeln!(out, "        return err").unwrap();
+            writeln!(out, "    }}").unwrap();
+            writeln!(
+                out,
+                "    if start.Name.Local == \"\" || start.Name.Local == \"items\" || start.Name.Local == \"Items\" {{"
+            )
+            .unwrap();
+            for (branch, field_name) in u.branches.iter().zip(&branch_field_names) {
+                writeln!(out, "        if c.{} != nil {{", field_name).unwrap();
+                writeln!(
+                    out,
+                    "            return e.EncodeElement(c.{}, xml.StartElement{{Name: xml.Name{{Local: \"{}\"}} }})",
+                    field_name, branch.xml_name
+                )
+                .unwrap();
+                writeln!(out, "        }}").unwrap();
+            }
+            writeln!(out, "        return nil").unwrap();
             writeln!(out, "    }}").unwrap();
             writeln!(out, "    type Alias {}", choice_name).unwrap();
             writeln!(out, "    return e.EncodeElement(Alias(c), start)").unwrap();
@@ -808,7 +839,9 @@ impl GoCodegen {
                 FieldKind::Any => ",any".to_string(),
                 FieldKind::AnyAttribute => ",any,attr".to_string(),
                 FieldKind::Element => {
-                    if is_opt {
+                    if f.xml_name.is_empty() {
+                        ",any".to_string()
+                    } else if is_opt {
                         format!("{},omitempty", f.xml_name)
                     } else {
                         f.xml_name.clone()
@@ -822,6 +855,8 @@ impl GoCodegen {
             let is_opt = f.cardinality.is_optional() || f.nillable;
             let raw_json_name = if f.kind == FieldKind::Text {
                 "value".to_string()
+            } else if f.xml_name.is_empty() {
+                f.name.clone()
             } else {
                 f.xml_name.clone()
             };

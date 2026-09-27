@@ -384,6 +384,7 @@ impl CSharpCodegen {
             if let TypeDef::Union(u) = def {
                 let name = type_ident(&u.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
+                writeln!(out, "{}[JsonSerializable(typeof(List<{}>))]", indent, name).unwrap();
             }
         }
 
@@ -1028,7 +1029,15 @@ impl CSharpCodegen {
 
         if self.options.emit_xml_attributes {
             // If the field is a choice (UnionDef), emit XmlElement("branchXml", typeof(BranchType))
-            if let TypeRef::Named(ref qname) = f.type_ref {
+            let named_qname = match &f.type_ref {
+                TypeRef::Named(q) => Some(q),
+                TypeRef::List(inner) | TypeRef::Boxed(inner) => match &**inner {
+                    TypeRef::Named(q) => Some(q),
+                    _ => None,
+                },
+                _ => None,
+            };
+            if let Some(qname) = named_qname {
                 if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
                     let choice_name = type_ident(&u.qname);
                     for branch in &u.branches {
@@ -1054,7 +1063,13 @@ impl CSharpCodegen {
         if self.options.emit_json_attributes {
             let json_name = match f.kind {
                 FieldKind::Text => "value",
-                _ => &f.xml_name,
+                _ => {
+                    if f.xml_name.is_empty() {
+                        &f.name
+                    } else {
+                        &f.xml_name
+                    }
+                }
             };
             if f.kind != FieldKind::Any && f.kind != FieldKind::AnyAttribute {
                 parts.push(format!("JsonPropertyName(\"{}\")", json_name));

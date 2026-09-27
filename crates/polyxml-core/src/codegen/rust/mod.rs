@@ -5,8 +5,8 @@ use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, flatten_fields, lookup_type_name, normalize_symbol_name, sanitize_keyword,
-    set_type_name_map, LanguageContext,
+    build_type_name_map, flatten_fields, lookup_type_name, sanitize_keyword, set_type_name_map,
+    LanguageContext,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR, SimpleTypeDef, StructDef,
@@ -160,8 +160,7 @@ pub fn to_rust_variant_identifier(val: &str) -> String {
         return "Empty".to_string();
     }
 
-    let normalized = normalize_symbol_name(trimmed);
-    let cleaned: String = normalized
+    let cleaned: String = trimmed
         .chars()
         .map(|c| if c.is_alphanumeric() { c } else { ' ' })
         .collect();
@@ -2134,6 +2133,8 @@ impl RustCodegen {
                     "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
+            } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
+                let _ = writeln!(out, "            item.encode_xml(writer, None)?;",);
             } else {
                 let _ = writeln!(
                     out,
@@ -2184,6 +2185,8 @@ impl RustCodegen {
                     "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
+            } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
+                let _ = writeln!(out, "            val.encode_xml(writer, None)?;",);
             } else {
                 let _ = writeln!(
                     out,
@@ -2237,6 +2240,8 @@ impl RustCodegen {
                     "        writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
+            } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
+                let _ = writeln!(out, "        self.{}.encode_xml(writer, None)?;", rust_name);
             } else {
                 let _ = writeln!(
                     out,
