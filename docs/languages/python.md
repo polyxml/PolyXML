@@ -5,7 +5,7 @@ description: High-throughput XML serialization and deserialization into Python d
 
 # Python
 
-PolyXML is the fastest typed XML data-binding engine for Python `>=3.12`. Compiled natively in Rust via PyO3 with `abi3` stability, it replaces slow pure-Python parsers like `xsdata` with up to **16.8x faster deserialization** and **38.5x faster serialization**.
+PolyXML is a native XML data-binding engine for Python `>=3.12`, compiled in Rust via PyO3 with `abi3` stability. On the [10,000-item catalog benchmark](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md), it reads **10.0x faster** and writes **23.5x faster** than `xsdata`.
 
 ---
 
@@ -264,21 +264,21 @@ print("Pretty:\n" + pretty.decode("utf-8"))
 
 ## 6. Migrating from `xsdata` and `ElementTree`
 
-Switching from `xsdata` or standard `xml.etree.ElementTree` to PolyXML is drop-in and delivers immediate order-of-magnitude speedups:
+This migration example shows the corresponding APIs. Measured speedups depend on workload; see the [committed XML benchmark results](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md).
 
 ### Comparison: Deserialization
 
 === "PolyXML (Native Rust)"
     ```python
     import polyxml
-    # 13.48 ms for 10,000 items (16.8x faster)
+    # Parse XML into typed dataclasses
     result = polyxml.deserialize(xml_bytes, Catalog)
     ```
 
 === "xsdata (Pure Python)"
     ```python
     from xsdata.formats.dataclass.parsers import XmlParser
-    # 226.94 ms for 10,000 items
+    # Equivalent xsdata API
     parser = XmlParser()
     result = parser.from_bytes(xml_bytes, Catalog)
     ```
@@ -286,7 +286,7 @@ Switching from `xsdata` or standard `xml.etree.ElementTree` to PolyXML is drop-i
 === "xml.etree.ElementTree"
     ```python
     import xml.etree.ElementTree as ET
-    # 12.28 ms for raw untyped DOM + ~18 ms manual loop = ~30 ms
+    # Parsing plus manual conversion into typed objects
     root = ET.fromstring(xml_bytes)
     items = [
         CatalogItem(
@@ -354,7 +354,7 @@ journey = ServiceJourney(
     source_file=pathlib.Path("/data/netex/timetable.xml"),
 )
 
-# 1. Direct typed binary encoding & decoding (maximum speed: 200,000+ ops/s)
+# 1. Direct typed binary encoding & decoding
 blob = polyxml.dumps_binary(journey)
 restored = polyxml.loads_binary(blob, ServiceJourney)
 assert restored == journey
@@ -381,9 +381,7 @@ assert restored_user.balance == Decimal("125.75")
 ```
 
 ### Key Performance & Architecture Advantages:
-- **7.9x Faster than Pickle**: Slashes serialization latency from 48.5 μs to 6.1 μs per entity.
-- **53.9% Smaller Storage Footprint**: Drops entity storage from 547 bytes to 252 bytes in transactional databases like `libmdbx`.
-- **3.2x Faster MDBX Database Writes**: 58,781 ops/sec transactional throughput compared to 18,287 ops/sec with legacy `cloudpickle + lz4`.
+- **Native MessagePack support**: `dumps_binary()` and `loads_binary()` work with typed XML models. Measure size and throughput with your own records and storage engine.
 - **Universal Schema Leaf Support**: Out-of-the-box lossless handling of `XmlDate`, `XmlDateTime`, `XmlDuration`, `XmlTime`, `Decimal`, `QName`, `Enum`, `Path`, `UserString`, and any object implementing `.from_string()`.
 - **Zero Schema Compilation**: Introspects dataclasses dynamically in C with zero manual boilerplate or per-class serializer generation.
 
@@ -437,7 +435,7 @@ from polyxml import JsonSerializer, JsonParser, XmlSerializer, XmlParser
 # Or:
 from polyxml.compat.xsdata import JsonSerializer, JsonParser, XmlSerializer, XmlParser
 
-# Existing parser and serializer calls work out of the box with 5x-10x performance gains:
+# Existing parser and serializer calls retain the same shape:
 serializer = JsonSerializer(indent=2)
 json_str = serializer.render(user)
 
@@ -445,15 +443,6 @@ parser = JsonParser()
 user = parser.from_string(json_str, User)
 user = parser.parse("data.json", User)
 ```
-
-### Head-to-Head JSON Benchmarks
-
-| Operation | xsdata | PolyXML (Rust Core) | Speedup |
-| :--- | :--- | :--- | :--- |
-| **JSON Deserialization** | 198.4 μs | **20.8 μs** | **9.5x faster** |
-| **JSON Serialization** | 76.8 μs | **16.6 μs** | **4.6x faster** |
-
----
 
 ## 8. High-Performance XML ↔ JSON Transcoding (`polyxml.xml_to_json` & `polyxml.json_to_xml`)
 
@@ -562,7 +551,7 @@ maturin develop --release
 ```python
 import my_extension
 
-# Sub-microsecond native parsing directly into C-extension PyObject:
+# Native parsing directly into a C-extension PyObject:
 reading = my_extension.SensorReadingType.from_xml(xml_bytes)
 print(f"ID: {reading.sensorId}, Temp: {reading.temperature}")
 
@@ -573,8 +562,5 @@ json_bytes = reading.to_json(indent=2)
 
 ### Production Reference & Benchmarks
 
-- **Real-World Showcase**: The **[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)** repository showcases an end-to-end AOT C2 telemetry bridge ([`examples/python/bridge_aot.py`](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)) parsing USAF UCI v2.5 schemas at **172,500+ ops/sec**.
+- **Real-World Showcase**: The **[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)** repository includes an end-to-end AOT C2 telemetry bridge ([`examples/python/bridge_aot.py`](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)) for USAF UCI v2.5 schemas.
 - **Detailed Benchmarks**: See the [Python AOT vs Dataclass Benchmark](../benchmarks/python-aot-vs-dataclass.md) for full metrics showing 3.4x higher throughput and 60.3% lower peak memory.
-
-
-

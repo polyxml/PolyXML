@@ -120,7 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## 3. Constant-Memory Streaming with `XmlItemStream`
 
-When parsing multi-gigabyte XML feeds (e.g. PubMed, Wikipedia, SEC EDGAR, ISO 20022), loading the full document into memory is prohibitive. `XmlItemStream` provides a streaming iterator that yields individual record subtrees with **$O(1)$ constant memory**.
+When parsing large XML feeds (e.g. PubMed, Wikipedia, SEC EDGAR, ISO 20022), loading the full document into memory is prohibitive. `XmlItemStream` yields individual record subtrees, so memory depends on the largest record rather than the complete document.
 
 ```rust
 use std::sync::Arc;

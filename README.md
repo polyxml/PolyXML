@@ -43,7 +43,7 @@
 
 **PolyXML turns W3C XML Schemas (`.xsd`) into production-ready, type-safe data models with built-in streaming parsers and serializers.**
 
-If you have ever used `xjc` (JAXB), `CodeSynthesis XSD`, or `xsdata`, PolyXML is their modern, safe-Rust replacement. It compiles your schema once and generates idiomatic code across **7 languages simultaneously**. In the published 10,000-item Python catalog benchmark, PolyXML's typed binding is **10.0x faster to read and 23.5x faster to write than `xsdata`**; other runtimes and parsers have different results.
+If you have ever used `xjc` (JAXB), `CodeSynthesis XSD`, or `xsdata`, PolyXML is their modern, safe-Rust replacement. It compiles your schema once and generates idiomatic code across **7 languages simultaneously**. In the published 10,000-item Python catalog benchmark, PolyXML's typed binding is **10.0x faster to read and 23.5x faster to write than `xsdata`** ([benchmark results](benchmarks/python/results.md)); other runtimes and parsers have different results.
 
 Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary serialization, **PolyXML brings modern software engineering to XML**:
 
@@ -108,10 +108,9 @@ Bridge legacy enterprise XML (ISO 20022 banking, HL7 healthcare, FIXM aviation) 
 
 Headline numbers ([full methodology & reproduction steps →](docs/benchmarks/index.md)):
 
-- **10x–24x faster** than legacy Python bindings: 10.0x faster deserialization & 23.5x faster serialization than `xsdata` on 10,000-item catalogs.
+- **10.0x faster to read and 23.5x faster to write** than `xsdata` on the 10,000-item Python catalog ([raw results](benchmarks/python/results.md), [method](benchmarks/python/README.md)).
 - **Ahead-of-Time PyO3 Native Extensions (`--backend aot`)**: 3.4x faster throughput (585k ops/sec) and 60.3% less memory than slotted dataclasses via compiled Rust C-extensions ([AOT benchmark →](docs/benchmarks/python-aot-vs-dataclass.md)).
-- **3.2 μs per telemetry packet** (13.9x vs pure Python) — neck-and-neck with the C-based `lxml.etree` while still returning fully typed dataclasses.
-- **Binary KV-store & IPC pipelines**: 163k dumps ops/s, 53.9% smaller payloads than CloudPickle+LZ4, and 3.2x faster transactional MDBX writes.
+- **3.2 μs per telemetry packet** (13.9x vs `xsdata`) while returning typed dataclasses ([raw results](benchmarks/python/results.md)).
 
 ---
 
@@ -121,7 +120,7 @@ All three production showcase repositories demonstrate core PolyXML capabilities
 
 | Showcase Repository | Domain & Schemas | Distinct PolyXML Features Highlighted |
 | :--- | :--- | :--- |
-| **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**<br>`polyxml-defense-examples` | **USAF UCI v2.5** (8.3 MB XML)<br>↔ **Anduril Lattice SDK** (Protobuf/JSON) | • **`backend = "aot"`**: Ahead-of-Time compiled PyO3 native extension with sub-microsecond C2 telemetry parsing (172k+ ops/sec)<br>• **`features = ["rkyv"]`**: Opt-in zero-copy binary serialization in Rust for telemetry & tactical radio links<br>• **`xsd:extension` Inlining**: Base headers (`SecurityInformation`, `MessageHeader`) inlined into derived commands<br>• **Massive Schema Validation**: `polyxml validate` on 8.3 MB, 5,558-type Open-Arsenal schemas<br>• **Standard Library Java 22+**: Zero-dependency immutable records with `java.time.Instant`<br>• **Edge C2 Streaming**: Browser/Node WebAssembly streaming drone swarm telemetry via `parseStream` |
+| **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**<br>`polyxml-defense-examples` | **USAF UCI v2.5** ([8.3 MB schema, 5,558 types](https://github.com/polyxml/polyxml-defense-examples#readme))<br>↔ **Anduril Lattice SDK** (Protobuf/JSON) | • **`backend = "aot"`**: Ahead-of-Time compiled PyO3 native extension in the [telemetry bridge example](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)<br>• **`features = ["rkyv"]`**: Opt-in zero-copy binary serialization in Rust for telemetry & tactical radio links<br>• **`xsd:extension` Inlining**: Base headers (`SecurityInformation`, `MessageHeader`) inlined into derived commands<br>• **Massive Schema Validation**: `polyxml validate` on the [Open-Arsenal schema](https://github.com/polyxml/polyxml-defense-examples#readme)<br>• **Standard Library Java 22+**: Zero-dependency immutable records with `java.time.Instant`<br>• **Edge C2 Streaming**: Browser/Node WebAssembly streaming drone swarm telemetry via `parseStream` |
 | **[💳 Global Finance & Banking](https://github.com/polyxml/polyxml-finance-examples)**<br>`polyxml-finance-examples` | **ISO 20022 `pacs.008`** (Interbank XML)<br>↔ **FinTech Intents** (FedNow/Stripe JSON) | • **`backend = "jackson"`**: Enterprise Jackson XML/JSON annotations for Spring Boot / Jakarta EE banking<br>• **`backend = "source-gen"`**: C# 12 / .NET 8 `System.Text.Json` source generation for Native AOT<br>• **Strict Facets & Attributes**: XML attributes on simple content (`Ccy="USD"`) & `xs:pattern` regexes (UETR, IBAN)<br>• **Batch Payment Streaming**: WebAssembly `parseStream` consuming high-volume `<Document>` payment batches |
 | **[🚍 Smart Cities & Transit](https://github.com/polyxml/polyxml-transit-examples)**<br>`polyxml-transit-examples` | **CEN SIRI v2.0 & NeTEx** (European Norm)<br>↔ **Google GTFS-RT** (Protobuf/JSON) | • **`backend = "sonic"`**: ByteDance's JIT/AVX-accelerated JSON engine for high-throughput Go microservices<br>• **Deeply Nested Collections**: Hierarchical arrays (`VehicleActivity[]`, `MonitoredCall[]`)<br>• **C++20 Concepts & Value Equality**: `XmlModel` concept verification and `operator==` structural comparisons<br>• **Client-Side Map Streaming**: WebAssembly streaming transit vehicle deliveries into passenger maps |
 

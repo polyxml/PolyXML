@@ -331,7 +331,7 @@ target_link_libraries(my_app PRIVATE telemetry_models)
 
 ## 8. High-Throughput Glaze Serialization (`--backend glaze`)
 
-PolyXML provides compile-time reflection metadata for [Glaze](https://github.com/stephenberry/glaze), the fastest C++ JSON/XML serialization library achieving multi-GB/s throughput without runtime reflection or macros.
+PolyXML provides compile-time reflection metadata for [Glaze](https://github.com/stephenberry/glaze), a C++ JSON/XML serialization library that works without runtime reflection or macros. Benchmark this backend with your own models before making a throughput claim.
 
 ### Generating Glaze Metadata
 
@@ -422,4 +422,3 @@ int main() {
     return 0;
 }
 ```
-

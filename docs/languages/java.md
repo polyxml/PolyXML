@@ -42,7 +42,7 @@ supported facets, but a no-argument constructor permits a partially populated ob
 On schemas where most fields are optional and empty, POJO construction is cheaper
 than record construction: every empty optional still allocates an `Optional`
 component in the record's canonical constructor. The JMH suite measured POJO reads
-at roughly 1.8–2.3× record reads on its sparse 80-field message (73 fields empty);
+at roughly twice the record read throughput in the [published JMH runs](../benchmarks/language-results-2026-09.md#java-jmh-binding-comparison);
 dense messages narrow the gap. Choose the representation for its ergonomics and
 benchmark your own schema before optimizing for this.
 This is not full XSD validation. The Jackson backend annotates fields explicitly and

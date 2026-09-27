@@ -29,9 +29,9 @@ pip install polyxml
 
 ## Features
 
-- **⚡ Blazing Fast**: 16x faster deserialization and 38x faster serialization than standard Python tools.
-- **🌊 Streaming `iterparse()`**: Parse multi-gigabyte XML files with O(1) constant memory (<5 MB RAM).
-- **📦 Zero-GIL Binary Serialization**: Native `dumps_binary()` and `loads_binary()` using MessagePack (`msgspec`), up to 12.4x faster than pickle.
+- **⚡ Fast typed XML binding**: 10.0x faster deserialization and 23.5x faster serialization than `xsdata` on the [10,000-item catalog benchmark](../../benchmarks/python/results.md).
+- **🌊 Streaming `iterparse()`**: Process records incrementally; measure memory on your own document structure.
+- **📦 Binary Serialization**: Native `dumps_binary()` and `loads_binary()` using MessagePack (`msgspec`).
 - **🎯 Full Type Support**: Dataclasses and Pydantic v2 models with zero boilerplate.
 
 ---

@@ -273,7 +273,7 @@ For full conformance benchmark metrics across Sun Microsystems, Microsoft, and N
 Explore full-scale enterprise examples demonstrating `polyxml.toml` manifests and multi-target compilation in real-world production settings:
 
 - **[🛸 Defense & Aerospace Showcase (polyxml-defense-examples)](https://github.com/polyxml/polyxml-defense-examples)**:
-  Compiles the **USAF UCI v2.5** schema standard and bridges edge sensor telemetry from **Anduril Lattice** across all 7 languages. Features an Ahead-of-Time (AOT) compiled PyO3 native extension (`backend = "aot"`, `examples/python/bridge_aot.py`) achieving 172k+ msg/sec parsing speed.
+  Compiles the **USAF UCI v2.5** schema standard and bridges edge sensor telemetry from **Anduril Lattice** across all 7 languages. Includes an [Ahead-of-Time PyO3 example](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py) (`backend = "aot"`).
 - **[💳 FinTech & Banking Showcase (polyxml-finance-examples)](https://github.com/polyxml/polyxml-finance-examples)**:
   Compiles the **ISO 20022 `pacs.008`** schema standard and bridges instant payment webhooks (FedNow, Stripe, Plaid) across all 7 languages.
 - **[🚍 Smart Cities & Transit Showcase (polyxml-transit-examples)](https://github.com/polyxml/polyxml-transit-examples)**:

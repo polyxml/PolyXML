@@ -30,3 +30,8 @@ description: Use when running, adding, or publishing PolyXML language and runtim
    `data/` subdirectory. Link the page from `docs/benchmarks/index.md` and run
    `uvx zensical build --clean --strict` before pushing. Docs-site Markdown
    must link to repo-only benchmark READMEs with GitHub URLs.
+8. Place a specific result or benchmark-source link next to every numerical
+   performance claim in the README and docs. For tables, introduce the table
+   with a source link. Remove or qualify old figures when no matching result
+   or reproducible runner can be found; a general benchmark index link does
+   not establish an individual measurement.

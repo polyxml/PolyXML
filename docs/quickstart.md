@@ -42,8 +42,8 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     xml_output = polyxml.serialize(sensor, indent=2)
     print(xml_output.decode("utf-8"))
 
-    # 3. Stream multi-gigabyte XML files in O(1) memory
-    # for s in polyxml.iterparse(open("huge.xml", "rb").read(), Sensor, tag="Sensor"):
+    # 3. Iterate records from a large XML document
+    # for s in polyxml.iterparse(open("huge.xml", "rb"), Sensor, tag="Sensor"):
     #     print(s.name)
 
     # 4. Zero-GIL binary serialization for key-value DBs (MDBX, Redis) & IPC
@@ -289,14 +289,16 @@ After compiling your schema with `polyxml generate`, each target ships ready-to-
     from generated.python import Customer
     import polyxml
 
-    # 14x faster XML parsing with zero intermediate DOM overhead
+    # XML-to-dataclass parsing; see the linked benchmarks below for measured workloads
     customer = Customer.from_xml(xml_bytes)
     xml_output = customer.to_xml(indent=2)
 
-    # 10x faster native JSON — completely replace xsdata at 10x+ less latency:
+    # Native JSON on the same model:
     json_bytes = customer.to_json(indent=2)
     customer = Customer.from_json(json_bytes)
     ```
+
+    For measured XML comparisons, see the [Python benchmark results](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md).
 
 === "Rust"
 
@@ -430,6 +432,6 @@ Looking for production-grade project repositories with complete build setups acr
 
 | Domain & Repository | Standards & Integration | Key PolyXML Features Highlighted |
 |---|---|---|
-| **Defense & Avionics**<br>[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) | • `backend = "aot"` Ahead-of-Time PyO3 C-extension with sub-microsecond parsing (172k+ ops/sec)<br>• `features = ["rkyv"]` zero-copy binary serialization in Rust<br>• `xsd:extension` inheritance & base-field inlining<br>• Large schema validation (`polyxml validate` on 8.3 MB schema)<br>• Standard Library Java 22+ immutable records<br>• Edge C2 Wasm streaming via `@polyxml/wasm` |
+| **Defense & Avionics**<br>[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) | • `backend = "aot"` Ahead-of-Time PyO3 C-extension in the [telemetry bridge](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)<br>• `features = ["rkyv"]` zero-copy binary serialization in Rust<br>• `xsd:extension` inheritance & base-field inlining<br>• Large schema validation on the [8.3 MB UCI schema](https://github.com/polyxml/polyxml-defense-examples#readme)<br>• Standard Library Java 22+ immutable records<br>• Edge C2 Wasm streaming via `@polyxml/wasm` |
 | **Banking & FinTech**<br>[polyxml-finance-examples](https://github.com/polyxml/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) | • `backend = "jackson"` Java annotations for enterprise microservices<br>• `backend = "source-gen"` C# 12 / .NET 8 Native AOT source-gen<br>• Strict facets & attributes on simple content (`Ccy="USD"`)<br>• Batch payment streaming via `@polyxml/wasm` |
 | **Public Transit & Mobility**<br>[polyxml-transit-examples](https://github.com/polyxml/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) | • `backend = "sonic"` ByteDance JIT/AVX JSON engine for Go<br>• Deeply nested arrays & complex recursive collections<br>• C++20 `XmlModel` concept verification & `operator==` equality<br>• Passenger map live streaming via `@polyxml/wasm` |

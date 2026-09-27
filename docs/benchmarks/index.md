@@ -57,7 +57,7 @@ Use each linked method and environment when interpreting those figures.
 
 ## 1. Python Deserialization & Serialization Throughput
 
-Benchmarks conducted using Python 3.12 (`abi3-py312`) across 10,000-element streaming payloads (~724 KB XML), micro sensor payloads (~100B), and enterprise orders:
+Benchmarks conducted using Python 3.12 (`abi3-py312`) across 10,000-element streaming payloads (~724 KB XML), micro sensor payloads (~100B), and enterprise orders. The [committed results](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md) and [runner](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python) support the tables below.
 
 > ⚡ **AOT Native Compilation**: In addition to standard dataclasses, PolyXML can compile schemas directly into native C-extensions via `--backend aot`. See the full [Python AOT Native Extension vs Dataclass Benchmark](python-aot-vs-dataclass.md) (3.4x faster throughput, 60.3% less memory).
 
@@ -66,7 +66,7 @@ Benchmarks conducted using Python 3.12 (`abi3-py312`) across 10,000-element stre
 | Engine | Paradigm / Category | Implementation | Deserialization Latency | Deserialization Throughput | Serialization Latency | Serialization Throughput | Peak RAM |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **PolyXML** | **Typed Dataclass** | **Rust + PyO3** | **24.0 ms** | **29.8 MB/s** | **12.2 ms** | **58.1 MB/s** | **2.0 MB** |
-| `lxml.objectify` | Dynamic C Object | C / Cython (`libxml2`) | 10.2 ms | 70.8 MB/s | 4.1 ms | 173.5 MB/s | 0.2 MB |
+| `lxml.objectify` | Dynamic C Object | C / Cython (`libxml2`) | 11.8 ms | 61.0 MB/s | 4.1 ms | 173.5 MB/s | 0.2 MB |
 | `lxml.etree` | Untyped DOM | C / Cython (`libxml2`) | 11.8 ms | 61.1 MB/s | — | — | <0.1 MB |
 | `ElementTree` | Untyped DOM | Python Stdlib C/Python | 13.6 ms | 53.0 MB/s | — | — | 7.1 MB |
 | `defusedxml` | Secure DOM | Python Defused | 29.5 ms | 24.2 MB/s | — | — | 7.1 MB |
@@ -102,7 +102,7 @@ Critical telemetry commands and sensor packets deserialize in **3.2 microseconds
 
 ## 2. Pure Rust Core Throughput (`crates/polyxml-core`)
 
-Statistical benchmarks measured with Criterion.rs:
+Statistical benchmarks measured with Criterion.rs; [benchmark source](https://github.com/polyxml/PolyXML/blob/main/crates/polyxml-core/benches/core_benchmarks.rs) and [reproduction command](#run-pure-rust-criterion-benchmarks). These historical figures have no committed raw Criterion report, so rerun before using them for a new performance claim:
 
 | Workload / Target | Operation | Latency | Throughput | Zero Allocations |
 | :--- | :--- | :---: | :---: | :---: |
@@ -115,30 +115,7 @@ Statistical benchmarks measured with Criterion.rs:
 
 ---
 
-## 3. Key-Value Storage & Binary IPC Throughput (`polyxml.dumps_binary` / `loads_binary`)
-
-When storing XML dataclasses and Pydantic models in embedded transactional key-value databases (`libmdbx`, `LMDB`, `RocksDB`) or communicating over Unix Domain Sockets/multiprocessing queues, Python's traditional `cloudpickle` and standard `pickle` encounter severe GIL and GC bottlenecks.
-
-`polyxml.dumps_binary()` and `polyxml.loads_binary()` provide high-speed MessagePack encoding with universal leaf type hooks (`XmlDate`, `XmlDateTime`, `XmlDuration`, `XmlTime`, `Decimal`, `QName`, `Enum`, `Path`, and Pydantic models):
-
-### 10,000 Complex XML Entities in Real MDBX Pipeline
-
-| Serializer Pipeline | Dumps Ops/s | Dumps Latency | Loads Ops/s | Avg Payload Size | MDBX Write Ops/s |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **`CloudPickle + LZ4` (Legacy)** | 20,609 ops/s | 48.5 μs | 49,322 ops/s | 547 B | 18,287 ops/s |
-| `Pickle 5 + LZ4` (Stdlib C) | 71,954 ops/s | 13.9 μs | 50,092 ops/s | 539 B | — |
-| **`PolyXML Binary + LZ4`** | **163,192 ops/s** | **6.1 μs** | **64,781 ops/s** | **252 B** | **58,781 ops/s** |
-| **`PolyXML Binary (Direct, No LZ4)`** | **213,003 ops/s** | **4.7 μs** | **84,673 ops/s** | **327 B** | **63,236 ops/s** |
-
-### Key Takeaways:
-- **7.9x Faster Serialization**: Slashes per-object serialization from 48.5 μs down to 6.1 μs.
-- **53.9% Storage Space Reduction**: Cuts stored byte size from 547 bytes to 252 bytes per entity.
-- **3.2x MDBX Transaction Speedup**: Real database writes into `libmdbx` jump from 18,287 ops/s to 58,781 ops/s.
-- **100% Fidelity Guarantee**: Round-trips preserve exact dataclass types, field metadata, and XML primitive representations with `assert loads(dumps(x)) == x`.
-
----
-
-## 4. How to Reproduce Benchmarks
+## 3. How to Reproduce Benchmarks
 
 The benchmark suite is reusable and version-controlled.
 

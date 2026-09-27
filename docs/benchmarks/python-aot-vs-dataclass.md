@@ -35,7 +35,7 @@ When generating Python bindings from XML schemas (XSD), PolyXML offers two prima
 
 ## 2. Empirical Benchmark Results
 
-Measurements conducted on Linux x86_64 using Python 3.12 (`abi3-py312`) and release-compiled binaries (`maturin develop --release`).
+Measurements conducted on Linux x86_64 using Python 3.12 (`abi3-py312`) and release-compiled binaries (`maturin develop --release`). [Benchmark source](https://github.com/polyxml/PolyXML/blob/main/crates/polyxml-python/benches/aot_vs_dataclass.py) and [reproduction steps](#3-how-to-reproduce) apply to the table below; a raw run transcript was not committed.
 
 ### Workload: High-Frequency Sensor Telemetry (~180 bytes XML)
 
@@ -119,5 +119,4 @@ json_out = reading.to_json()
 To see a production-scale example of `--backend aot` handling complex military XML schemas (USAF Universal Command and Control Interface / UCI v2.5), check out the **[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)** repository:
 
 - **Manifest Configuration**: Defined in [`polyxml.toml`](https://github.com/polyxml/polyxml-defense-examples/blob/main/polyxml.toml) with `backend = "aot"` and `package = "uci_aot"`.
-- **AOT Telemetry Bridge**: See [`examples/python/bridge_aot.py`](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py), which benchmarks **172,500+ ops/sec (166+ MB/s)** parsing multi-kilobyte USAF UCI XML messages into native PyO3 C-extension objects.
-
+- **AOT Telemetry Bridge**: See the [`examples/python/bridge_aot.py` example](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py) for an end-to-end USAF UCI integration. Its throughput is not part of the measured AOT comparison above.

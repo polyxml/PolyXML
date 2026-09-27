@@ -18,10 +18,10 @@ Yet, for over twenty years, the developer tooling landscape for XML has suffered
 | Ecosystem | Legacy Tool | Architecture & Runtime | Modern Idiom Alignment | Critical Operational Friction | PolyXML Modern Approach |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Java** | **Jakarta JAXB (`xjc`)** | JAXP / StAX with reflection | ❌ **Low**: Mutable JavaBeans, no-arg constructors, getters/setters | Reflection overhead; extensive heap churn; cannot emit immutable records or sealed interfaces natively | ✅ **Java 22+ Records & Sealed Interfaces**: Exhaustive switch pattern matching, compact constructor facet validation, zero JNI Panama FFI |
-| **Java** | **Apache XMLBeans** | In-memory XML store maintaining full Infoset | ❌ **Very Low**: Classes extending `XmlObject` | **10x–20x memory bloat**; every field access traverses pointer trees; obsolete Ant/Maven plugins | ✅ **Streaming Core**: Zero DOM allocation, minimal memory footprint |
+| **Java** | **Apache XMLBeans** | In-memory XML store maintaining full Infoset | ❌ **Very Low**: Classes extending `XmlObject` | Materialized XML store and pointer traversal on field access | ✅ **Streaming Core**: No intermediate DOM in the Rust parser |
 | **C++** | **CodeSynthesis XSD** | Hard dependency on **Apache Xerces-C++** | ❌ **Low**: Pre-C++11 raw pointers, `auto_ptr`, Boost wrappers | Massive binary footprint; expensive **UTF-8 ↔ UTF-16 (`XMLCh`) transcoding**; punitive **GPL v2 / commercial dual-license** | ✅ **Modern C++20/C++23**: `std::variant`, `std::optional`, `std::string_view`, concepts, zero Xerces dependency, **permissive MIT license** |
 | **C++** | **gSOAP (`soapcpp2`)** | Custom low-level C parser with macro tables | ❌ **Very Low**: Procedural C/C++ | Global state variables; namespace collisions; fragile memory ownership; GPL/commercial dual-license | ✅ **Thread-Safe Modern Value Types**: RAII memory management, CMake/Meson module export |
-| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | **10x–24x slower** on the documented benchmark workload; interpreter loop bottlenecks | ✅ **High-Performance Rust PyO3 Engine**: 10x faster deserialization, 23.5x faster serialization on that workload, in-memory XML entity handling, PEP 695 type aliases, 100% test coverage |
+| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | [10.0x slower to read and 23.5x slower to write](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md) on the 10,000-item catalog workload | ✅ **Rust PyO3 Engine**: Typed models, in-memory XML entity handling, and PEP 695 type aliases |
 | **Python** | **`generateDS`** | Monolithic Python script with string matching | ❌ **Very Low**: Legacy procedural classes | Monolithic un-typed files; fails on substitution groups and circular definitions | ✅ **Pydantic v2 & `@dataclass(slots=True)`**: Complete restriction facet validation and IDE autocomplete |
 | **Rust** | **`xsd-parser`** | quick-xml / serde-xml-rs derive attributes | 🟡 **Moderate**: Rust structs with serde | **Panics on enterprise schemas** (ISO 20022); Serde impedance mismatch on mixed content and duplicate element sequences | ✅ **Pure-Rust Compiler & Zero-Copy Codecs**: Tarjan SCC cycle-cutting (`Box<T>`), streaming `Cow<'a, str>`, zero Serde mismatch |
 | **Go** | **`xgen` / `goxsd`** | Direct SAX mapping to `encoding/xml` | 🟡 **Moderate**: Standard Go structs | **Collapses `xs:choice` into optional pointers** (losing mutual exclusivity); slow reflection parser; no facet validation | ✅ **Go 1.22+ Structs with Choice Validation**: Custom `UnmarshalXML` enforcing mutual exclusivity, pointer cycle cuts, canonical initialisms (`ID`, `URL`) |
@@ -42,12 +42,12 @@ PolyXML operates as a **single, unified compiler frontend** written in safe, hig
 - Guarantees that **all 7 target languages** receive structurally identical, bug-free data contracts from the exact same schema.
 
 ### 2. Zero-Allocation Streaming Runtime vs. Intermediate DOM Memory Bloat
-Traditional XML data-binding libraries construct an intermediate Document Object Model (DOM) tree in memory before populating user objects. For a 100 MB XML document, DOM node allocations, string copies, and pointer graphs frequently expand to **1 GB – 2 GB of RAM**, triggering aggressive garbage collection pauses.
+Some XML data-binding libraries construct an intermediate Document Object Model (DOM) tree before populating user objects. This can increase peak memory and garbage collection pressure; the actual cost depends on the document and library.
 
 PolyXML eliminates intermediate DOM allocations entirely:
 - **Direct Event Streaming**: Feeds raw bytes directly through a monomorphized `quick-xml` event state machine.
 - **Slice Conversions with `lexical-core`**: Converts numeric and boolean scalars directly from ASCII byte slices into native integers and floats without intermediate heap string allocations.
-- **Zero-Copy Borrowing**: Text elements in Rust and C++ borrow directly from the input buffer (`Cow<'a, str>` and `std::string_view`), delivering multi-gigabyte-per-second throughput.
+- **Borrowed Text Where Supported**: Rust generated models can use `Cow<'a, str>`; check each target's ownership model before assuming a zero-copy parse.
 
 ### 3. Modern Language Idioms (2024–2026) vs. 20-Year-Old Code Generation
 Most legacy compilers were architected during the Java 5 / C++98 era. They generate sprawling boilerplate:
@@ -64,7 +64,7 @@ PolyXML is **100% permissively licensed under the MIT License**, with zero runti
 Enterprise engineering rarely lives in an XML-only silo. Interbank rails (ISO 20022), aviation telemetry (FIXM), and healthcare networks (HL7) mandate strict XML Schema contracts, but modern cloud services, microservices, and frontends operate on JSON.
 
 Historically, bridging this divide forced engineering teams into painful trade-offs:
-- **Fragile Untyped Parsers**: Running `xmltodict` or ad-hoc scripts drops XML attribute metadata (`@attr`), mangles repeated elements, and runs up to 38x slower.
+- **Untyped Parser Mapping**: Ad-hoc scripts need explicit rules for XML attributes and repeated elements. The [Python XML benchmark](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md) measures `xmltodict` on specific inputs.
 - **Duplicate Schema Maintenance**: Manually writing and synchronizing separate XSD and OpenAPI/JSON schemas across teams inevitably leads to silent drift and catastrophic production outages.
 
 PolyXML breaks this dichotomy through a **natively dual-format architecture**:
@@ -75,7 +75,7 @@ PolyXML breaks this dichotomy through a **natively dual-format architecture**:
   - **Go**: Generated structs include both `xml:"..."` and `json:"..."` tags, with `json:"-"` on `XMLName`, allowing identical structs to marshal to both formats with Go's standard libraries.
   - **C#**: Emits `[property: JsonPropertyName("...")]` on primary constructor records and `[JsonConverter(typeof(JsonStringEnumConverter))]` on enums for native .NET `System.Text.Json` serialization.
   - **Rust**: Inherent zero-copy `.to_json_string()`, `.to_json_vec()`, `.from_json_str()`, and `.from_json_slice()` methods alongside XML codecs, with Serde rename support.
-  - **Python**: Inherent `.to_json()` and `@classmethod from_json()` on every model, drop-in `JsonSerializer` / `JsonParser` (9.5x faster than xsdata), and direct `polyxml.xml_to_json()` / `polyxml.json_to_xml()`.
+  - **Python**: Inherent `.to_json()` and `@classmethod from_json()` on generated models, compatible `JsonSerializer` / `JsonParser` APIs, and direct `polyxml.xml_to_json()` / `polyxml.json_to_xml()`.
 
 ### 6. Controlled XML Entity Handling
 
@@ -94,6 +94,8 @@ consuming application.
 ### 1. Python Deserialization & Serialization Throughput
 *Workload: 10,000 complex business items (~724 KB XML) measured with Python 3.12 (`abi3-py312`)*
 
+[Committed benchmark results and runner](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python) support this table and chart. Different parsers return different object shapes.
+
 ```
 Deserialization Throughput (Higher is Better)
 PolyXML (Typed Dataclass)    ████████████████████████████████ 29.8 MB/s  (10.0x faster)
@@ -110,14 +112,16 @@ xsdata (Typed Dataclass)     █ 2.5 MB/s
 | Engine | Data Model | Deserialization Latency | Deserialization Speedup | Serialization Latency | Serialization Speedup | Peak RAM |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **PolyXML** | **Typed Dataclass** | **24.0 ms** | **10.0x** | **12.2 ms** | **23.5x** | **2.0 MB** |
-| `lxml.objectify` | Dynamic C Proxy | 10.2 ms | 23.7x | 4.1 ms | 72.8x | 0.2 MB |
+| `lxml.objectify` | Dynamic C Proxy | 11.8 ms | 20.4x | 4.1 ms | 70.1x | 0.2 MB |
 | `ElementTree` | Untyped DOM | 13.6 ms | 17.8x | — | — | 7.1 MB |
 | `defusedxml` | Secure DOM | 29.5 ms | 8.2x | — | — | 7.1 MB |
-| `xmltodict` | Untyped Dict | 57.5 ms | 4.2x | 80.0 ms | 3.7x | 4.8 MB |
+| `xmltodict` | Untyped Dict | 57.5 ms | 4.2x | 80.0 ms | 3.6x | 4.8 MB |
 | `xsdata` | Typed Dataclass | 241.9 ms | 1.0x (Ref) | 298.8 ms | 1.0x (Ref) | 3.3 MB |
 
 ### 2. Real-Time Micro Telemetry (Sensor ~100B, UCI Telemetry)
 *Workload: High-frequency telemetry packets in avionics, robotics, and financial feeds*
+
+Source: [Python sensor benchmark results](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md).
 
 | Engine | Paradigm | Deserialization Latency | Speedup vs Standard Python |
 | :--- | :--- | :---: | :---: |
@@ -134,18 +138,13 @@ xsdata (Typed Dataclass)     █ 2.5 MB/s
 
 ---
 
-### 3. Native JSON Data-Binding: Ditching xsdata Completely
-Many enterprise teams keep `xsdata` solely for its `JsonParser` and `JsonSerializer` to handle hybrid XML/JSON architectures. PolyXML completely eliminates `xsdata` by offering native, Rust-backed JSON serialization and deserialization that is up to **9.5x faster**, with drop-in compatibility classes and dual-key matching (accepting both camelCase schema aliases and snake_case Python attributes):
-
-| Workload (5,000 iterations) | xsdata | PolyXML (Rust Core) | Speedup |
-| :--- | :--- | :--- | :--- |
-| **JSON Deserialization** | 198.4 μs | **20.8 μs** | **9.5x faster** |
-| **JSON Serialization** | 76.8 μs | **16.6 μs** | **4.6x faster** |
+### 3. Native JSON Data-Binding
+PolyXML offers Rust-backed JSON serialization and deserialization with compatible `JsonParser` and `JsonSerializer` APIs. Run a like-for-like benchmark on your model before making a JSON speedup claim.
 
 ---
 
 ### 4. Pure Rust Core Throughput (`crates/polyxml-core`)
-*Statistical benchmarks measured using Criterion.rs*
+*Statistical benchmarks measured using Criterion.rs; [benchmark source](https://github.com/polyxml/PolyXML/blob/main/crates/polyxml-core/benches/core_benchmarks.rs). These historical figures have no committed raw Criterion report; rerun before using them for a new performance claim.*
 
 | Workload | Operation | Latency | Throughput | Allocation Strategy |
 | :--- | :--- | :---: | :---: | :--- |
@@ -175,7 +174,7 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 | :--- | :--- |
 | **JAXB / `xjc` in Java** | Immutable Java 22+ records, sealed interface choices, zero reflection overhead, and Project Panama FFI — or drop-in JavaBeans with fluent builders and zero-reflection StAX codecs (`--style pojo --feature builder,direct-codec`) for existing codebases. |
 | **CodeSynthesis in C++** | Modern C++20 value types, `std::variant`, zero Apache Xerces dependency, zero UTF-16 transcoding overhead, and a permissive MIT license. |
-| **`xsdata` in Python** | **10x faster** XML parsing, **23.5x faster** XML serialization, **9.5x faster** native JSON, 100% drop-in replacement (`JsonSerializer`, `JsonParser`), and direct C/Rust transcoding (`xml_to_json`, `json_to_xml`). |
+| **`xsdata` in Python** | [10.0x faster XML reading and 23.5x faster XML writing](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md) on the 10,000-item catalog, compatible JSON parser and serializer APIs, and direct XML/JSON transcoding. |
 | **`xsd-parser` in Rust** | A battle-tested compiler that doesn't panic on complex schemas, with automatic Tarjan `Box<T>` cycle breaks, inherent streaming XML codecs, and native `.to_json_string()` codecs. |
 | **`xgen` in Go** | Dual `xml:"..."` and `json:"..."` struct tags on every model, true `xs:choice` mutual exclusivity validation, pointer cycle breaks, and canonical Go initialism normalization. |
 | **`xsd.exe` in .NET** | Modern C# 12 records with primary constructors, dual `XmlSerializer` and `System.Text.Json` attributes (`[JsonPropertyName]`, `[JsonConverter]`), and standard `IValidatableObject` integration. |
