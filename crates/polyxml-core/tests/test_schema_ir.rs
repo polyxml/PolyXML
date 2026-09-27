@@ -8,6 +8,38 @@ use polyxml::ir::{
 use polyxml::schema_parser::XsdParser;
 
 #[test]
+fn test_parse_lexical_union_member_types_and_inline_members() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:test" targetNamespace="urn:test">
+      <xs:simpleType name="DateOrCode"><xs:union memberTypes="xs:date xs:string">
+        <xs:simpleType><xs:restriction base="xs:int"><xs:minInclusive value="1"/></xs:restriction></xs:simpleType>
+      </xs:union></xs:simpleType>
+      <xs:element name="value" type="t:DateOrCode"/>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let union = match &ir.types[&QName::new(Some("urn:test"), "DateOrCode")] {
+        TypeDef::Union(union) => union,
+        other => panic!("expected lexical union, got {other:?}"),
+    };
+    assert_eq!(union.branches.len(), 3);
+    assert!(union
+        .branches
+        .iter()
+        .all(|branch| branch.xml_name.is_empty()));
+    assert_eq!(
+        union.branches[0].type_ref,
+        TypeRef::Primitive(PrimitiveType::Date)
+    );
+    assert_eq!(
+        union.branches[1].type_ref,
+        TypeRef::Primitive(PrimitiveType::String)
+    );
+    let TypeRef::Named(inline) = &union.branches[2].type_ref else {
+        panic!("inline simple type was not registered")
+    };
+    assert!(matches!(ir.types.get(inline), Some(TypeDef::Simple(_))));
+}
+
+#[test]
 fn test_parse_complex_type_and_facets() {
     let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
     <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09" elementFormDefault="qualified">

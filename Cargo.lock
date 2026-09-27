@@ -619,6 +619,7 @@ dependencies = [
  "phf_codegen",
  "pretty_assertions",
  "quick-xml",
+ "regex",
  "serde",
  "serde_json",
  "smallvec",

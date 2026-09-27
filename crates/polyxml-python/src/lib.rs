@@ -168,7 +168,24 @@ fn resolve_scalar_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<
         "XmlDuration" => Ok(ScalarType::XmlDuration),
         _ => {
             if is_enum_class(py, &unwrapped) {
-                return Ok(ScalarType::Any);
+                if let Ok(members) = unwrapped.getattr("__members__") {
+                    if let Ok(values) = members.call_method0("values") {
+                        let mut choices = Vec::new();
+                        for member in values.try_iter()?.flatten() {
+                            if let Ok(value) = member.getattr("value") {
+                                if let Ok(value) = value.str().and_then(|text| text.extract()) {
+                                    choices.push(value);
+                                }
+                            }
+                            if let Ok(name) = member.getattr("name") {
+                                if let Ok(name) = name.extract() {
+                                    choices.push(name);
+                                }
+                            }
+                        }
+                        return Ok(ScalarType::Enum(choices));
+                    }
+                }
             }
             Ok(ScalarType::Any)
         }
@@ -181,7 +198,29 @@ fn resolve_value_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<V
     }
     if type_obj.hasattr("__metadata__").unwrap_or(false) {
         if let Ok(origin) = type_obj.getattr("__origin__") {
-            return resolve_value_type(py, &origin);
+            let base = resolve_value_type(py, &origin)?;
+            if let ValueType::Scalar(scalar) = base {
+                if let Ok(metadata) = type_obj.getattr("__metadata__") {
+                    if let Ok(items) = metadata.cast::<PyTuple>() {
+                        for item in items.iter() {
+                            if let Ok(marker) = item.cast::<PyTuple>() {
+                                if marker.len() == 2
+                                    && marker.get_item(0)?.extract::<String>().ok().as_deref()
+                                        == Some("polyxml_patterns")
+                                {
+                                    let patterns = marker.get_item(1)?.extract::<Vec<String>>()?;
+                                    return Ok(ValueType::Scalar(ScalarType::Pattern(
+                                        Box::new(scalar),
+                                        patterns,
+                                    )));
+                                }
+                            }
+                        }
+                    }
+                }
+                return Ok(ValueType::Scalar(scalar));
+            }
+            return Ok(base);
         }
     }
 
@@ -204,14 +243,32 @@ fn resolve_value_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<V
     if is_union {
         if let Ok(args) = type_obj.getattr("__args__") {
             if let Ok(tuple) = args.cast_into::<PyTuple>() {
+                let mut scalars = Vec::new();
+                let mut first_non_scalar = None;
                 for arg in tuple.iter() {
                     let arg_name: String = arg
                         .getattr("__name__")
                         .and_then(|n| n.extract())
                         .unwrap_or_default();
                     if arg_name != "NoneType" {
-                        return resolve_value_type(py, &arg);
+                        match resolve_value_type(py, &arg)? {
+                            ValueType::Scalar(scalar) => scalars.push(scalar),
+                            other => {
+                                if first_non_scalar.is_none() {
+                                    first_non_scalar = Some(other);
+                                }
+                            }
+                        }
                     }
+                }
+                if let Some(non_scalar) = first_non_scalar {
+                    return Ok(non_scalar);
+                }
+                if scalars.len() > 1 {
+                    return Ok(ValueType::Scalar(ScalarType::Union(scalars)));
+                }
+                if let Some(scalar) = scalars.into_iter().next() {
+                    return Ok(ValueType::Scalar(scalar));
                 }
             }
         }

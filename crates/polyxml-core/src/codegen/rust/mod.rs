@@ -604,6 +604,9 @@ impl RustCodegen {
         }
 
         let _ = writeln!(out, "#[derive({})]", derives.join(", "));
+        if u.is_lexical() && self.options.derive_serde {
+            out.push_str("#[serde(untagged)]\n");
+        }
         if self.options.emit_rkyv {
             let _ = writeln!(
                 out,
@@ -614,7 +617,7 @@ impl RustCodegen {
         let type_signature = if needs_lifetime {
             format!("{}<'a>", union_name)
         } else {
-            union_name
+            union_name.clone()
         };
 
         let _ = writeln!(out, "pub enum {} {{", type_signature);
@@ -638,16 +641,32 @@ impl RustCodegen {
             if let Some(ref doc) = branch.documentation {
                 let _ = writeln!(out, "    /// {}", doc.trim());
             }
-            if self.options.derive_serde {
+            if self.options.derive_serde && !u.is_lexical() {
                 let _ = writeln!(out, "    #[serde(rename = \"{}\")]", branch.xml_name);
             }
-            if self.options.emit_polyxml_attrs {
+            if self.options.emit_polyxml_attrs && !u.is_lexical() {
                 let _ = writeln!(out, "    #[polyxml(element = \"{}\")]", branch.xml_name);
             }
             let _ = writeln!(out, "    {}({}),", var_id, branch_type);
         }
 
         out.push_str("}\n");
+
+        if self.options.derive_default {
+            if let Some(first) = u.branches.first() {
+                let variant = to_rust_variant_identifier(&first.variant_name);
+                let impl_header = if needs_lifetime {
+                    format!("impl<'a> Default for {}<'a>", union_name)
+                } else {
+                    format!("impl Default for {}", union_name)
+                };
+                let _ = writeln!(
+                    out,
+                    "{} {{ fn default() -> Self {{ Self::{}(Default::default()) }} }}",
+                    impl_header, variant
+                );
+            }
+        }
 
         if self.options.emit_codecs {
             self.emit_union_codecs(out, u, types_with_lifetime, ir);
@@ -1089,7 +1108,7 @@ impl RustCodegen {
         match type_ref {
             TypeRef::Named(qname) => {
                 if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
-                    Some(u)
+                    (!u.is_lexical()).then_some(u)
                 } else {
                     None
                 }
@@ -2259,6 +2278,10 @@ impl RustCodegen {
         types_with_lifetime: &HashSet<QName>,
         ir: &SchemaIR,
     ) {
+        if u.is_lexical() {
+            self.emit_lexical_union_codecs(out, u, types_with_lifetime, ir);
+            return;
+        }
         let union_name = type_ident(&u.qname);
         let needs_lifetime = types_with_lifetime.contains(&u.qname);
 
@@ -2473,6 +2496,119 @@ impl RustCodegen {
         out.push_str("        }\n");
         out.push_str("    }\n");
         out.push_str("}\n");
+    }
+
+    fn emit_lexical_union_codecs(
+        &self,
+        out: &mut String,
+        u: &UnionDef,
+        types_with_lifetime: &HashSet<QName>,
+        ir: &SchemaIR,
+    ) {
+        let name = type_ident(&u.qname);
+        let borrowed = types_with_lifetime.contains(&u.qname);
+        let header = if borrowed {
+            format!("impl<'a> {}<'a>", name)
+        } else {
+            format!("impl {}", name)
+        };
+        let text_type = if borrowed { "Cow<'a, str>" } else { "String" };
+        let xml_arg = if borrowed { "&'a str" } else { "&str" };
+        let bytes_arg = if borrowed { "&'a [u8]" } else { "&[u8]" };
+        let reader_arg = if borrowed {
+            "&mut Reader<&'a [u8]>"
+        } else {
+            "&mut Reader<&[u8]>"
+        };
+
+        let _ = writeln!(out, "\n{} {{", header);
+        let _ = writeln!(
+            out,
+            "    fn parse_lexical(text: {}) -> Result<Self> {{",
+            text_type
+        );
+        out.push_str("        let s = text.trim();\n");
+        for branch in &u.branches {
+            let variant = to_rust_variant_identifier(&branch.variant_name);
+            if let Some(enum_name) = self.field_is_enum(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "        if let Ok(value) = {}::from_str(s) {{ return Ok(Self::{}(value)); }}",
+                    enum_name, variant
+                );
+            } else if let Some(numeric) = self.field_numeric_type(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "        if let Ok(value) = s.parse::<{}>() {{ return Ok(Self::{}(value)); }}",
+                    numeric, variant
+                );
+            } else if self.field_is_bool(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "        if s == \"true\" || s == \"1\" {{ return Ok(Self::{}(true)); }}",
+                    variant
+                );
+                let _ = writeln!(
+                    out,
+                    "        if s == \"false\" || s == \"0\" {{ return Ok(Self::{}(false)); }}",
+                    variant
+                );
+            } else if self.field_is_string(&branch.type_ref, ir) {
+                if let Some(simple) = super::patterned_simple(&branch.type_ref, ir) {
+                    let _ = writeln!(out, "        if validate_{}_patterns(s).is_ok() {{ return Ok(Self::{}(text)); }}", type_ident(&simple.qname), variant);
+                } else if matches!(
+                    super::primitive_base(&branch.type_ref, ir),
+                    TypeRef::Primitive(PrimitiveType::Date)
+                ) {
+                    let _ = writeln!(out, "        if polyxml::converters::ValueConverter::parse_scalar(&polyxml::ScalarType::XmlDate, s.as_bytes(), {:?}).is_ok() {{ return Ok(Self::{}(text)); }}", name, variant);
+                } else {
+                    let _ = writeln!(out, "        return Ok(Self::{}(text));", variant);
+                }
+            }
+        }
+        let _ = writeln!(out, "        Err(PolyXmlError::ScalarParseError {{ field: {:?}.into(), expected: \"union member\", value: s.into() }})", name);
+        out.push_str("    }\n\n");
+        let _ = writeln!(
+            out,
+            "    pub fn from_xml(xml: {}) -> Result<Self> {{",
+            xml_arg
+        );
+        out.push_str("        let mut reader = Reader::from_str(xml);\n        loop {\n            match reader.read_event()? {\n                Event::Start(e) => return Self::decode_xml(&mut reader, &e),\n                Event::Empty(e) => return Self::decode_xml_empty(&e),\n                Event::Eof => return Err(PolyXmlError::SchemaError(\"Unexpected EOF while parsing union\".into())),\n                _ => {}\n            }\n        }\n    }\n\n");
+        let _ = writeln!(
+            out,
+            "    pub fn from_xml_bytes(xml_bytes: {}) -> Result<Self> {{",
+            bytes_arg
+        );
+        out.push_str("        Self::from_xml(std::str::from_utf8(xml_bytes)?)\n    }\n\n");
+        let _ = writeln!(
+            out,
+            "    pub fn decode_xml(reader: {}, start: &BytesStart<'_>) -> Result<Self> {{",
+            reader_arg
+        );
+        out.push_str("        let tag = start.local_name().as_ref().to_owned();\n        Self::parse_lexical(read_element_text(reader, &tag)?)\n    }\n\n");
+        out.push_str("    pub fn decode_xml_empty(_start: &BytesStart<'_>) -> Result<Self> {\n        Self::parse_lexical(Default::default())\n    }\n\n");
+        out.push_str("    pub fn to_xml(&self) -> Result<Vec<u8>> {\n        let mut buf = Vec::new();\n        let mut writer = Writer::new(std::io::Cursor::new(&mut buf));\n        self.encode_xml(&mut writer, None)?;\n        Ok(buf)\n    }\n\n");
+        out.push_str("    pub fn to_xml_string(&self) -> Result<String> {\n        String::from_utf8(self.to_xml()?).map_err(|e| PolyXmlError::Utf8Error(e.utf8_error()))\n    }\n\n");
+        if self.options.derive_serde {
+            let json_arg = if borrowed { "&'a str" } else { "&str" };
+            let _ = writeln!(out, "    pub fn from_json_str(json_str: {}) -> std::result::Result<Self, serde_json::Error> {{ serde_json::from_str(json_str) }}", json_arg);
+            let _ = writeln!(out, "    pub fn from_json_slice(bytes: {}) -> std::result::Result<Self, serde_json::Error> {{ serde_json::from_slice(bytes) }}", bytes_arg);
+            out.push_str("    pub fn to_json_string(&self) -> std::result::Result<String, serde_json::Error> { serde_json::to_string(self) }\n");
+            out.push_str("    pub fn to_json_vec(&self) -> std::result::Result<Vec<u8>, serde_json::Error> { serde_json::to_vec(self) }\n\n");
+        }
+        out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n        let tag = tag_name.unwrap_or(");
+        let _ = writeln!(out, "{:?});", name);
+        out.push_str("        writer.write_event(Event::Start(BytesStart::new(tag)))?;\n        let text = match self {\n");
+        for branch in &u.branches {
+            let variant = to_rust_variant_identifier(&branch.variant_name);
+            let expr = if self.field_is_enum(&branch.type_ref, ir).is_some() {
+                "value.as_str().to_owned()"
+            } else {
+                "value.to_string()"
+            };
+            let _ = writeln!(out, "            Self::{}(value) => {},", variant, expr);
+        }
+        out.push_str("        };\n        writer.write_event(Event::Text(BytesText::new(&text)))?;\n        writer.write_event(Event::End(BytesEnd::new(tag)))?;\n        Ok(())\n    }\n}\n");
     }
 
     fn emit_pyo3_error_type(&self, out: &mut String) {

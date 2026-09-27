@@ -645,7 +645,7 @@ impl JavaCodegen {
             .join(", ");
 
         // Jackson polymorphic type annotations
-        if jackson {
+        if jackson && !u.is_lexical() {
             let _ = writeln!(
                 out,
                 "{}@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = \"@type\")",
@@ -681,7 +681,7 @@ impl JavaCodegen {
                 self.emit_docstring(out, doc, &format!("{}    ", indent));
             }
 
-            if jackson {
+            if jackson && !u.is_lexical() {
                 let _ = writeln!(out, "{}    @JsonTypeName({:?})", indent, branch.xml_name);
             }
 

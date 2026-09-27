@@ -20,6 +20,9 @@ pub enum ScalarType {
     XmlTime,
     XmlDuration,
     XmlGregorian(crate::ir::PrimitiveType),
+    Enum(Vec<String>),
+    Pattern(Box<ScalarType>, Vec<String>),
+    Union(Vec<ScalarType>),
     Any,
 }
 
@@ -264,8 +267,33 @@ impl ModelSchema {
                                     ValueType::Nested(child_schema)
                                 }
                             }
-                            TypeDef::Simple(sim) => build_type(&sim.base_type, ir, visited),
-                            TypeDef::Enum(_) => ValueType::Scalar(ScalarType::String),
+                            TypeDef::Simple(sim) => {
+                                let base = build_type(&sim.base_type, ir, visited);
+                                if sim.facets.patterns.is_empty() {
+                                    base
+                                } else if let ValueType::Scalar(scalar) = base {
+                                    ValueType::Scalar(ScalarType::Pattern(
+                                        Box::new(scalar),
+                                        sim.facets.patterns.clone(),
+                                    ))
+                                } else {
+                                    base
+                                }
+                            }
+                            TypeDef::Enum(e) => ValueType::Scalar(ScalarType::Enum(
+                                e.variants.iter().map(|v| v.value.clone()).collect(),
+                            )),
+                            TypeDef::Union(u) if u.is_lexical() => {
+                                ValueType::Scalar(ScalarType::Union(
+                                    u.branches
+                                        .iter()
+                                        .map(|b| match build_type(&b.type_ref, ir, visited) {
+                                            ValueType::Scalar(scalar) => scalar,
+                                            _ => ScalarType::Any,
+                                        })
+                                        .collect(),
+                                ))
+                            }
                             TypeDef::Union(_) => ValueType::Scalar(ScalarType::String),
                         }
                     } else {

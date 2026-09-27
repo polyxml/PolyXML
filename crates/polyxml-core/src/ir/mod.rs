@@ -362,6 +362,18 @@ pub struct UnionDef {
     pub documentation: Option<String>,
 }
 
+impl UnionDef {
+    /// Lexical `xs:union` members share one element's text, unlike `xs:choice`
+    /// branches which each carry a distinct child element name.
+    pub fn is_lexical(&self) -> bool {
+        !self.branches.is_empty()
+            && self
+                .branches
+                .iter()
+                .all(|branch| branch.xml_name.is_empty())
+    }
+}
+
 /// A simple type definition with restriction facets.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SimpleTypeDef {

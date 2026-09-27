@@ -313,7 +313,7 @@ impl CSharpCodegen {
         // Emit Unions (Choices)
         for def in ir.types.values() {
             if let TypeDef::Union(u) = def {
-                self.emit_union(&mut out, u, indent);
+                self.emit_union(&mut out, u, ir, indent);
             }
         }
 
@@ -577,14 +577,14 @@ impl CSharpCodegen {
         }
     }
 
-    fn emit_union(&self, out: &mut String, u: &UnionDef, indent: &str) {
+    fn emit_union(&self, out: &mut String, u: &UnionDef, ir: &SchemaIR, indent: &str) {
         let choice_name = type_ident(&u.qname);
         if let Some(ref doc) = u.documentation {
             self.emit_docstring(out, doc, indent);
         }
 
-        // XmlInclude attributes for polymorphism
-        if self.options.emit_xml_attributes {
+        // XmlInclude attributes for element-choice polymorphism.
+        if self.options.emit_xml_attributes && !u.is_lexical() {
             for branch in &u.branches {
                 let variant_name = to_csharp_type_name(&branch.variant_name);
                 writeln!(
@@ -632,10 +632,10 @@ impl CSharpCodegen {
             }
 
             let mut branch_attrs = Vec::new();
-            if self.options.emit_xml_attributes {
+            if self.options.emit_xml_attributes && !u.is_lexical() {
                 branch_attrs.push(format!("XmlElement(\"{}\")", branch.xml_name));
             }
-            if self.options.emit_json_attributes {
+            if self.options.emit_json_attributes && !u.is_lexical() {
                 branch_attrs.push(format!("JsonPropertyName(\"{}\")", branch.xml_name));
             }
             let xml_attr = if branch_attrs.is_empty() {
@@ -679,7 +679,127 @@ impl CSharpCodegen {
             writeln!(out).unwrap();
         }
 
+        if u.is_lexical() {
+            self.emit_lexical_union_helpers(out, u, ir, indent);
+        }
         writeln!(out, "{}}}\n", indent).unwrap();
+    }
+
+    fn emit_lexical_union_helpers(
+        &self,
+        out: &mut String,
+        u: &UnionDef,
+        ir: &SchemaIR,
+        indent: &str,
+    ) {
+        let name = type_ident(&u.qname);
+        let _ = writeln!(
+            out,
+            "{}    public static {} Parse(string text)",
+            indent, name
+        );
+        let _ = writeln!(out, "{}    {{", indent);
+        let _ = writeln!(out, "{}        var value = text.Trim();", indent);
+        for (idx, branch) in u.branches.iter().enumerate() {
+            let variant = to_csharp_type_name(&branch.variant_name);
+            let mapped = self.context.map_type_ref(&branch.type_ref);
+            if let TypeRef::Named(qname) = &branch.type_ref {
+                if let Some(TypeDef::Enum(def)) = ir.types.get(qname) {
+                    for item in &def.variants {
+                        let item_name = to_csharp_variant_name(&item.name);
+                        let _ = writeln!(
+                            out,
+                            "{}        if (value == {:?}) return new {}({}.{});",
+                            indent, item.value, variant, mapped, item_name
+                        );
+                    }
+                    continue;
+                }
+            }
+            let simple = match &branch.type_ref {
+                TypeRef::Named(qname) => ir.types.get(qname).and_then(|def| match def {
+                    TypeDef::Simple(s) => Some(s.as_ref()),
+                    _ => None,
+                }),
+                _ => None,
+            };
+            let base = super::primitive_base(&branch.type_ref, ir);
+            let base_name = self.context.map_type_ref(base);
+            let wrap = if simple.is_some() {
+                format!("new {}(candidate{})", mapped, idx)
+            } else {
+                format!("candidate{}", idx)
+            };
+            if base_name == "string" {
+                if let Some(simple) = simple.filter(|s| !s.facets.patterns.is_empty()) {
+                    let checks = simple
+                        .facets
+                        .patterns
+                        .iter()
+                        .map(|pattern| {
+                            format!("Regex.IsMatch(value, {:?})", format!(r"\A(?:{pattern})\z"))
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" && ");
+                    let _ = writeln!(
+                        out,
+                        "{}        if ({}) {{ var candidate{} = value; return new {}({}); }}",
+                        indent, checks, idx, variant, wrap
+                    );
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "{}        {{ var candidate{} = value; return new {}({}); }}",
+                        indent, idx, variant, wrap
+                    );
+                }
+            } else if base_name == "bool" {
+                let _ = writeln!(out, "{}        if (value == \"true\" || value == \"1\") {{ var candidate{} = true; return new {}({}); }}", indent, idx, variant, wrap);
+                let _ = writeln!(out, "{}        if (value == \"false\" || value == \"0\") {{ var candidate{} = false; return new {}({}); }}", indent, idx, variant, wrap);
+            } else if base_name == "DateOnly" {
+                let _ = writeln!(out, "{}        if (DateOnly.TryParseExact(value, \"yyyy-MM-dd\", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var candidate{})) return new {}({});", indent, idx, variant, wrap);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "{}        if ({}.TryParse(value, out var candidate{})) return new {}({});",
+                    indent, base_name, idx, variant, wrap
+                );
+            }
+        }
+        let _ = writeln!(
+            out,
+            "{}        throw new FormatException(\"No {} union member accepts the value\");",
+            indent, name
+        );
+        let _ = writeln!(out, "{}    }}", indent);
+        let _ = writeln!(
+            out,
+            "{}    public string ToXmlString() => this switch",
+            indent
+        );
+        let _ = writeln!(out, "{}    {{", indent);
+        for branch in &u.branches {
+            let variant = to_csharp_type_name(&branch.variant_name);
+            let value = if matches!(
+                super::primitive_base(&branch.type_ref, ir),
+                TypeRef::Primitive(PrimitiveType::Date)
+            ) {
+                "item.Value.ToString(\"yyyy-MM-dd\", System.Globalization.CultureInfo.InvariantCulture)".to_string()
+            } else {
+                match &branch.type_ref {
+                TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Enum(_))) => "item.Value.ToXmlValue()".to_string(),
+                TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Simple(_))) => "Convert.ToString(item.Value.Value, System.Globalization.CultureInfo.InvariantCulture) ?? \"\"".to_string(),
+                _ => "Convert.ToString(item.Value, System.Globalization.CultureInfo.InvariantCulture) ?? \"\"".to_string(),
+            }
+            };
+            let _ = writeln!(out, "{}        {} item => {},", indent, variant, value);
+        }
+        let _ = writeln!(
+            out,
+            "{}        _ => throw new InvalidOperationException()",
+            indent
+        );
+        let _ = writeln!(out, "{}    }};", indent);
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR, indent: &str) {
@@ -732,6 +852,55 @@ impl CSharpCodegen {
             .map(|f| self.unique_property_name(&f.name, &mut seen_props, Some(&struct_name)))
             .collect();
 
+        let has_lexical_union = self.options.emit_xml_attributes && s.fields.iter().any(|f| {
+            matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
+        });
+
+        if self.options.use_records && has_lexical_union {
+            writeln!(
+                out,
+                "{}public record {}{}\n{}{{",
+                indent, struct_name, implements_str, indent
+            )
+            .unwrap();
+            for (f, name) in s.fields.iter().zip(&prop_names) {
+                let ty = self.map_field_type(f, ir);
+                if let TypeRef::Named(q) = &f.type_ref {
+                    if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()) {
+                        let _ = writeln!(out, "{}    [XmlIgnore]", indent);
+                        if self.options.emit_json_attributes {
+                            let _ =
+                                writeln!(out, "{}    [JsonPropertyName({:?})]", indent, f.xml_name);
+                        }
+                        let _ = writeln!(
+                            out,
+                            "{}    public {} {} {{ get; set; }} = default!;",
+                            indent, ty, name
+                        );
+                        let _ = writeln!(out, "{}    [XmlElement({:?})]", indent, f.xml_name);
+                        if self.options.emit_json_attributes {
+                            let _ = writeln!(out, "{}    [JsonIgnore]", indent);
+                        }
+                        let _ = writeln!(out, "{}    public string? {}Xml {{ get => {}?.ToXmlString(); set => {} = value is null ? default! : {}.Parse(value); }}", indent, name, name, name, type_ident(q));
+                        continue;
+                    }
+                }
+                let attrs = self
+                    .build_field_attributes(f, ir)
+                    .replace("[property: ", "[");
+                let _ = writeln!(
+                    out,
+                    "{}    {}public {} {} {{ get; set; }} = default!;",
+                    indent, attrs, ty, name
+                );
+            }
+            if self.options.emit_validation {
+                self.emit_struct_validator(out, s, &prop_names, indent);
+            }
+            writeln!(out, "{}}}\n", indent).unwrap();
+            return;
+        }
+
         if !self.options.use_records {
             writeln!(
                 out,
@@ -742,6 +911,28 @@ impl CSharpCodegen {
             writeln!(out, "{}    public {}() {{ }}", indent, struct_name).unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
                 let ty = self.map_field_type(f, ir);
+                if let TypeRef::Named(q) = &f.type_ref {
+                    if self.options.emit_xml_attributes
+                        && matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical())
+                    {
+                        let _ = writeln!(out, "{}    [XmlIgnore]", indent);
+                        if self.options.emit_json_attributes {
+                            let _ =
+                                writeln!(out, "{}    [JsonPropertyName({:?})]", indent, f.xml_name);
+                        }
+                        let _ = writeln!(
+                            out,
+                            "{}    public {} {} {{ get; set; }} = default!;",
+                            indent, ty, name
+                        );
+                        let _ = writeln!(out, "{}    [XmlElement({:?})]", indent, f.xml_name);
+                        if self.options.emit_json_attributes {
+                            let _ = writeln!(out, "{}    [JsonIgnore]", indent);
+                        }
+                        let _ = writeln!(out, "{}    public string? {}Xml {{ get => {}?.ToXmlString(); set => {} = value is null ? default! : {}.Parse(value); }}", indent, name, name, name, type_ident(q));
+                        continue;
+                    }
+                }
                 let attrs = self
                     .build_field_attributes(f, ir)
                     .replace("[property: ", "[");

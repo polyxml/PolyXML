@@ -32,6 +32,13 @@ maturin develop
 maturin develop --release
 ```
 
+If `maturin` is unavailable in the local environment, build the extension with
+`cargo build -p polyxml-python`, copy `target/debug/lib_polyxml.so` as
+`_polyxml.abi3.so` into a temporary copy of `python/polyxml`, and put that
+temporary parent directory on `PYTHONPATH` for tests. The test environment's
+`.venv/bin` should be prepended to `PATH` so generated-model tests can find
+`ruff`. This keeps the checked-in extension untouched.
+
 ## 3. ABI3 Conformance Auditing
 
 Ensure no unstable C-API calls or non-limited API symbols leaked into the compiled shared library:

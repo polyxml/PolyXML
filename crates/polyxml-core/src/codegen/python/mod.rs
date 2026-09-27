@@ -306,6 +306,11 @@ impl PythonCodegen {
                     if self.options.backend == PythonBackend::Pydantic && !s.facets.is_empty() {
                         has_annotated = true;
                     }
+                    if self.options.backend == PythonBackend::Dataclass
+                        && !s.facets.patterns.is_empty()
+                    {
+                        has_annotated = true;
+                    }
                     if let TypeRef::Primitive(PrimitiveType::Decimal) = s.base_type {
                         has_decimal = true;
                     }
@@ -458,6 +463,22 @@ impl PythonCodegen {
                 );
                 return;
             }
+        }
+
+        if self.options.backend == PythonBackend::Dataclass && !s.facets.patterns.is_empty() {
+            let patterns = s
+                .facets
+                .patterns
+                .iter()
+                .map(|pattern| format!("{:?}", pattern))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let _ = writeln!(
+                out,
+                "type {} = Annotated[{}, (\"polyxml_patterns\", ({},))]",
+                type_name, base_type, patterns
+            );
+            return;
         }
 
         let _ = writeln!(out, "type {} = {}", type_name, base_type);

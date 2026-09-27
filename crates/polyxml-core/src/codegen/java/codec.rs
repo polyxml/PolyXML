@@ -40,10 +40,9 @@ impl JavaCodegen {
                         check_type(&f.type_ref, ir)?;
                         if matches!(f.kind, FieldKind::Attribute | FieldKind::Text) {
                             if let TypeRef::Named(q) = &f.type_ref {
-                                if matches!(
-                                    ir.types.get(q),
-                                    Some(TypeDef::Struct(_) | TypeDef::Union(_))
-                                ) {
+                                if matches!(ir.types.get(q), Some(TypeDef::Struct(_)))
+                                    || matches!(ir.types.get(q), Some(TypeDef::Union(u)) if !u.is_lexical())
+                                {
                                     return Err(format!(
                                         "non-scalar XML text/attribute {}.{}",
                                         name, f.name
@@ -176,13 +175,23 @@ impl JavaCodegen {
                 );
             }
             TypeDef::Union(u) => {
-                let _=writeln!(out,"            {name} result = null;\n            while (reader.hasNext()) {{\n                int event = reader.next();\n                if (event == XMLStreamConstants.END_ELEMENT) return result;\n                if (event != XMLStreamConstants.START_ELEMENT) continue;");
-                for (i, b) in u.branches.iter().enumerate() {
-                    let expr = self.read_value(&b.type_ref, ir);
-                    let variant = to_java_type_name(&b.variant_name);
-                    let _=writeln!(out,"                {}if (reader.getLocalName().equals({:?})) result = new {name}.{variant}({expr});",if i==0 {""}else{"else "},b.xml_name);
+                if u.is_lexical() {
+                    out.push_str("            String text = reader.getElementText();\n");
+                    for b in &u.branches {
+                        let expr = self.parse_scalar(&b.type_ref, "text", ir);
+                        let variant = to_java_type_name(&b.variant_name);
+                        let _ = writeln!(out, "            try {{ return new {name}.{variant}({expr}); }} catch (RuntimeException ignored) {{ }}");
+                    }
+                    let _ = writeln!(out, "            throw new XMLStreamException(\"No {} union member accepts: \" + text);", name);
+                } else {
+                    let _=writeln!(out,"            {name} result = null;\n            while (reader.hasNext()) {{\n                int event = reader.next();\n                if (event == XMLStreamConstants.END_ELEMENT) return result;\n                if (event != XMLStreamConstants.START_ELEMENT) continue;");
+                    for (i, b) in u.branches.iter().enumerate() {
+                        let expr = self.read_value(&b.type_ref, ir);
+                        let variant = to_java_type_name(&b.variant_name);
+                        let _=writeln!(out,"                {}if (reader.getLocalName().equals({:?})) result = new {name}.{variant}({expr});",if i==0 {""}else{"else "},b.xml_name);
+                    }
+                    out.push_str("                else skip(reader);\n            }\n            return result;\n");
                 }
-                out.push_str("                else skip(reader);\n            }\n            return result;\n");
             }
         }
         out.push_str("        } catch (IllegalArgumentException | java.time.DateTimeException ex) { throw new XMLStreamException(\"Invalid XML value\", reader.getLocation(), ex); }\n    }\n");
@@ -230,15 +239,20 @@ impl JavaCodegen {
                     } else {
                         "branch.getValue()"
                     };
-                    self.emit_write_value(
-                        &mut out,
-                        &b.type_ref,
-                        access,
-                        &b.xml_name,
-                        u.qname.namespace.as_deref().unwrap_or(""),
-                        ir,
-                        "            ",
-                    );
+                    if u.is_lexical() {
+                        let text = self.format_scalar(&b.type_ref, access, ir);
+                        let _ = writeln!(out, "            writer.writeCharacters({text});");
+                    } else {
+                        self.emit_write_value(
+                            &mut out,
+                            &b.type_ref,
+                            access,
+                            &b.xml_name,
+                            u.qname.namespace.as_deref().unwrap_or(""),
+                            ir,
+                            "            ",
+                        );
+                    }
                     out.push_str("        }\n");
                 }
             }

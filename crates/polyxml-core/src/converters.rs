@@ -31,6 +31,47 @@ impl ValueConverter {
         field_name: &str,
     ) -> Result<PolyValue> {
         match scalar_type {
+            ScalarType::Union(members) => {
+                for member in members {
+                    if let Ok(value) = Self::parse_scalar(member, bytes, field_name) {
+                        return Ok(value);
+                    }
+                }
+                Err(PolyXmlError::ScalarParseError {
+                    field: field_name.to_string(),
+                    expected: "union member",
+                    value: String::from_utf8_lossy(bytes).to_string(),
+                })
+            }
+            ScalarType::Enum(values) => {
+                let value = std::str::from_utf8(trim_bytes(bytes))?;
+                if values.iter().any(|candidate| candidate == value) {
+                    Ok(PolyValue::String(value.to_string()))
+                } else {
+                    Err(PolyXmlError::ScalarParseError {
+                        field: field_name.to_string(),
+                        expected: "enumeration",
+                        value: value.to_string(),
+                    })
+                }
+            }
+            ScalarType::Pattern(base, patterns) => {
+                let value = std::str::from_utf8(trim_bytes(bytes))?;
+                for pattern in patterns {
+                    let anchored = format!(r"\A(?:{pattern})\z");
+                    if !regex::Regex::new(&anchored)
+                        .map(|compiled| compiled.is_match(value))
+                        .unwrap_or(false)
+                    {
+                        return Err(PolyXmlError::ScalarParseError {
+                            field: field_name.to_string(),
+                            expected: "pattern",
+                            value: value.to_string(),
+                        });
+                    }
+                }
+                Self::parse_scalar(base, bytes, field_name)
+            }
             ScalarType::String => {
                 let s = std::str::from_utf8(bytes)?;
                 Ok(PolyValue::String(s.to_string()))
@@ -68,13 +109,23 @@ impl ValueConverter {
                 }
             }
             ScalarType::Decimal
-            | ScalarType::XmlDate
             | ScalarType::XmlDateTime
             | ScalarType::XmlTime
             | ScalarType::XmlDuration
             | ScalarType::Any => {
                 let s = std::str::from_utf8(trim_bytes(bytes))?;
                 Ok(PolyValue::String(s.to_string()))
+            }
+            ScalarType::XmlDate => {
+                let value = std::str::from_utf8(trim_bytes(bytes))?;
+                if !valid_xml_date(value.as_bytes()) {
+                    return Err(PolyXmlError::ScalarParseError {
+                        field: field_name.to_string(),
+                        expected: "XML Schema date",
+                        value: value.to_string(),
+                    });
+                }
+                Ok(PolyValue::String(value.to_string()))
             }
             ScalarType::XmlGregorian(kind) => {
                 let value = std::str::from_utf8(trim_bytes(bytes))?;
@@ -97,6 +148,56 @@ fn two_digits(bytes: &[u8]) -> Option<u8> {
     } else {
         None
     }
+}
+
+fn valid_xml_date(bytes: &[u8]) -> bool {
+    let date = if bytes.ends_with(b"Z")
+        || (bytes.len() >= 6
+            && matches!(bytes[bytes.len() - 6], b'+' | b'-')
+            && bytes[bytes.len() - 3] == b':')
+    {
+        let Some(date) = valid_timezone(bytes) else {
+            return false;
+        };
+        date
+    } else {
+        bytes
+    };
+    let (negative, date) = if let Some(rest) = date.strip_prefix(b"-") {
+        (true, rest)
+    } else {
+        (false, date)
+    };
+    let mut parts = date.split(|byte| *byte == b'-');
+    let (Some(year), Some(month), Some(day), None) =
+        (parts.next(), parts.next(), parts.next(), parts.next())
+    else {
+        return false;
+    };
+    if year.len() < 4 || !year.iter().all(u8::is_ascii_digit) || (year.len() > 4 && year[0] == b'0')
+    {
+        return false;
+    }
+    let Some(month) = two_digits(month) else {
+        return false;
+    };
+    let Some(day) = two_digits(day) else {
+        return false;
+    };
+    let Ok(year) = std::str::from_utf8(year).unwrap_or("").parse::<i64>() else {
+        return false;
+    };
+    if year == 0 && negative {
+        return false;
+    }
+    let max_day = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) => 29,
+        2 => 28,
+        _ => return false,
+    };
+    day >= 1 && day <= max_day
 }
 
 fn valid_timezone(bytes: &[u8]) -> Option<&[u8]> {

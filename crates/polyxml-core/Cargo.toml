@@ -21,6 +21,7 @@ serde_json = "1.0"
 minijinja = { version = "2.8", features = ["builtins"] }
 heck = "0.5"
 phf_codegen = "0.14.0"
+regex = "1.11"
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }

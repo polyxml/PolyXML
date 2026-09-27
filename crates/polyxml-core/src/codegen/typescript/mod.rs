@@ -471,6 +471,54 @@ impl TypeScriptCodegen {
             self.emit_docstring(out, doc, "");
         }
 
+        if u.is_lexical() {
+            let members = u
+                .branches
+                .iter()
+                .map(|branch| self.context.map_type_ref(&branch.type_ref))
+                .collect::<Vec<_>>();
+            let _ = writeln!(out, "export type {} = {};\n", ts_name, members.join(" | "));
+            let schema_name = format!("{}Schema", ts_name);
+            let expressions = u
+                .branches
+                .iter()
+                .map(|branch| match self.options.effective_backend() {
+                    TypeScriptBackend::Zod => self.zod_expr_for_type(&branch.type_ref),
+                    TypeScriptBackend::Valibot => self.valibot_expr_for_type(&branch.type_ref),
+                    TypeScriptBackend::TypeBox => self.typebox_expr_for_type(&branch.type_ref),
+                    TypeScriptBackend::None => String::new(),
+                })
+                .collect::<Vec<_>>();
+            match self.options.effective_backend() {
+                TypeScriptBackend::Zod => {
+                    let _ = writeln!(
+                        out,
+                        "export const {} = z.union([{}]);\n",
+                        schema_name,
+                        expressions.join(", ")
+                    );
+                }
+                TypeScriptBackend::Valibot => {
+                    let _ = writeln!(
+                        out,
+                        "export const {} = v.union([{}]);\n",
+                        schema_name,
+                        expressions.join(", ")
+                    );
+                }
+                TypeScriptBackend::TypeBox => {
+                    let _ = writeln!(
+                        out,
+                        "export const {} = Type.Union([{}]);\n",
+                        schema_name,
+                        expressions.join(", ")
+                    );
+                }
+                TypeScriptBackend::None => {}
+            }
+            return;
+        }
+
         let mut seen = HashSet::new();
         let kind_names: Vec<String> = u
             .branches

@@ -255,15 +255,22 @@ impl GoCodegen {
         set_type_name_map(build_type_name_map(ir, to_go_type_name));
         let mut body = String::new();
         let mut has_time = false;
-        let has_patterns = self.options.validate_facets
-            && ir.types.values().any(|t| match t {
-                TypeDef::Simple(s) => !s.facets.patterns.is_empty(),
-                TypeDef::Struct(s) => s
-                    .fields
-                    .iter()
-                    .any(|f| f.facets.as_ref().is_some_and(|f| !f.patterns.is_empty())),
-                _ => false,
-            });
+        let lexical_patterns = ir.types.values().any(|def| match def {
+            TypeDef::Union(u) if u.is_lexical() => u.branches.iter().any(|branch| {
+                matches!(&branch.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Simple(s)) if !s.facets.patterns.is_empty()))
+            }),
+            _ => false,
+        });
+        let has_patterns = lexical_patterns
+            || (self.options.validate_facets
+                && ir.types.values().any(|t| match t {
+                    TypeDef::Simple(s) => !s.facets.patterns.is_empty(),
+                    TypeDef::Struct(s) => s
+                        .fields
+                        .iter()
+                        .any(|f| f.facets.as_ref().is_some_and(|f| !f.patterns.is_empty())),
+                    _ => false,
+                }));
         let mut has_fmt = has_patterns;
         let mut has_io = false;
         let mut has_xml = self.options.emit_xml_tags;
@@ -288,10 +295,20 @@ impl GoCodegen {
                         has_fmt = true;
                     }
                 }
-                TypeDef::Union(_) => {
-                    if self.options.validate_choice_exclusivity {
+                TypeDef::Union(u) => {
+                    if u.branches
+                        .iter()
+                        .any(|branch| self.references_time(&branch.type_ref))
+                    {
+                        has_time = true;
+                    }
+                    if self.options.validate_choice_exclusivity && !u.is_lexical() {
                         has_fmt = true;
                         has_io = true;
+                        has_xml = true;
+                    }
+                    if u.is_lexical() {
+                        has_fmt = true;
                         has_xml = true;
                     }
                 }
@@ -343,6 +360,14 @@ impl GoCodegen {
         }
         if has_patterns {
             imports.push("\"regexp\"");
+        }
+        if ir
+            .types
+            .values()
+            .any(|def| matches!(def, TypeDef::Union(u) if u.is_lexical()))
+        {
+            imports.push("\"strconv\"");
+            imports.push("\"strings\"");
         }
         if has_time {
             imports.push("\"time\"");
@@ -399,7 +424,7 @@ impl GoCodegen {
         // Emit choices (unions)
         for type_def in ir.types.values() {
             if let TypeDef::Union(u) = type_def {
-                self.emit_union(out, u);
+                self.emit_union(out, u, ir);
             }
         }
 
@@ -509,7 +534,11 @@ impl GoCodegen {
         writeln!(out, "}}\n").unwrap();
     }
 
-    fn emit_union(&self, out: &mut String, u: &UnionDef) {
+    fn emit_union(&self, out: &mut String, u: &UnionDef, ir: &SchemaIR) {
+        if u.is_lexical() {
+            self.emit_lexical_union(out, u, ir);
+            return;
+        }
         let choice_name = type_ident(&u.qname);
         if let Some(ref doc) = u.documentation {
             for line in doc.lines() {
@@ -687,6 +716,153 @@ impl GoCodegen {
             writeln!(out, "    return e.EncodeElement(Alias(c), start)").unwrap();
             writeln!(out, "}}\n").unwrap();
         }
+    }
+
+    fn emit_lexical_union(&self, out: &mut String, u: &UnionDef, ir: &SchemaIR) {
+        let name = type_ident(&u.qname);
+        let mut seen = HashSet::new();
+        let fields = u
+            .branches
+            .iter()
+            .map(|b| self.unique_field_name(&b.variant_name, &mut seen))
+            .collect::<Vec<_>>();
+        let _ = writeln!(out, "type {} struct {{", name);
+        for (branch, field) in u.branches.iter().zip(&fields) {
+            let _ = writeln!(
+                out,
+                "    {} *{} `json:{:?}`",
+                field,
+                self.context.map_type_ref(&branch.type_ref),
+                format!("{},omitempty", field)
+            );
+        }
+        out.push_str("}\n\n");
+        let _ = writeln!(out, "func (c {}) Selected() string {{", name);
+        for field in &fields {
+            let _ = writeln!(out, "    if c.{} != nil {{ return {:?} }}", field, field);
+        }
+        out.push_str("    return \"\"\n}\n\n");
+        let _ = writeln!(
+            out,
+            "func (c *{}) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {{",
+            name
+        );
+        out.push_str("    var raw string\n    if err := d.DecodeElement(&raw, &start); err != nil { return err }\n    value := strings.TrimSpace(raw)\n    *c = ");
+        let _ = writeln!(out, "{}{{}}", name);
+        for (branch, field) in u.branches.iter().zip(&fields) {
+            let mapped = self.context.map_type_ref(&branch.type_ref);
+            if let TypeRef::Named(qname) = &branch.type_ref {
+                if let Some(TypeDef::Enum(def)) = ir.types.get(qname) {
+                    let comparisons = def
+                        .variants
+                        .iter()
+                        .map(|v| format!("value == {:?}", v.value))
+                        .collect::<Vec<_>>()
+                        .join(" || ");
+                    let _ = writeln!(
+                        out,
+                        "    if {} {{ v := {}(value); c.{} = &v; return nil }}",
+                        comparisons, mapped, field
+                    );
+                    continue;
+                }
+            }
+            let base = super::primitive_base(&branch.type_ref, ir);
+            let numeric = match base {
+                TypeRef::Primitive(
+                    PrimitiveType::Int
+                    | PrimitiveType::Integer
+                    | PrimitiveType::Long
+                    | PrimitiveType::Short
+                    | PrimitiveType::Byte,
+                ) => Some("signed"),
+                TypeRef::Primitive(
+                    PrimitiveType::UnsignedInt
+                    | PrimitiveType::UnsignedLong
+                    | PrimitiveType::UnsignedShort
+                    | PrimitiveType::UnsignedByte
+                    | PrimitiveType::PositiveInteger
+                    | PrimitiveType::NonNegativeInteger,
+                ) => Some("unsigned"),
+                TypeRef::Primitive(
+                    PrimitiveType::Float | PrimitiveType::Double | PrimitiveType::Decimal,
+                ) => Some("float"),
+                _ => None,
+            };
+            if matches!(base, TypeRef::Primitive(PrimitiveType::Date)) {
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+            } else if let Some(kind) = numeric {
+                let parse = match kind {
+                    "signed" => "strconv.ParseInt(value, 10, 64)",
+                    "unsigned" => "strconv.ParseUint(value, 10, 64)",
+                    _ => "strconv.ParseFloat(value, 64)",
+                };
+                let _ = writeln!(out, "    if parsed, err := {}; err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", parse, mapped, field);
+            } else if matches!(base, TypeRef::Primitive(PrimitiveType::Boolean)) {
+                let _ = writeln!(out, "    if parsed, err := strconv.ParseBool(value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+            } else {
+                let simple = match &branch.type_ref {
+                    TypeRef::Named(qname) => ir.types.get(qname).and_then(|def| match def {
+                        TypeDef::Simple(s) => Some(s.as_ref()),
+                        _ => None,
+                    }),
+                    _ => None,
+                };
+                if let Some(simple) = simple.filter(|s| !s.facets.patterns.is_empty()) {
+                    let checks = simple
+                        .facets
+                        .patterns
+                        .iter()
+                        .map(|pattern| {
+                            format!(
+                                "regexp.MustCompile({:?}).MatchString(value)",
+                                format!("^(?:{pattern})$")
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" && ");
+                    let _ = writeln!(
+                        out,
+                        "    if {} {{ v := {}(value); c.{} = &v; return nil }}",
+                        checks, mapped, field
+                    );
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "    {{ v := {}(value); c.{} = &v; return nil }}",
+                        mapped, field
+                    );
+                }
+            }
+        }
+        let _ = writeln!(
+            out,
+            "    return fmt.Errorf(\"invalid lexical value for {}: %q\", value)",
+            name
+        );
+        out.push_str("}\n\n");
+        let _ = writeln!(
+            out,
+            "func (c {}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{",
+            name
+        );
+        out.push_str("    count := 0\n    var value string\n");
+        for (branch, field) in u.branches.iter().zip(&fields) {
+            let expr = if matches!(
+                super::primitive_base(&branch.type_ref, ir),
+                TypeRef::Primitive(PrimitiveType::Date)
+            ) {
+                format!("c.{}.Format(\"2006-01-02\")", field)
+            } else {
+                format!("fmt.Sprint(*c.{})", field)
+            };
+            let _ = writeln!(
+                out,
+                "    if c.{} != nil {{ count++; value = {} }}",
+                field, expr
+            );
+        }
+        out.push_str("    if count != 1 { return fmt.Errorf(\"lexical union requires exactly one member\") }\n    return e.EncodeElement(value, start)\n}\n\n");
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {

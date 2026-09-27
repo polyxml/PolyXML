@@ -285,6 +285,7 @@ impl XsdParser {
                                 target_namespace.as_deref(),
                                 &prefixes,
                                 None,
+                                &mut ir,
                             )? {
                                 ir.add_type(type_def);
                             }
@@ -788,9 +789,14 @@ impl XsdParser {
                             target_ns,
                             &format!("{}{}SimpleType", parent_local, elem_local),
                         );
-                        if let Some(type_def) =
-                            self.parse_simple_type(reader, e, target_ns, prefixes, Some(unique))?
-                        {
+                        if let Some(type_def) = self.parse_simple_type(
+                            reader,
+                            e,
+                            target_ns,
+                            prefixes,
+                            Some(unique),
+                            ir,
+                        )? {
                             let q = type_def.qname().clone();
                             ir.add_type(type_def);
                             field.type_ref = TypeRef::Named(q);
@@ -915,6 +921,7 @@ impl XsdParser {
         target_ns: Option<&str>,
         prefixes: &HashMap<String, String>,
         name_override: Option<String>,
+        ir: &mut SchemaIR,
     ) -> Result<Option<TypeDef>, SchemaError> {
         let name = match get_attr_value(start, "name").or(name_override) {
             Some(n) => n,
@@ -925,6 +932,7 @@ impl XsdParser {
         let mut base_type = TypeRef::string();
         let mut facets = RestrictionFacets::default();
         let mut enum_values = Vec::new();
+        let mut union_branches: Option<Vec<UnionBranch>> = None;
         let mut documentation = None;
         let mut buf = Vec::new();
 
@@ -945,6 +953,36 @@ impl XsdParser {
                             if let Some(base) = get_attr_value(e, "base") {
                                 base_type = resolve_type_ref(&base, target_ns, prefixes);
                             }
+                        }
+                        "union" => {
+                            union_branches = Some(parse_union_members(e, target_ns, prefixes));
+                        }
+                        "simpleType" if union_branches.is_some() => {
+                            let branch_index = union_branches.as_ref().unwrap().len() + 1;
+                            let inline_name = unique_type_name(
+                                ir,
+                                target_ns,
+                                &format!("{}Member{}", qname.local, branch_index),
+                            );
+                            if let Some(inner) = self.parse_simple_type(
+                                reader,
+                                e,
+                                target_ns,
+                                prefixes,
+                                Some(inline_name),
+                                ir,
+                            )? {
+                                let inner_qname = inner.qname().clone();
+                                ir.add_type(inner);
+                                union_branches.as_mut().unwrap().push(UnionBranch {
+                                    variant_name: format!("{}Value", inner_qname.local),
+                                    xml_name: String::new(),
+                                    namespace: None,
+                                    type_ref: TypeRef::Named(inner_qname),
+                                    documentation: None,
+                                });
+                            }
+                            depth -= 1;
                         }
                         "pattern" => {
                             if let Some(val) = get_attr_value(e, "value") {
@@ -972,6 +1010,9 @@ impl XsdParser {
                             if let Some(base) = get_attr_value(e, "base") {
                                 base_type = resolve_type_ref(&base, target_ns, prefixes);
                             }
+                        }
+                        "union" => {
+                            union_branches = Some(parse_union_members(e, target_ns, prefixes));
                         }
                         "enumeration" => {
                             if let Some(val) = get_attr_value(e, "value") {
@@ -1066,6 +1107,31 @@ impl XsdParser {
                     v.name = candidate;
                 }
             }
+        }
+
+        if let Some(mut branches) = union_branches {
+            if branches.is_empty() {
+                return Err(SchemaError::Malformed(format!(
+                    "xs:union '{}' has no member types",
+                    qname.local
+                )));
+            }
+            let mut seen = HashSet::new();
+            for branch in &mut branches {
+                let base = branch.variant_name.clone();
+                let mut name = base.clone();
+                let mut suffix = 2;
+                while !seen.insert(name.clone()) {
+                    name = format!("{base}{suffix}");
+                    suffix += 1;
+                }
+                branch.variant_name = name;
+            }
+            return Ok(Some(TypeDef::Union(UnionDef {
+                qname,
+                branches,
+                documentation,
+            })));
         }
 
         if !enum_values.is_empty() {
@@ -1164,6 +1230,7 @@ impl XsdParser {
                                 target_ns,
                                 prefixes,
                                 Some(anon_name),
+                                ir,
                             )? {
                                 match type_def {
                                     TypeDef::Enum(mut ed) => {
@@ -1173,6 +1240,10 @@ impl XsdParser {
                                     TypeDef::Simple(mut sd) => {
                                         sd.qname = anon_qname.clone();
                                         ir.add_type(TypeDef::Simple(sd));
+                                    }
+                                    TypeDef::Union(mut union) => {
+                                        union.qname = anon_qname.clone();
+                                        ir.add_type(TypeDef::Union(union));
                                     }
                                     _ => {}
                                 }
@@ -1289,6 +1360,39 @@ impl XsdParser {
             }
         }
     }
+}
+
+fn parse_union_members(
+    union: &BytesStart,
+    target_ns: Option<&str>,
+    prefixes: &HashMap<String, String>,
+) -> Vec<UnionBranch> {
+    let mut names = HashMap::<String, usize>::new();
+    get_attr_value(union, "memberTypes")
+        .unwrap_or_default()
+        .split_whitespace()
+        .map(|member| {
+            let type_ref = resolve_type_ref(member, target_ns, prefixes);
+            let base = match &type_ref {
+                TypeRef::Primitive(primitive) => format!("{primitive:?}Value"),
+                TypeRef::Named(qname) => format!("{}Value", qname.local),
+                _ => "Member".into(),
+            };
+            let count = names.entry(base.clone()).or_insert(0);
+            *count += 1;
+            UnionBranch {
+                variant_name: if *count == 1 {
+                    base
+                } else {
+                    format!("{base}{count}")
+                },
+                xml_name: String::new(),
+                namespace: None,
+                type_ref,
+                documentation: None,
+            }
+        })
+        .collect()
 }
 
 /// Give XSD Gregorian primitives named, validated types in every target.

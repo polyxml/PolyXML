@@ -28,6 +28,15 @@ crates/polyxml-core/src/codegen/
 └── csharp/mod.rs           # C# 12 / .NET 8+ (Record classes/structs, source gen context)
 ```
 
+Lexical `xs:union` and element `xs:choice` both use `UnionDef`. Check
+`UnionDef::is_lexical()` before emitting XML codecs: lexical members parse the
+same element text in declaration order, while choice members dispatch on child
+element names. The fixture `crates/polyxml-core/tests/fixtures/lexical_union.xsd`
+and `test_lexical_union_codegen.rs` cover typed output and runtime parsing.
+For C# `XmlSerializer`, a lexical union field needs a typed `[XmlIgnore]`
+property plus a string `[XmlElement]` proxy; repeated empty branch tags leave
+the typed field unset.
+
 ---
 
 ## 2. Standard Pattern for Codegen Options & Backends

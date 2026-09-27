@@ -345,6 +345,42 @@ def test_pep604_union_nested_dataclass():
     assert res.count == 42
 
 
+def test_lexical_union_tries_scalar_members_in_order():
+    from enum import StrEnum
+    from typing import Annotated
+
+    class Code(StrEnum):
+        LATE = "LATE"
+        EARLY = "EARLY"
+
+    type PatternCode = Annotated[str, ("polyxml_patterns", ("[A-Z]{3}[0-9]{2}",))]
+
+    @dataclass
+    class Payload:
+        number: int | PatternCode = field(metadata={"type": "Element"})
+        code: Code | PatternCode = field(metadata={"type": "Element"})
+
+    Payload.__annotations__["number"] = int | PatternCode
+    Payload.__annotations__["code"] = Code | PatternCode
+
+    integer = polyxml.deserialize(
+        "<Payload><number>42</number><code>LATE</code></Payload>", Payload
+    )
+    assert integer.number == 42
+    assert type(integer.number) is int
+    assert integer.code is Code.LATE
+
+    patterned = polyxml.deserialize(
+        "<Payload><number>ABC12</number><code>XYZ34</code></Payload>", Payload
+    )
+    assert patterned.number == "ABC12"
+    assert patterned.code == "XYZ34"
+    assert type(patterned.code) is str
+
+    with pytest.raises(ValueError, match="union member"):
+        polyxml.deserialize("<Payload><number>bad</number><code>LATE</code></Payload>", Payload)
+
+
 def test_binary_serialization_dataclass():
     item = SimpleItem(id=42, name="TestItem", price=19.99, active=True)
     payload = polyxml.dumps_binary(item)
