@@ -1,3 +1,10 @@
+# [0.30.0](https://github.com/polyxml/PolyXML/compare/v0.29.0...v0.30.0) (2026-09-27)
+
+
+### Features
+
+* multi-schema deduplication and shared module imports ([#81](https://github.com/polyxml/PolyXML/issues/81)) ([427ca1b](https://github.com/polyxml/PolyXML/commit/427ca1b355f3f9276aee998f4fcfd6554d4f1e7e))
+
 # [0.29.0](https://github.com/polyxml/PolyXML/compare/v0.28.0...v0.29.0) (2026-09-27)
 
 
