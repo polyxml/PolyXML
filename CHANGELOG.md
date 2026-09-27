@@ -1,3 +1,10 @@
+## [0.24.2](https://github.com/polyxml/PolyXML/compare/v0.24.1...v0.24.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* **codegen:** harden identifier sanitization, member collisions, and enum symbols ([#82](https://github.com/polyxml/PolyXML/issues/82)) ([c54aa63](https://github.com/polyxml/PolyXML/commit/c54aa635c359c9e99ea1579b5f908530fd307d9c))
+
 ## [0.24.1](https://github.com/polyxml/PolyXML/compare/v0.24.0...v0.24.1) (2026-09-27)
 
 
