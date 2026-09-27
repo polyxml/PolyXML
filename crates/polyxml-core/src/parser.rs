@@ -17,6 +17,7 @@ pub(crate) struct StackFrame {
     values: SmallVec<[Option<PolyValue>; 8]>,
     list_values: SmallVec<[Option<Vec<PolyValue>>; 4]>,
     frame_text_buf: Option<Vec<u8>>,
+    mixed_parent_kind: Option<String>,
 }
 
 impl StackFrame {
@@ -32,7 +33,27 @@ impl StackFrame {
             values: smallvec![None; field_count],
             list_values: SmallVec::new(),
             frame_text_buf,
+            mixed_parent_kind: None,
         }
+    }
+
+    fn push_mixed_item(&mut self, kind: &str, value: PolyValue) {
+        if let Some(mixed) = &self.schema.mixed_content {
+            let mut item = HashMap::new();
+            item.insert("kind".into(), PolyValue::String(kind.into()));
+            item.insert("value".into(), value);
+            self.push_list_item(mixed.items_index, PolyValue::Object(item));
+        }
+    }
+
+    fn push_mixed_text(&mut self, text: &[u8]) -> Result<()> {
+        if self.schema.mixed_content.is_some() && !text.is_empty() {
+            self.push_mixed_item(
+                "#text",
+                PolyValue::String(std::str::from_utf8(text)?.into()),
+            );
+        }
+        Ok(())
     }
 
     #[inline]
@@ -301,6 +322,7 @@ impl XmlDeserializer {
         stack.push(root_frame);
 
         let mut active_scalar_field: Option<(usize, ScalarType, bool)> = None;
+        let mut active_mixed_scalar: Option<(String, ScalarType)> = None;
         let mut unknown_depth: usize = 0;
         let mut text_buf: Vec<u8> = Vec::new();
         let mut buf = Vec::new();
@@ -313,7 +335,7 @@ impl XmlDeserializer {
                         unknown_depth += 1;
                         continue;
                     }
-                    if active_scalar_field.is_some() {
+                    if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
                         unknown_depth = 1;
                         continue;
                     }
@@ -391,12 +413,47 @@ impl XmlDeserializer {
                                 stack.push(frame);
                             }
                         }
+                    } else if let Some(mixed) = &current_schema.mixed_content {
+                        if let Some(branch) = mixed.branch(local_name.as_ref().as_bytes()) {
+                            if is_nil {
+                                stack
+                                    .last_mut()
+                                    .unwrap()
+                                    .push_mixed_item(&branch.variant_name, PolyValue::Null);
+                                unknown_depth = 1;
+                            } else {
+                                match &branch.val_type {
+                                    ValueType::Scalar(scalar) => {
+                                        active_mixed_scalar =
+                                            Some((branch.variant_name.clone(), scalar.clone()));
+                                        text_buf.clear();
+                                    }
+                                    ValueType::Nested(sub_schema) => {
+                                        let frame_schema = resolve_record_schema(
+                                            sub_schema,
+                                            e,
+                                            namespace_stack.last().unwrap(),
+                                        )?;
+                                        let mut frame = StackFrame::new(frame_schema);
+                                        frame.mixed_parent_kind = Some(branch.variant_name.clone());
+                                        Self::parse_attributes(e, &mut frame)?;
+                                        stack.push(frame);
+                                    }
+                                    ValueType::List(_) => unknown_depth = 1,
+                                }
+                            }
+                        } else {
+                            unknown_depth = 1;
+                        }
                     } else {
                         unknown_depth = 1;
                     }
                 }
                 Ok(Event::Empty(ref e)) => {
-                    if unknown_depth > 0 || active_scalar_field.is_some() {
+                    if unknown_depth > 0
+                        || active_scalar_field.is_some()
+                        || active_mixed_scalar.is_some()
+                    {
                         continue;
                     }
                     let local_name = e.local_name();
@@ -460,6 +517,32 @@ impl XmlDeserializer {
                                 stack.last_mut().unwrap().values[field_idx] = Some(instance);
                             }
                         }
+                    } else if let Some(mixed) = &current_schema.mixed_content {
+                        if let Some(branch) = mixed.branch(local_name.as_ref().as_bytes()) {
+                            let value = if is_nil {
+                                PolyValue::Null
+                            } else {
+                                match &branch.val_type {
+                                    ValueType::Scalar(scalar) => ValueConverter::parse_scalar(
+                                        scalar,
+                                        b"",
+                                        &branch.variant_name,
+                                    )?,
+                                    ValueType::Nested(sub_schema) => {
+                                        let frame_schema =
+                                            resolve_record_schema(sub_schema, e, &scope)?;
+                                        let mut frame = StackFrame::new(frame_schema);
+                                        Self::parse_attributes(e, &mut frame)?;
+                                        frame.finish()?
+                                    }
+                                    ValueType::List(_) => PolyValue::Null,
+                                }
+                            };
+                            stack
+                                .last_mut()
+                                .unwrap()
+                                .push_mixed_item(&branch.variant_name, value);
+                        }
                     }
                 }
                 Ok(Event::Text(ref e)) => {
@@ -469,20 +552,24 @@ impl XmlDeserializer {
                     let raw = e.as_ref();
                     let raw_bytes = raw.as_bytes();
                     if memchr::memchr(b'&', raw_bytes).is_none() {
-                        if active_scalar_field.is_some() {
+                        if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
                             text_buf.extend_from_slice(raw_bytes);
                         } else if let Some(frame) = stack.last_mut() {
                             if let Some(ref mut tb) = frame.frame_text_buf {
                                 tb.extend_from_slice(raw_bytes);
+                            } else {
+                                frame.push_mixed_text(raw_bytes)?;
                             }
                         }
                     } else {
                         let unescaped = quick_xml::escape::unescape(raw)?;
-                        if active_scalar_field.is_some() {
+                        if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
                             text_buf.extend_from_slice(unescaped.as_bytes());
                         } else if let Some(frame) = stack.last_mut() {
                             if let Some(ref mut tb) = frame.frame_text_buf {
                                 tb.extend_from_slice(unescaped.as_bytes());
+                            } else {
+                                frame.push_mixed_text(unescaped.as_bytes())?;
                             }
                         }
                     }
@@ -491,11 +578,13 @@ impl XmlDeserializer {
                     if unknown_depth > 0 {
                         continue;
                     }
-                    if active_scalar_field.is_some() {
+                    if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
                         text_buf.extend_from_slice(e.as_ref().as_bytes());
                     } else if let Some(frame) = stack.last_mut() {
                         if let Some(ref mut tb) = frame.frame_text_buf {
                             tb.extend_from_slice(e.as_ref().as_bytes());
+                        } else {
+                            frame.push_mixed_text(e.as_ref().as_bytes())?;
                         }
                     }
                 }
@@ -504,7 +593,23 @@ impl XmlDeserializer {
                         continue;
                     }
                     let frame_tb = stack.last_mut().and_then(|f| f.frame_text_buf.as_mut());
-                    append_general_ref(e, active_scalar_field.is_some(), &mut text_buf, frame_tb)?;
+                    if active_scalar_field.is_some()
+                        || active_mixed_scalar.is_some()
+                        || frame_tb.is_some()
+                    {
+                        append_general_ref(
+                            e,
+                            active_scalar_field.is_some() || active_mixed_scalar.is_some(),
+                            &mut text_buf,
+                            frame_tb,
+                        )?;
+                    } else {
+                        let mut resolved = Vec::new();
+                        append_general_ref(e, true, &mut resolved, None)?;
+                        if let Some(frame) = stack.last_mut() {
+                            frame.push_mixed_text(&resolved)?;
+                        }
+                    }
                 }
                 Ok(Event::End(ref e)) => {
                     namespace_stack.pop();
@@ -512,7 +617,11 @@ impl XmlDeserializer {
                         unknown_depth -= 1;
                         continue;
                     }
-                    if let Some((field_idx, ref scalar_type, is_list)) = active_scalar_field.take()
+                    if let Some((kind, scalar_type)) = active_mixed_scalar.take() {
+                        let parsed = ValueConverter::parse_scalar(&scalar_type, &text_buf, &kind)?;
+                        stack.last_mut().unwrap().push_mixed_item(&kind, parsed);
+                    } else if let Some((field_idx, ref scalar_type, is_list)) =
+                        active_scalar_field.take()
                     {
                         let field_name = &stack.last().unwrap().schema.fields[field_idx].name;
                         let parsed_val =
@@ -526,8 +635,14 @@ impl XmlDeserializer {
                     } else if stack.len() > 1 {
                         let finished_frame = stack.pop().unwrap();
                         let local_name = e.local_name();
+                        let mixed_kind = finished_frame.mixed_parent_kind.clone();
                         let instance = finished_frame.finish()?;
                         let parent = stack.last_mut().unwrap();
+
+                        if let Some(kind) = mixed_kind {
+                            parent.push_mixed_item(&kind, instance);
+                            continue;
+                        }
 
                         if let Some(&field_idx) = parent
                             .schema

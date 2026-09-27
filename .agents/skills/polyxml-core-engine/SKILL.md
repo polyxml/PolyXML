@@ -87,6 +87,13 @@ Key mechanisms (regression-locked in `crates/polyxml-core/tests/test_schema_audi
    per-includer via `rekey_to_namespace`/`rekey_new_state`.
 7. Parser reuse across `parse_file` calls is supported; groups partially
    replay from `file_groups` on cache hit.
+8. **Mixed content**: compile `mixed="true"` structs after group expansion into
+   a repeated item union containing a `#text` branch plus child-element
+   branches. The runtime schema keeps branch metadata separately from the
+   synthetic list field. Parse `Text`, `CData`, and `GeneralRef` events into
+   that list in document order; serialize each item in the same order. Keep
+   attributes outside the list and choose a distinct synthetic field name if
+   an actual schema field already uses `items`.
 
 ## 5. `xsi:type` Polymorphic Dispatch
 

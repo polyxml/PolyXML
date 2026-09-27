@@ -219,6 +219,7 @@ fn test_tarjan_self_recursive_cycle_detection_and_boxing() {
         qname: node_qname.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef::new(
                 "id",
@@ -291,6 +292,7 @@ fn test_tarjan_mutual_recursive_cycle_detection_and_boxing() {
         qname: qname_a.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "child",
             "child",
@@ -305,6 +307,7 @@ fn test_tarjan_mutual_recursive_cycle_detection_and_boxing() {
         qname: qname_b.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![{
             let mut f = FieldDef::new(
                 "parent",
@@ -354,6 +357,7 @@ fn test_list_fields_do_not_trigger_spurious_cycles() {
         qname: folder_qname.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![{
             let mut f = FieldDef::new(
                 "subfolders",

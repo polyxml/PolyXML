@@ -373,9 +373,7 @@ impl RustCodegen {
             self.emit_pyo3_error_type(out);
             return;
         }
-        if (self.options.zero_copy && has_borrowed_types)
-            || (self.options.zero_copy && self.options.emit_codecs)
-        {
+        if (self.options.zero_copy && has_borrowed_types) || self.options.emit_codecs {
             out.push_str("use std::borrow::Cow;\n");
         }
         if self.options.derive_serde {
@@ -1158,7 +1156,12 @@ impl RustCodegen {
                     continue;
                 }
                 let tags: Vec<String> = match self.resolve_union_def(&field.type_ref, ir) {
-                    Some(u) => u.branches.iter().map(|b| b.xml_name.clone()).collect(),
+                    Some(u) => u
+                        .branches
+                        .iter()
+                        .filter(|b| b.xml_name != "#text")
+                        .map(|b| b.xml_name.clone())
+                        .collect(),
                     None => vec![field.xml_name.clone()],
                 };
                 let base_variant = to_rust_variant_identifier(rust_name.trim_start_matches("r#"));
@@ -1318,8 +1321,12 @@ impl RustCodegen {
                     let branch_tags: Vec<_> = union_def
                         .branches
                         .iter()
+                        .filter(|b| b.xml_name != "#text")
                         .map(|b| format!("\"{}\"", b.xml_name))
                         .collect();
+                    if branch_tags.is_empty() {
+                        continue;
+                    }
                     if let Some(variant) = phf_variant_of.get(meta.rust_name.as_str()) {
                         let _ = writeln!(
                             out,
@@ -1394,8 +1401,12 @@ impl RustCodegen {
                     let branch_tags: Vec<_> = union_def
                         .branches
                         .iter()
+                        .filter(|b| b.xml_name != "#text")
                         .map(|b| format!("\"{}\"", b.xml_name))
                         .collect();
+                    if branch_tags.is_empty() {
+                        continue;
+                    }
                     if let Some(variant) = phf_variant_of.get(meta.rust_name.as_str()) {
                         let _ = writeln!(
                             out,
@@ -1452,6 +1463,24 @@ impl RustCodegen {
             out.push_str("                },\n");
 
             out.push_str("                Event::End(e) if e.local_name().as_ref() == start.local_name().as_ref() => break,\n");
+            if s.is_mixed {
+                let item_union = field_metas.iter().find_map(|meta| {
+                    self.resolve_union_def(&meta.field.type_ref, ir)
+                        .filter(|u| u.is_mixed_content())
+                        .map(|u| (meta, u))
+                });
+                if let Some((meta, union)) = item_union {
+                    let union_name = type_ident(&union.qname);
+                    let wrap = if self.options.zero_copy {
+                        "Cow::Owned"
+                    } else {
+                        "String::from"
+                    };
+                    let _ = writeln!(out, "                Event::Text(e) => var_{}.push({}::Text({wrap}(quick_xml::escape::unescape(e.as_ref())?.into_owned()))),", meta.rust_name, union_name);
+                    let _ = writeln!(out, "                Event::CData(e) => var_{}.push({}::Text({wrap}(e.as_ref().to_string()))),", meta.rust_name, union_name);
+                    let _ = writeln!(out, "                Event::GeneralRef(e) => {{ let text = if e.is_char_ref() {{ e.resolve_char_ref()?.map(|ch| ch.to_string()).unwrap_or_default() }} else if let Some(value) = quick_xml::escape::resolve_xml_entity(e.as_ref()) {{ value.to_string() }} else {{ e.as_ref().to_string() }}; var_{}.push({}::Text({wrap}(text))); }},", meta.rust_name, union_name);
+                }
+            }
             out.push_str("                Event::Eof => break,\n");
             out.push_str("                _ => {}\n");
             out.push_str("            }\n");
@@ -1696,7 +1725,7 @@ impl RustCodegen {
     fn emit_attr_parse(&self, out: &mut String, field: &FieldDef, rust_name: &str, ir: &SchemaIR) {
         if self.field_is_string(&field.type_ref, ir) {
             out.push_str("                    let s = attr.value.as_ref();\n");
-            out.push_str("                    let val = match quick_xml::escape::unescape(s)? {\n");
+            out.push_str("                    let val: Cow<'_, str> = match quick_xml::escape::unescape(s)? {\n");
             out.push_str(
                 "                        Cow::Borrowed(s) => Cow::Owned(s.to_string()),\n",
             );
@@ -2340,6 +2369,9 @@ impl RustCodegen {
 
         for branch in &u.branches {
             let var_id = to_rust_variant_identifier(&branch.variant_name);
+            if u.is_mixed_content() && branch.xml_name == "#text" {
+                continue;
+            }
             let _ = writeln!(out, "            \"{}\" => {{", branch.xml_name);
             if self.field_is_string(&branch.type_ref, ir) {
                 let _ = writeln!(
@@ -2439,6 +2471,11 @@ impl RustCodegen {
         out.push_str("        match self {\n");
         for branch in &u.branches {
             let var_id = to_rust_variant_identifier(&branch.variant_name);
+            if u.is_mixed_content() && branch.xml_name == "#text" {
+                let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
+                out.push_str("                writer.write_event(Event::Text(BytesText::new(val.as_ref())))?;\n                Ok(())\n            }\n");
+                continue;
+            }
             if self.field_is_string(&branch.type_ref, ir) {
                 let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
                 let _ = writeln!(

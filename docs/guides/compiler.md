@@ -15,7 +15,20 @@ PolyXML includes a high-performance, polyglot XSD-to-code generator and CLI tool
 - **PolyXML Intermediate Representation (IR)**: Normalized schema representation preserving namespaces, facets, substitution groups, documentation, and cardinality.
 - **Tarjan SCC Cycle-Cutting**: Automatically identifies self-referential and mutually recursive types, calculating the minimal set of cycle-cut points to prevent infinite size allocations (`Box<T>`, pointers, `std::unique_ptr`, `z.lazy`).
 - **Simultaneous Multi-Target Compilation**: Emit models for Python, Rust, C++, Java, TypeScript, Go, and C# in a single compiler invocation.
+- **Ordered Mixed Content**: Preserve text and child elements from `xs:complexType mixed="true"` in one typed item sequence.
 - **W3C Conformance Tested**: Validated against the official W3C XML Schema Test Suite (XSTS) via the [polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests) harness.
+
+---
+
+## Mixed content
+
+For a mixed complex type, PolyXML generates an `items` collection containing
+text and child-element variants in document order. For example,
+`<description>open <b>bold</b> close</description>` becomes three items:
+text `"open "`, element `b` with value `"bold"`, and text `" close"`.
+Attributes remain regular fields on the parent model. Rust, Python, Go,
+Java direct codecs, and C# can read and write this ordered sequence. C++ and
+TypeScript expose it as typed variants for application code.
 
 ---
 

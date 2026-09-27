@@ -37,6 +37,14 @@ For C# `XmlSerializer`, a lexical union field needs a typed `[XmlIgnore]`
 property plus a string `[XmlElement]` proxy; repeated empty branch tags leave
 the typed field unset.
 
+Mixed `xs:complexType` content uses an ordered item union with a `#text`
+branch. The text branch is character data, never an element named `#text`.
+When changing its codecs, compile and roundtrip a generated fixture with text
+before, between, and after both scalar and nested children. Exercise Rust with
+both zero-copy settings: owned output still uses `Cow` in attribute parsing,
+and generated code must import it. Java and C# nested choice variants must
+avoid a class name collision when a branch and its value type share a name.
+
 ---
 
 ## 2. Standard Pattern for Codegen Options & Backends

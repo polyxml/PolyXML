@@ -372,6 +372,13 @@ impl UnionDef {
                 .iter()
                 .all(|branch| branch.xml_name.is_empty())
     }
+
+    /// The `#text` branch identifies an ordered mixed-content item stream.
+    pub fn is_mixed_content(&self) -> bool {
+        self.branches
+            .iter()
+            .any(|branch| branch.xml_name == "#text")
+    }
 }
 
 /// A simple type definition with restriction facets.
@@ -389,6 +396,8 @@ pub struct StructDef {
     pub qname: QName,
     pub base_type: Option<QName>,
     pub is_abstract: bool,
+    #[serde(default)]
+    pub is_mixed: bool,
     pub fields: Vec<FieldDef>,
     pub documentation: Option<String>,
 }

@@ -279,6 +279,11 @@ impl GoCodegen {
         for type_def in ir.types.values() {
             match type_def {
                 TypeDef::Struct(s) => {
+                    if s.is_mixed && self.options.emit_xml_tags {
+                        has_xml = true;
+                        has_fmt = true;
+                        has_io = true;
+                    }
                     for f in &s.fields {
                         if self.references_time(&f.type_ref) {
                             has_time = true;
@@ -351,6 +356,14 @@ impl GoCodegen {
         let mut imports = Vec::new();
         if has_xml {
             imports.push("\"encoding/xml\"");
+        }
+        if self.options.emit_xml_tags
+            && ir
+                .types
+                .values()
+                .any(|def| matches!(def, TypeDef::Struct(s) if s.is_mixed))
+        {
+            imports.push("\"bytes\"");
         }
         if has_fmt {
             imports.push("\"fmt\"");
@@ -977,9 +990,88 @@ impl GoCodegen {
 
         writeln!(out, "}}\n").unwrap();
 
+        if s.is_mixed && self.options.emit_xml_tags {
+            self.emit_mixed_struct_xml(out, s, ir, &field_names);
+        }
+
         if self.options.validate_facets {
             self.emit_struct_validator(out, s, ir, &field_names);
         }
+    }
+
+    fn emit_mixed_struct_xml(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ir: &SchemaIR,
+        field_names: &[String],
+    ) {
+        let Some((item_index, union)) =
+            s.fields
+                .iter()
+                .enumerate()
+                .find_map(|(index, field)| match &field.type_ref {
+                    TypeRef::Named(qname) => match ir.types.get(qname) {
+                        Some(TypeDef::Union(union)) if union.is_mixed_content() => {
+                            Some((index, union))
+                        }
+                        _ => None,
+                    },
+                    _ => None,
+                })
+        else {
+            return;
+        };
+        let struct_name = type_ident(&s.qname);
+        let item_field = &field_names[item_index];
+        let union_name = type_ident(&union.qname);
+        let mut seen = HashSet::new();
+        let branch_fields = union
+            .branches
+            .iter()
+            .map(|branch| self.unique_field_name(&branch.variant_name, &mut seen))
+            .collect::<Vec<_>>();
+
+        let _ = writeln!(
+            out,
+            "func (v *{struct_name}) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {{"
+        );
+        let _ = writeln!(out, "    type Alias {struct_name}");
+        out.push_str("    var attrBytes bytes.Buffer\n    attrEncoder := xml.NewEncoder(&attrBytes)\n    if err := attrEncoder.EncodeToken(start); err != nil { return err }\n    if err := attrEncoder.EncodeToken(start.End()); err != nil { return err }\n    if err := attrEncoder.Flush(); err != nil { return err }\n    var attrs Alias\n    if err := xml.Unmarshal(attrBytes.Bytes(), &attrs); err != nil { return err }\n");
+        let _ = writeln!(out, "    *v = {struct_name}(attrs)");
+        let _ = writeln!(out, "    v.{item_field} = nil");
+        out.push_str("    for {\n        token, err := d.Token()\n        if err != nil { if err == io.EOF { return io.ErrUnexpectedEOF }; return err }\n        switch element := token.(type) {\n        case xml.CharData:\n            if len(element) > 0 {\n                value := string(element)\n");
+        let _ = writeln!(out, "                v.{item_field} = append(v.{item_field}, {union_name}{{{text_field}: &value}})", text_field=branch_fields[0]);
+        out.push_str("            }\n        case xml.StartElement:\n            switch element.Name.Local {\n");
+        for (branch, branch_field) in union.branches.iter().zip(&branch_fields) {
+            if branch.xml_name == "#text" {
+                continue;
+            }
+            let mapped = self.context.map_type_ref(&branch.type_ref);
+            let _ = writeln!(out, "            case {:?}:\n                var value {mapped}\n                if err := d.DecodeElement(&value, &element); err != nil {{ return err }}\n                v.{item_field} = append(v.{item_field}, {union_name}{{{branch_field}: &value}})", branch.xml_name);
+        }
+        out.push_str("            default:\n                if err := d.Skip(); err != nil { return err }\n            }\n        case xml.EndElement:\n            if element.Name == start.Name { return nil }\n        }\n    }\n}\n\n");
+
+        let _ = writeln!(
+            out,
+            "func (v {struct_name}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{"
+        );
+        let _ = writeln!(
+            out,
+            "    type Alias {struct_name}\n    attrs := Alias(v)\n    attrs.{item_field} = nil"
+        );
+        out.push_str("    raw, err := xml.Marshal(attrs)\n    if err != nil { return err }\n    decoder := xml.NewDecoder(bytes.NewReader(raw))\n    token, err := decoder.Token()\n    if err != nil { return err }\n    start.Attr = token.(xml.StartElement).Attr\n    if err := e.EncodeToken(start); err != nil { return err }\n");
+        let _ = writeln!(out, "    for _, item := range v.{item_field} {{");
+        for (branch, branch_field) in union.branches.iter().zip(&branch_fields) {
+            let _ = writeln!(out, "        if item.{branch_field} != nil {{");
+            if branch.xml_name == "#text" {
+                let _ = writeln!(out, "            if err := e.EncodeToken(xml.CharData(*item.{branch_field})); err != nil {{ return err }}");
+            } else {
+                let _ = writeln!(out, "            if err := e.EncodeElement(item.{branch_field}, xml.StartElement{{Name: xml.Name{{Local: {:?}}}}}); err != nil {{ return err }}", branch.xml_name);
+            }
+            out.push_str("            continue\n        }\n");
+        }
+        out.push_str("        return fmt.Errorf(\"mixed content item has no selected branch\")\n    }\n    return e.EncodeToken(start.End())\n}\n\n");
     }
 
     fn resolve_field_type(&self, f: &FieldDef) -> String {

@@ -73,6 +73,7 @@ fn test_go_struct_and_enum_generation() {
         qname: QName::new(Some("https://example.com/crm"), "Customer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),
@@ -307,6 +308,7 @@ fn test_go_choice_mutual_exclusivity() {
         qname: QName::new(Some("urn:payments"), "PaymentParty"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "name".into(),
@@ -439,6 +441,7 @@ fn test_go_recursive_cycle_pointers() {
         qname: QName::new(Some("urn:tree"), "TreeNode"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "label".into(),
@@ -583,6 +586,7 @@ fn test_go_easyjson_backend() {
         qname: QName::new(Some("https://example.com/easy"), "Payload"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef {
             name: "id".into(),
             xml_name: "id".into(),
@@ -620,6 +624,7 @@ fn test_go_sonic_backend() {
         qname: QName::new(Some("https://example.com/sonic"), "Metric"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "cpuUsage".into(),

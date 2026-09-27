@@ -519,6 +519,32 @@ impl PythonCodegen {
     fn emit_union(&self, out: &mut String, u: &UnionDef) {
         let union_name = type_ident(&u.qname);
 
+        if u.is_mixed_content() {
+            let value_types = u
+                .branches
+                .iter()
+                .map(|branch| self.context.map_type_ref(&branch.type_ref))
+                .collect::<Vec<_>>();
+            let value_type = value_types
+                .into_iter()
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(" | ");
+            if self.options.backend == PythonBackend::Pydantic {
+                let _ = writeln!(out, "class {}(BaseModel):", union_name);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "@dataclass(slots=True, kw_only=True)\nclass {}:",
+                    union_name
+                );
+            }
+            out.push_str("    kind: str\n");
+            let _ = writeln!(out, "    value: {}", value_type);
+            return;
+        }
+
         if let Some(ref doc) = u.documentation {
             let _ = writeln!(out, "# {}", doc.trim());
         }
@@ -595,7 +621,7 @@ impl PythonCodegen {
             has_body = true;
         }
 
-        if self.options.emit_meta {
+        if self.options.emit_meta || s.is_mixed {
             if has_body {
                 out.push('\n');
             }
@@ -609,6 +635,38 @@ impl PythonCodegen {
             // derivations.
             if s.is_abstract {
                 out.push_str("        abstract = True\n");
+            }
+            if s.is_mixed {
+                if let Some(item_field) = s
+                    .fields
+                    .iter()
+                    .find(|field| field.xml_name.is_empty() && field.kind == FieldKind::Element)
+                {
+                    let _ = writeln!(out, "        mixed_items = {:?}", item_field.name);
+                }
+                if let Some(union) = s.fields.iter().find_map(|field| match &field.type_ref {
+                    TypeRef::Named(qname) => match ir.types.get(qname) {
+                        Some(TypeDef::Union(union)) if union.is_mixed_content() => Some(union),
+                        _ => None,
+                    },
+                    _ => None,
+                }) {
+                    out.push_str("        mixed_branches = (\n");
+                    for branch in &union.branches {
+                        let branch_type = self.context.map_type_ref(&branch.type_ref);
+                        let namespace = branch
+                            .namespace
+                            .as_ref()
+                            .map(|ns| format!("{ns:?}"))
+                            .unwrap_or_else(|| "None".into());
+                        let _ = writeln!(
+                            out,
+                            "            ({:?}, {:?}, {}, {:?}),",
+                            branch.variant_name, branch.xml_name, namespace, branch_type
+                        );
+                    }
+                    out.push_str("        )\n");
+                }
             }
             has_body = true;
         }

@@ -44,6 +44,7 @@ fn test_rust_zero_copy_codegen() {
         qname: QName::new(Some("https://example.com/crm"), "Dimension"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef::new(
                 "width",
@@ -66,6 +67,7 @@ fn test_rust_zero_copy_codegen() {
         qname: QName::new(Some("https://example.com/crm"), "Customer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),
@@ -186,6 +188,7 @@ fn test_rust_owned_codegen() {
         qname: QName::local("User"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "username",
             "username",
@@ -272,6 +275,7 @@ fn test_rust_choice_union_codegen() {
         qname: QName::local("Card"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "number",
             "number",
@@ -285,6 +289,7 @@ fn test_rust_choice_union_codegen() {
         qname: QName::local("Cash"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "amount",
             "amount",
@@ -332,6 +337,7 @@ fn test_rust_recursive_cycle_boxing() {
         qname: QName::local("TreeNode"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef::new(
                 "value",
@@ -403,6 +409,7 @@ fn test_rust_codecs_codegen() {
         qname: QName::local("Order"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),
@@ -479,6 +486,7 @@ fn test_rust_attribute_codec_loop_syntax() {
         qname: QName::new(Some("https://example.com/siri"), "Envelope"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "version".into(),
@@ -569,6 +577,7 @@ fn test_rust_rkyv_derives() {
         qname: QName::new(Some("https://example.com/rkyv"), "Packet"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef {
             name: "id".into(),
             xml_name: "id".into(),
@@ -805,6 +814,7 @@ fn test_rust_extension_base_cycle_cut() {
         qname: qa.clone(),
         base_type: Some(qb.clone()),
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "alphaField",
             "alphaField",
@@ -817,6 +827,7 @@ fn test_rust_extension_base_cycle_cut() {
         qname: qb.clone(),
         base_type: Some(qa.clone()),
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "betaField",
             "betaField",
@@ -1011,6 +1022,7 @@ fn test_rust_phf_dispatch_union_groups_branch_tags() {
         qname: QName::local("Card"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "number",
             "number",
@@ -1023,6 +1035,7 @@ fn test_rust_phf_dispatch_union_groups_branch_tags() {
         qname: QName::local("Cash"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "amount",
             "amount",
@@ -1055,6 +1068,7 @@ fn test_rust_phf_dispatch_union_groups_branch_tags() {
         qname: QName::local("Order"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "method",
             "method",
@@ -1089,6 +1103,7 @@ fn test_rust_phf_dispatch_uniquifies_like_field_metas() {
         qname: QName::local("Collision"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef::new(
                 "code",

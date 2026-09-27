@@ -15,7 +15,7 @@ use crate::codegen::{
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
-    StructDef, TypeDef, TypeRef, UnionDef,
+    StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
 };
 
 /// Record emission kind: class vs struct.
@@ -240,6 +240,15 @@ pub struct CSharpCodegen {
 /// for the IR currently being generated.
 fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || to_csharp_type_name(&q.local))
+}
+
+fn choice_variant_name(branch: &UnionBranch) -> String {
+    let name = to_csharp_type_name(&branch.variant_name);
+    if matches!(&branch.type_ref, TypeRef::Named(qname) if type_ident(qname) == name) {
+        format!("{name}Branch")
+    } else {
+        name
+    }
 }
 
 impl CSharpCodegen {
@@ -584,9 +593,9 @@ impl CSharpCodegen {
         }
 
         // XmlInclude attributes for element-choice polymorphism.
-        if self.options.emit_xml_attributes && !u.is_lexical() {
+        if self.options.emit_xml_attributes && !u.is_lexical() && !u.is_mixed_content() {
             for branch in &u.branches {
-                let variant_name = to_csharp_type_name(&branch.variant_name);
+                let variant_name = choice_variant_name(branch);
                 writeln!(
                     out,
                     "{}[XmlInclude(typeof({}.{}))]",
@@ -603,7 +612,7 @@ impl CSharpCodegen {
                     "{}[JsonDerivedType(typeof({}.{}), {:?})]",
                     indent,
                     choice_name,
-                    to_csharp_type_name(&branch.variant_name),
+                    choice_variant_name(branch),
                     branch.xml_name
                 )
                 .unwrap();
@@ -624,7 +633,7 @@ impl CSharpCodegen {
         writeln!(out, "{}{{", indent).unwrap();
 
         for branch in &u.branches {
-            let variant_name = to_csharp_type_name(&branch.variant_name);
+            let variant_name = choice_variant_name(branch);
             let branch_type = self.context.map_type_ref(&branch.type_ref);
 
             if let Some(ref doc) = branch.documentation {
@@ -632,7 +641,7 @@ impl CSharpCodegen {
             }
 
             let mut branch_attrs = Vec::new();
-            if self.options.emit_xml_attributes && !u.is_lexical() {
+            if self.options.emit_xml_attributes && !u.is_lexical() && !u.is_mixed_content() {
                 branch_attrs.push(format!("XmlElement(\"{}\")", branch.xml_name));
             }
             if self.options.emit_json_attributes && !u.is_lexical() {
@@ -701,7 +710,7 @@ impl CSharpCodegen {
         let _ = writeln!(out, "{}    {{", indent);
         let _ = writeln!(out, "{}        var value = text.Trim();", indent);
         for (idx, branch) in u.branches.iter().enumerate() {
-            let variant = to_csharp_type_name(&branch.variant_name);
+            let variant = choice_variant_name(branch);
             let mapped = self.context.map_type_ref(&branch.type_ref);
             if let TypeRef::Named(qname) = &branch.type_ref {
                 if let Some(TypeDef::Enum(def)) = ir.types.get(qname) {
@@ -779,7 +788,7 @@ impl CSharpCodegen {
         );
         let _ = writeln!(out, "{}    {{", indent);
         for branch in &u.branches {
-            let variant = to_csharp_type_name(&branch.variant_name);
+            let variant = choice_variant_name(branch);
             let value = if matches!(
                 super::primitive_base(&branch.type_ref, ir),
                 TypeRef::Primitive(PrimitiveType::Date)
@@ -800,6 +809,111 @@ impl CSharpCodegen {
             indent
         );
         let _ = writeln!(out, "{}    }};", indent);
+    }
+
+    fn emit_mixed_struct(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ir: &SchemaIR,
+        indent: &str,
+        struct_name: &str,
+        prop_names: &[String],
+    ) {
+        let Some((item_index, union)) =
+            s.fields
+                .iter()
+                .enumerate()
+                .find_map(|(index, field)| match &field.type_ref {
+                    TypeRef::Named(qname) => match ir.types.get(qname) {
+                        Some(TypeDef::Union(union)) if union.is_mixed_content() => {
+                            Some((index, union))
+                        }
+                        _ => None,
+                    },
+                    _ => None,
+                })
+        else {
+            return;
+        };
+        let item_name = &prop_names[item_index];
+        let union_name = type_ident(&union.qname);
+        let class_kind = if self.options.use_records {
+            "record"
+        } else {
+            "class"
+        };
+        let _ = writeln!(out, "{indent}public {class_kind} {struct_name} : System.Xml.Serialization.IXmlSerializable\n{indent}{{");
+        for (field, prop_name) in s.fields.iter().zip(prop_names) {
+            let ty = self.map_field_type(field, ir);
+            if field.kind == FieldKind::Attribute {
+                if self.options.emit_json_attributes {
+                    let _ = writeln!(out, "{indent}    [JsonPropertyName({:?})]", field.xml_name);
+                }
+                let _ = writeln!(
+                    out,
+                    "{indent}    public {ty} {prop_name} {{ get; set; }} = default!;"
+                );
+            } else if field.kind == FieldKind::Element && prop_name == item_name {
+                let _ = writeln!(out, "{indent}    [XmlIgnore]\n{indent}    public List<{union_name}> {item_name} {{ get; set; }} = new();");
+            }
+        }
+        let _ = writeln!(
+            out,
+            "{indent}    public System.Xml.Schema.XmlSchema? GetSchema() => null;"
+        );
+        let _ = writeln!(
+            out,
+            "{indent}    public void ReadXml(System.Xml.XmlReader reader)\n{indent}    {{"
+        );
+        out.push_str("        reader.MoveToContent();\n");
+        for (field, prop_name) in s.fields.iter().zip(prop_names) {
+            if field.kind == FieldKind::Attribute {
+                let ty = self.map_field_type(field, ir);
+                let base_type = ty.trim_end_matches('?');
+                let _ = writeln!(out, "        {{ var raw = reader.GetAttribute({:?}); if (raw is not null) {prop_name} = ({ty})System.Convert.ChangeType(raw, typeof({base_type}), System.Globalization.CultureInfo.InvariantCulture); }}", field.xml_name);
+            }
+        }
+        let _ = writeln!(out, "        {item_name} = new List<{union_name}>();");
+        out.push_str("        bool empty = reader.IsEmptyElement;\n        reader.ReadStartElement();\n        if (empty) return;\n        while (reader.NodeType != System.Xml.XmlNodeType.EndElement && !reader.EOF)\n        {\n            switch (reader.NodeType)\n            {\n                case System.Xml.XmlNodeType.Text:\n                case System.Xml.XmlNodeType.CDATA:\n                case System.Xml.XmlNodeType.Whitespace:\n                case System.Xml.XmlNodeType.SignificantWhitespace:\n");
+        let _ = writeln!(
+            out,
+            "                    {item_name}.Add(new {union_name}.Text(reader.Value));"
+        );
+        out.push_str("                    reader.Read();\n                    break;\n                case System.Xml.XmlNodeType.Element:\n                    switch (reader.LocalName)\n                    {\n");
+        for branch in &union.branches {
+            if branch.xml_name == "#text" {
+                continue;
+            }
+            let branch_type = self.context.map_type_ref(&branch.type_ref);
+            let variant = choice_variant_name(branch);
+            let namespace = branch.namespace.as_deref().unwrap_or("");
+            let _ = writeln!(out, "                        case {:?}:\n                            {{ var serializer = new XmlSerializer(typeof({branch_type}), new XmlRootAttribute({:?}) {{ Namespace = {:?} }}); {item_name}.Add(new {union_name}.{variant}(({branch_type})serializer.Deserialize(reader)!)); break; }}", branch.xml_name, branch.xml_name, namespace);
+        }
+        out.push_str("                        default: reader.Skip(); break;\n                    }\n                    break;\n                default: reader.Read(); break;\n            }\n        }\n        reader.ReadEndElement();\n");
+        let _ = writeln!(out, "{indent}    }}");
+        let _ = writeln!(
+            out,
+            "{indent}    public void WriteXml(System.Xml.XmlWriter writer)\n{indent}    {{"
+        );
+        for (field, prop_name) in s.fields.iter().zip(prop_names) {
+            if field.kind == FieldKind::Attribute {
+                let _ = writeln!(out, "        if ({prop_name} is not null) writer.WriteAttributeString({:?}, System.Convert.ToString({prop_name}, System.Globalization.CultureInfo.InvariantCulture));", field.xml_name);
+            }
+        }
+        let _ = writeln!(out, "        foreach (var item in {item_name})\n        {{\n            switch (item)\n            {{");
+        for branch in &union.branches {
+            let variant = choice_variant_name(branch);
+            if branch.xml_name == "#text" {
+                let _ = writeln!(out, "                case {union_name}.{variant} text: writer.WriteString(text.Value); break;");
+            } else {
+                let branch_type = self.context.map_type_ref(&branch.type_ref);
+                let namespace = branch.namespace.as_deref().unwrap_or("");
+                let _ = writeln!(out, "                case {union_name}.{variant} value: new XmlSerializer(typeof({branch_type}), new XmlRootAttribute({:?}) {{ Namespace = {:?} }}).Serialize(writer, value.Value); break;", branch.xml_name, namespace);
+            }
+        }
+        out.push_str("            }\n        }\n");
+        let _ = writeln!(out, "{indent}    }}\n{indent}}}\n");
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR, indent: &str) {
@@ -851,6 +965,11 @@ impl CSharpCodegen {
             .iter()
             .map(|f| self.unique_property_name(&f.name, &mut seen_props, Some(&struct_name)))
             .collect();
+
+        if s.is_mixed && self.options.emit_xml_attributes {
+            self.emit_mixed_struct(out, s, ir, indent, &struct_name, &prop_names);
+            return;
+        }
 
         let has_lexical_union = self.options.emit_xml_attributes && s.fields.iter().any(|f| {
             matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
@@ -1232,7 +1351,7 @@ impl CSharpCodegen {
                 if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
                     let choice_name = type_ident(&u.qname);
                     for branch in &u.branches {
-                        let variant_name = to_csharp_type_name(&branch.variant_name);
+                        let variant_name = choice_variant_name(branch);
                         parts.push(format!(
                             "XmlElement(\"{}\", typeof({}.{}))",
                             branch.xml_name, choice_name, variant_name

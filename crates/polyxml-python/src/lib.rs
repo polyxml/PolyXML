@@ -10,7 +10,10 @@ use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
-use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
+use polyxml::schema::{
+    FieldKind, FieldSchema, MixedBranchSchema, MixedContentSchema, ModelSchema, ScalarType,
+    ValueType,
+};
 use polyxml::value::PolyValue;
 
 use smallvec::SmallVec;
@@ -485,7 +488,52 @@ fn extract_schema_from_class<'py>(
         }
     }
 
-    Ok((builder.build(), cached_fields))
+    let mut schema = builder.build();
+    if let Ok(branches_obj) = cls
+        .getattr("Meta")
+        .and_then(|meta| meta.getattr("mixed_branches"))
+    {
+        let item_name: String = cls
+            .getattr("Meta")?
+            .getattr("mixed_items")
+            .and_then(|value| value.extract())
+            .unwrap_or_else(|_| "items".into());
+        let item_index = schema
+            .fields
+            .iter()
+            .position(|field| field.name == item_name)
+            .ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err("Mixed content model has no items field")
+            })?;
+        let module_name: String = cls.getattr("__module__")?.extract()?;
+        let module = py.import(&module_name)?;
+        let builtins = py.import("builtins")?;
+        let mut branches = Vec::new();
+        for branch_obj in branches_obj.try_iter()? {
+            let (variant_name, xml_name, namespace, type_name): (
+                String,
+                String,
+                Option<String>,
+                String,
+            ) = branch_obj?.extract()?;
+            let branch_type = module
+                .getattr(type_name.as_str())
+                .or_else(|_| builtins.getattr(type_name.as_str()))?;
+            branches.push(MixedBranchSchema {
+                variant_name,
+                xml_name: xml_name.into_bytes(),
+                namespace,
+                val_type: resolve_value_type(py, &branch_type)?,
+            });
+        }
+        Arc::get_mut(&mut schema)
+            .expect("newly built schema must be unique")
+            .mixed_content = Some(MixedContentSchema {
+            items_index: item_index,
+            branches,
+        });
+    }
+    Ok((schema, cached_fields))
 }
 
 fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<CachedSchemaMeta>> {
@@ -1048,6 +1096,18 @@ fn py_to_poly_value<'py>(
                     continue;
                 }
 
+                if let Some(mixed) = &schema.mixed_content {
+                    if i == mixed.items_index {
+                        let list = val.cast::<PyList>()?;
+                        let items = list
+                            .iter()
+                            .map(|item| py_mixed_item_to_poly(py, &item, mixed))
+                            .collect::<PyResult<Vec<_>>>()?;
+                        values[i] = Some(PolyValue::List(items));
+                        continue;
+                    }
+                }
+
                 match &field.val_type {
                     ValueType::Scalar(st) => match st {
                         ScalarType::Int => {
@@ -1199,6 +1259,41 @@ fn py_to_poly_value<'py>(
     }
 
     Ok(PolyValue::Object(map))
+}
+
+fn py_mixed_item_to_poly(
+    py: Python<'_>,
+    item: &Bound<'_, PyAny>,
+    mixed: &MixedContentSchema,
+) -> PyResult<PolyValue> {
+    let kind: String = item.getattr("kind")?.extract()?;
+    let branch = mixed
+        .branches
+        .iter()
+        .find(|branch| branch.variant_name == kind || branch.xml_name == kind.as_bytes())
+        .ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err(format!("Unknown mixed content kind: {kind}"))
+        })?;
+    let value = item.getattr("value")?;
+    let content = match &branch.val_type {
+        ValueType::Scalar(ScalarType::Int) => PolyValue::Int(value.extract()?),
+        ValueType::Scalar(ScalarType::Float) => PolyValue::Float(value.extract()?),
+        ValueType::Scalar(ScalarType::Bool) => PolyValue::Bool(value.extract()?),
+        ValueType::Scalar(_) => PolyValue::String(value.str()?.extract()?),
+        ValueType::Nested(schema) => {
+            let meta = lookup_cached_meta(&schema.name);
+            py_to_poly_value(py, &value, schema, meta.as_deref())?
+        }
+        ValueType::List(_) => {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "Mixed content branch cannot be a list",
+            ))
+        }
+    };
+    let mut tagged = HashMap::new();
+    tagged.insert("kind".into(), PolyValue::String(kind));
+    tagged.insert("value".into(), content);
+    Ok(PolyValue::Object(tagged))
 }
 
 #[pyfunction]

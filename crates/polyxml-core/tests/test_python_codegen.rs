@@ -114,6 +114,7 @@ fn test_python_dataclass_codegen() {
         qname: QName::new(Some("https://example.com/shop"), "Order"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields,
         documentation: Some("Represents a customer purchase order".into()),
     }));
@@ -210,6 +211,7 @@ fn test_python_pydantic_codegen_with_facets() {
         qname: QName::local("User"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields,
         documentation: None,
     }));
@@ -247,6 +249,7 @@ fn test_python_choice_union_codegen() {
         qname: QName::local("CardPayment"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "card_number",
             "cardNumber",
@@ -260,6 +263,7 @@ fn test_python_choice_union_codegen() {
         qname: QName::local("BankTransfer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "iban",
             "iban",
@@ -344,6 +348,7 @@ fn test_python_recursive_type_codegen() {
         qname: QName::local("Department"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields,
         documentation: None,
     }));
@@ -363,6 +368,7 @@ fn test_python_codecs_generation() {
         qname: QName::local("Item"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "name",
             "name",
@@ -409,6 +415,7 @@ fn test_python_generated_tag_and_custom_header() {
         qname: QName::local("Item"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "name",
             "name",
@@ -444,6 +451,7 @@ fn test_python_abstract_meta_emission() {
         qname: QName::new(Some("urn:veh"), "Vehicle"),
         base_type: None,
         is_abstract: true,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "id",
             "id",
@@ -456,6 +464,7 @@ fn test_python_abstract_meta_emission() {
         qname: QName::new(Some("urn:veh"), "Car"),
         base_type: Some(QName::new(Some("urn:veh"), "Vehicle")),
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef::new(
             "doors",
             "doors",
@@ -520,6 +529,7 @@ fn test_python_aot_codegen() {
         qname: QName::new(Some("https://example.com/aero"), "FlightPlan"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "flightId".into(),

@@ -92,6 +92,7 @@ fn test_csharp_records_and_enums_generation() {
         qname: customer_qname.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),
@@ -375,6 +376,7 @@ fn test_csharp_choice_polymorphic_hierarchy() {
         qname: payment_qname.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "payer".into(),
@@ -529,6 +531,7 @@ fn test_csharp_recursive_cycle() {
         qname: tree_qname.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "label".into(),
@@ -715,6 +718,7 @@ fn test_csharp_source_gen_context() {
         qname: QName::new(Some("https://example.com/crm"), "Customer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),

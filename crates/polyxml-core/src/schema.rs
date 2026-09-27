@@ -34,6 +34,28 @@ pub enum ValueType {
 }
 
 #[derive(Debug, Clone)]
+pub struct MixedBranchSchema {
+    pub variant_name: String,
+    pub xml_name: Vec<u8>,
+    pub namespace: Option<String>,
+    pub val_type: ValueType,
+}
+
+#[derive(Debug, Clone)]
+pub struct MixedContentSchema {
+    pub items_index: usize,
+    pub branches: Vec<MixedBranchSchema>,
+}
+
+impl MixedContentSchema {
+    pub fn branch(&self, local_name: &[u8]) -> Option<&MixedBranchSchema> {
+        self.branches
+            .iter()
+            .find(|branch| branch.xml_name == local_name)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct FieldSchema {
     pub name: String,
     pub xml_name: Vec<u8>,
@@ -84,6 +106,7 @@ pub struct ModelSchema {
     pub element_map: HashMap<Vec<u8>, usize>,
     pub attribute_map: HashMap<Vec<u8>, usize>,
     pub text_field: Option<usize>,
+    pub mixed_content: Option<MixedContentSchema>,
     /// Declared `abstract="true"` in the source schema.
     pub is_abstract: bool,
     /// Concrete derivations eligible for `xsi:type` dispatch. Python may
@@ -391,7 +414,44 @@ impl ModelSchema {
                 builder = builder.field(build_field(f, ir, visited));
             }
 
-            let schema = builder.build();
+            let mut schema = builder.build();
+            if s.is_mixed {
+                let item_field = s
+                    .fields
+                    .iter()
+                    .find(|field| field.xml_name.is_empty() && matches!(&field.type_ref, TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Union(union)) if union.is_mixed_content())));
+                if let Some(crate::ir::FieldDef {
+                    type_ref: TypeRef::Named(item_type),
+                    ..
+                }) = item_field
+                {
+                    if let Some(TypeDef::Union(union)) = ir.types.get(item_type) {
+                        let items_index = schema
+                            .fields
+                            .iter()
+                            .position(|field| {
+                                field.name == item_field.expect("mixed items field").name
+                            })
+                            .expect("mixed items field");
+                        let branches = union
+                            .branches
+                            .iter()
+                            .filter(|branch| branch.xml_name != "#text")
+                            .map(|branch| MixedBranchSchema {
+                                variant_name: branch.variant_name.clone(),
+                                xml_name: branch.xml_name.as_bytes().to_vec(),
+                                namespace: branch.namespace.clone(),
+                                val_type: build_type(&branch.type_ref, ir, visited),
+                            })
+                            .collect();
+                        Arc::get_mut(&mut schema).expect("new schema").mixed_content =
+                            Some(MixedContentSchema {
+                                items_index,
+                                branches,
+                            });
+                    }
+                }
+            }
 
             // xsi:type dispatch registry: every transitive
             // derivation of this type, matched by namespace and local name.
@@ -539,6 +599,7 @@ impl ModelSchemaBuilder {
             element_map,
             attribute_map,
             text_field,
+            mixed_content: None,
             is_abstract: self.is_abstract,
             variants: Arc::new(RwLock::new(Vec::new())),
         })

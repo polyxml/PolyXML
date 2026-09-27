@@ -107,6 +107,18 @@ impl NamespaceContext {
                 _ => {}
             }
         }
+        if let Some(mixed) = &schema.mixed_content {
+            for branch in &mixed.branches {
+                if let Some(ns) = &branch.namespace {
+                    if !ns.is_empty() && !uris.contains(ns) {
+                        uris.push(ns.clone());
+                    }
+                }
+                if let ValueType::Nested(nested) = &branch.val_type {
+                    Self::collect_namespaces(nested, uris);
+                }
+            }
+        }
 
         // xsi:type dispatch: variant namespaces must be in
         // scope, and the XML Schema Instance namespace is required to
@@ -383,121 +395,229 @@ impl XmlSerializer {
             }
         }
 
-        // 3. Write child elements
-        for (idx, field) in schema.fields.iter().enumerate() {
-            if field.kind == FieldKind::Element {
-                if let Some(val) = get_field(idx, &field.name) {
-                    if val.is_null() {
+        // 3. Write child elements in their original order for mixed content.
+        if let Some(mixed) = &schema.mixed_content {
+            if let Some(PolyValue::List(items)) =
+                get_field(mixed.items_index, &schema.fields[mixed.items_index].name)
+            {
+                for item in items {
+                    let tagged_field = |name: &str| -> Option<&PolyValue> {
+                        match item {
+                            PolyValue::Object(tagged) => tagged.get(name),
+                            PolyValue::Record { schema, values } => schema
+                                .fields
+                                .iter()
+                                .position(|field| field.name == name)
+                                .and_then(|idx| values.get(idx))
+                                .and_then(Option::as_ref),
+                            _ => None,
+                        }
+                    };
+                    let Some(kind) = tagged_field("kind").and_then(PolyValue::as_str) else {
+                        return Err(PolyXmlError::SerializationError(
+                            "Mixed content item has no kind".into(),
+                        ));
+                    };
+                    let Some(content) = tagged_field("value") else {
+                        return Err(PolyXmlError::SerializationError(
+                            "Mixed content item has no value".into(),
+                        ));
+                    };
+                    if kind == "#text" {
+                        let Some(text) = content.as_str() else {
+                            return Err(PolyXmlError::SerializationError(
+                                "Mixed text item must be a string".into(),
+                            ));
+                        };
+                        writer
+                            .write_event(Event::Text(BytesText::new(text)))
+                            .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                         continue;
                     }
-                    let child_element_ns =
-                        field.namespace.as_deref().or(schema.namespace.as_deref());
-
-                    match &field.val_type {
+                    let Some(branch) = mixed
+                        .branches
+                        .iter()
+                        .find(|branch| branch.variant_name == kind)
+                    else {
+                        return Err(PolyXmlError::SerializationError(format!(
+                            "Unknown mixed content kind: {kind}"
+                        )));
+                    };
+                    let local_name = std::str::from_utf8(&branch.xml_name)?;
+                    let qualified = if let Some(ctx) = ns_ctx {
+                        ctx.qualify_element(
+                            local_name,
+                            branch.namespace.as_deref().or(schema.namespace.as_deref()),
+                        )
+                    } else {
+                        Cow::Borrowed(local_name)
+                    };
+                    match &branch.val_type {
                         ValueType::Scalar(_) => {
                             let mut buf = [0u8; lexical_core::BUFFER_SIZE];
-                            if let Some(text) = Self::format_scalar_to(val, &mut buf) {
-                                Self::validate_scalar(&field.val_type, text, &field.name)?;
-                                let local_child = std::str::from_utf8(&field.xml_name)?;
-                                let child_tag = if let Some(ctx) = ns_ctx {
-                                    ctx.qualify_element(local_child, child_element_ns)
-                                } else {
-                                    Cow::Borrowed(local_child)
-                                };
-
-                                writer
-                                    .write_event(Event::Start(BytesStart::new(child_tag.as_ref())))
-                                    .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                                writer
-                                    .write_event(Event::Text(BytesText::new(text)))
-                                    .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                                writer
-                                    .write_event(Event::End(BytesEnd::new(child_tag.as_ref())))
-                                    .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                            }
+                            let Some(text) = Self::format_scalar_to(content, &mut buf) else {
+                                return Err(PolyXmlError::SerializationError(format!(
+                                    "Invalid mixed content value for {kind}"
+                                )));
+                            };
+                            Self::validate_scalar(&branch.val_type, text, kind)?;
+                            writer
+                                .write_event(Event::Start(BytesStart::new(qualified.as_ref())))
+                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                            writer
+                                .write_event(Event::Text(BytesText::new(text)))
+                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                            writer
+                                .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
+                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                         }
-                        ValueType::List(inner) => {
-                            if let PolyValue::List(items) = val {
-                                for item in items {
-                                    match inner.as_ref() {
-                                        ValueType::Scalar(_) => {
-                                            let mut buf = [0u8; lexical_core::BUFFER_SIZE];
-                                            if let Some(text) =
-                                                Self::format_scalar_to(item, &mut buf)
-                                            {
-                                                Self::validate_scalar(inner, text, &field.name)?;
-                                                let local_child =
-                                                    std::str::from_utf8(&field.xml_name)?;
-                                                let child_tag = if let Some(ctx) = ns_ctx {
-                                                    ctx.qualify_element(
-                                                        local_child,
-                                                        child_element_ns,
-                                                    )
-                                                } else {
-                                                    Cow::Borrowed(local_child)
-                                                };
+                        ValueType::Nested(nested) => Self::write_model(
+                            writer,
+                            &branch.xml_name,
+                            content,
+                            nested,
+                            ns_ctx,
+                            false,
+                            branch.namespace.as_deref().or(nested.namespace.as_deref()),
+                        )?,
+                        ValueType::List(_) => {
+                            return Err(PolyXmlError::SerializationError(
+                                "Nested lists are invalid mixed content branches".into(),
+                            ))
+                        }
+                    }
+                }
+            }
+        } else {
+            for (idx, field) in schema.fields.iter().enumerate() {
+                if field.kind == FieldKind::Element {
+                    if let Some(val) = get_field(idx, &field.name) {
+                        if val.is_null() {
+                            continue;
+                        }
+                        let child_element_ns =
+                            field.namespace.as_deref().or(schema.namespace.as_deref());
 
-                                                writer
-                                                    .write_event(Event::Start(BytesStart::new(
-                                                        child_tag.as_ref(),
-                                                    )))
-                                                    .map_err(|e| {
-                                                        PolyXmlError::SerializationError(
-                                                            e.to_string(),
+                        match &field.val_type {
+                            ValueType::Scalar(_) => {
+                                let mut buf = [0u8; lexical_core::BUFFER_SIZE];
+                                if let Some(text) = Self::format_scalar_to(val, &mut buf) {
+                                    Self::validate_scalar(&field.val_type, text, &field.name)?;
+                                    let local_child = std::str::from_utf8(&field.xml_name)?;
+                                    let child_tag = if let Some(ctx) = ns_ctx {
+                                        ctx.qualify_element(local_child, child_element_ns)
+                                    } else {
+                                        Cow::Borrowed(local_child)
+                                    };
+
+                                    writer
+                                        .write_event(Event::Start(BytesStart::new(
+                                            child_tag.as_ref(),
+                                        )))
+                                        .map_err(|e| {
+                                            PolyXmlError::SerializationError(e.to_string())
+                                        })?;
+                                    writer
+                                        .write_event(Event::Text(BytesText::new(text)))
+                                        .map_err(|e| {
+                                            PolyXmlError::SerializationError(e.to_string())
+                                        })?;
+                                    writer
+                                        .write_event(Event::End(BytesEnd::new(child_tag.as_ref())))
+                                        .map_err(|e| {
+                                            PolyXmlError::SerializationError(e.to_string())
+                                        })?;
+                                }
+                            }
+                            ValueType::List(inner) => {
+                                if let PolyValue::List(items) = val {
+                                    for item in items {
+                                        match inner.as_ref() {
+                                            ValueType::Scalar(_) => {
+                                                let mut buf = [0u8; lexical_core::BUFFER_SIZE];
+                                                if let Some(text) =
+                                                    Self::format_scalar_to(item, &mut buf)
+                                                {
+                                                    Self::validate_scalar(
+                                                        inner,
+                                                        text,
+                                                        &field.name,
+                                                    )?;
+                                                    let local_child =
+                                                        std::str::from_utf8(&field.xml_name)?;
+                                                    let child_tag = if let Some(ctx) = ns_ctx {
+                                                        ctx.qualify_element(
+                                                            local_child,
+                                                            child_element_ns,
                                                         )
-                                                    })?;
-                                                writer
-                                                    .write_event(Event::Text(BytesText::new(text)))
-                                                    .map_err(|e| {
-                                                        PolyXmlError::SerializationError(
-                                                            e.to_string(),
-                                                        )
-                                                    })?;
-                                                writer
-                                                    .write_event(Event::End(BytesEnd::new(
-                                                        child_tag.as_ref(),
-                                                    )))
-                                                    .map_err(|e| {
-                                                        PolyXmlError::SerializationError(
-                                                            e.to_string(),
-                                                        )
-                                                    })?;
+                                                    } else {
+                                                        Cow::Borrowed(local_child)
+                                                    };
+
+                                                    writer
+                                                        .write_event(Event::Start(BytesStart::new(
+                                                            child_tag.as_ref(),
+                                                        )))
+                                                        .map_err(|e| {
+                                                            PolyXmlError::SerializationError(
+                                                                e.to_string(),
+                                                            )
+                                                        })?;
+                                                    writer
+                                                        .write_event(Event::Text(BytesText::new(
+                                                            text,
+                                                        )))
+                                                        .map_err(|e| {
+                                                            PolyXmlError::SerializationError(
+                                                                e.to_string(),
+                                                            )
+                                                        })?;
+                                                    writer
+                                                        .write_event(Event::End(BytesEnd::new(
+                                                            child_tag.as_ref(),
+                                                        )))
+                                                        .map_err(|e| {
+                                                            PolyXmlError::SerializationError(
+                                                                e.to_string(),
+                                                            )
+                                                        })?;
+                                                }
                                             }
+                                            ValueType::Nested(nested_schema) => {
+                                                let nested_ns = field
+                                                    .namespace
+                                                    .as_deref()
+                                                    .or(nested_schema.namespace.as_deref());
+                                                Self::write_model(
+                                                    writer,
+                                                    &field.xml_name,
+                                                    item,
+                                                    nested_schema,
+                                                    ns_ctx,
+                                                    false,
+                                                    nested_ns,
+                                                )?;
+                                            }
+                                            ValueType::List(_) => {}
                                         }
-                                        ValueType::Nested(nested_schema) => {
-                                            let nested_ns = field
-                                                .namespace
-                                                .as_deref()
-                                                .or(nested_schema.namespace.as_deref());
-                                            Self::write_model(
-                                                writer,
-                                                &field.xml_name,
-                                                item,
-                                                nested_schema,
-                                                ns_ctx,
-                                                false,
-                                                nested_ns,
-                                            )?;
-                                        }
-                                        ValueType::List(_) => {}
                                     }
                                 }
                             }
-                        }
-                        ValueType::Nested(nested_schema) => {
-                            let nested_ns = field
-                                .namespace
-                                .as_deref()
-                                .or(nested_schema.namespace.as_deref());
-                            Self::write_model(
-                                writer,
-                                &field.xml_name,
-                                val,
-                                nested_schema,
-                                ns_ctx,
-                                false,
-                                nested_ns,
-                            )?;
+                            ValueType::Nested(nested_schema) => {
+                                let nested_ns = field
+                                    .namespace
+                                    .as_deref()
+                                    .or(nested_schema.namespace.as_deref());
+                                Self::write_model(
+                                    writer,
+                                    &field.xml_name,
+                                    val,
+                                    nested_schema,
+                                    ns_ctx,
+                                    false,
+                                    nested_ns,
+                                )?;
+                            }
                         }
                     }
                 }

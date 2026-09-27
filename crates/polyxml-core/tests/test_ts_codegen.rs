@@ -60,6 +60,7 @@ fn test_ts_interface_and_enum_codegen() {
         qname: QName::new(Some("https://example.com/shop"), "Customer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),
@@ -248,6 +249,7 @@ fn test_ts_zod_schema_generation() {
         qname: QName::new(Some("https://example.com/zod"), "Person"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "age".into(),
@@ -316,6 +318,7 @@ fn test_ts_recursive_cycle_zod_lazy() {
         qname: tree_qname.clone(),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "value".into(),
@@ -450,6 +453,7 @@ fn test_ts_valibot_schema_generation() {
         qname: QName::new(Some("https://example.com/valibot"), "Person"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "postalCode".into(),
@@ -551,6 +555,7 @@ fn test_ts_typebox_schema_generation() {
         qname: QName::new(Some("https://example.com/typebox"), "Account"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "code".into(),

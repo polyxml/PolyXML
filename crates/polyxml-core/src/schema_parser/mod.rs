@@ -170,6 +170,9 @@ impl XsdParser {
         add_gregorian_types(&mut ir);
         inherit_pattern_facets(&mut ir);
         self.expand_group_refs(&mut ir, self.frame_depth == 0);
+        if self.frame_depth == 0 {
+            compile_mixed_types(&mut ir);
+        }
         ir.resolve_cycles();
 
         Ok(ir)
@@ -387,6 +390,8 @@ impl XsdParser {
                                     qname,
                                     base_type: None,
                                     is_abstract,
+                                    is_mixed: get_attr_value(e, "mixed")
+                                        .is_some_and(|value| value == "true" || value == "1"),
                                     fields: Vec::new(),
                                     documentation: None,
                                 }));
@@ -435,6 +440,8 @@ impl XsdParser {
         let is_abstract = get_attr_value(start, "abstract")
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
+        let is_mixed =
+            get_attr_value(start, "mixed").is_some_and(|value| value == "true" || value == "1");
 
         let qname = QName::new(target_ns, name.clone());
         let mut fields = Vec::new();
@@ -696,7 +703,8 @@ impl XsdParser {
 
         // Group references inside a bounded choice are not spliceable into a
         // union's branch list, so keep such types as structs.
-        let is_union = is_top_level_choice
+        let is_union = !is_mixed
+            && is_top_level_choice
             && !top_level_choice_branches.is_empty()
             && group_refs.is_empty()
             && fields.len() == top_level_choice_branches.len();
@@ -723,6 +731,7 @@ impl XsdParser {
                 qname,
                 base_type,
                 is_abstract,
+                is_mixed,
                 fields,
                 documentation,
             })))
@@ -1358,6 +1367,95 @@ impl XsdParser {
             if p.group.namespace.is_none() {
                 p.group = QName::new(Some(ns.to_string()), p.group.local.clone());
             }
+        }
+    }
+}
+
+/// Replace a mixed complex type's child fields with one ordered item stream.
+/// The union branches retain the element names and types for all generators.
+fn compile_mixed_types(ir: &mut SchemaIR) {
+    let mixed_types = ir
+        .types
+        .values()
+        .filter_map(|def| match def {
+            TypeDef::Struct(s) if s.is_mixed => Some(s.qname.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    for qname in mixed_types {
+        let Some(TypeDef::Struct(snapshot)) = ir.types.get(&qname).cloned() else {
+            continue;
+        };
+        if snapshot
+            .fields
+            .iter()
+            .any(|field| field.xml_name.is_empty() && matches!(&field.type_ref, TypeRef::Named(item_type) if matches!(ir.types.get(item_type), Some(TypeDef::Union(union)) if union.is_mixed_content())))
+        {
+            continue;
+        }
+        let mut branches = vec![UnionBranch {
+            variant_name: "Text".into(),
+            xml_name: "#text".into(),
+            namespace: None,
+            type_ref: TypeRef::string(),
+            documentation: None,
+        }];
+        for field in snapshot
+            .fields
+            .iter()
+            .filter(|field| field.kind == FieldKind::Element)
+        {
+            if field.xml_name.is_empty() {
+                if let TypeRef::Named(choice) = &field.type_ref {
+                    if let Some(TypeDef::Union(union)) = ir.types.get(choice) {
+                        branches.extend(union.branches.iter().cloned());
+                    }
+                }
+            } else {
+                branches.push(UnionBranch {
+                    variant_name: field.name.clone(),
+                    xml_name: field.xml_name.clone(),
+                    namespace: field.namespace.clone(),
+                    type_ref: field.type_ref.clone(),
+                    documentation: field.documentation.clone(),
+                });
+            }
+        }
+        let union_name = unique_type_name(
+            ir,
+            qname.namespace.as_deref(),
+            &format!("{}Item", qname.local),
+        );
+        let union_qname = QName::new(qname.namespace.as_deref(), union_name);
+        ir.add_type(TypeDef::Union(UnionDef {
+            qname: union_qname.clone(),
+            branches,
+            documentation: Some(format!("Ordered mixed content for {}", qname.local)),
+        }));
+        let mut items_name = "items".to_string();
+        let mut suffix = 2;
+        while snapshot.fields.iter().any(|field| field.name == items_name) {
+            items_name = format!("items_{suffix}");
+            suffix += 1;
+        }
+        if let Some(TypeDef::Struct(structure)) = ir.types.get_mut(&qname) {
+            structure
+                .fields
+                .retain(|field| field.kind != FieldKind::Element);
+            structure.fields.push(FieldDef {
+                name: items_name,
+                xml_name: String::new(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(union_qname),
+                cardinality: Cardinality::unbounded(0),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: Some("Text and child elements in document order".into()),
+                facets: None,
+                is_cycle_cut: false,
+            });
         }
     }
 }

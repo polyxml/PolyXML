@@ -69,6 +69,7 @@ fn test_cpp_struct_and_enum_codegen_compilation() {
         qname: QName::new(Some("https://example.com/crm"), "Customer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),
@@ -294,6 +295,7 @@ fn test_cpp_choice_variant_compilation() {
         qname: QName::new(Some("urn:payments"), "Payer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "name".into(),
@@ -431,6 +433,7 @@ fn test_cpp_recursive_cycle_unique_ptr() {
         qname: QName::new(Some("urn:tree"), "Node"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "label".into(),
@@ -545,6 +548,7 @@ fn test_cpp_modules_compilation() {
         qname: QName::new(Some("urn:calc"), "Operation"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "op_name".into(),
@@ -657,6 +661,7 @@ fn test_cpp_inheritance_codegen() {
         qname: QName::new(Some("urn:org"), "Person"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef {
             name: "id".into(),
             xml_name: "id".into(),
@@ -679,6 +684,7 @@ fn test_cpp_inheritance_codegen() {
         qname: QName::new(Some("urn:org"), "Employee"),
         base_type: Some(QName::new(Some("urn:org"), "Person")),
         is_abstract: false,
+        is_mixed: false,
         fields: vec![FieldDef {
             name: "dept".into(),
             xml_name: "dept".into(),
@@ -919,6 +925,7 @@ fn test_cpp_glaze_backend_meta_generation() {
         qname: QName::new(Some("https://example.com/shop"), "Order"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "order_id".into(),

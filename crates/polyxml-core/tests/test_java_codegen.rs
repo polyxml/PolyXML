@@ -69,6 +69,7 @@ fn test_java_records_and_enums_generation() {
         qname: QName::new(Some("https://example.com/shop"), "Customer"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),
@@ -352,6 +353,7 @@ fn test_java_jackson_backend_struct_annotations() {
         qname: QName::new(Some("https://example.com/crm"), "Contact"),
         base_type: None,
         is_abstract: false,
+        is_mixed: false,
         fields: vec![
             FieldDef {
                 name: "id".into(),

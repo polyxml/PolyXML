@@ -149,6 +149,7 @@ fn two_namespace_address_ir() -> SchemaIR {
             qname: QName::new(Some(ns), "Address"),
             base_type: None,
             is_abstract: false,
+            is_mixed: false,
             fields: vec![FieldDef::new(
                 "street",
                 "Street",

@@ -13,7 +13,7 @@ use crate::codegen::{
 };
 use crate::ir::{
     EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
-    TypeRef, UnionDef,
+    TypeRef, UnionBranch, UnionDef,
 };
 
 /// Target backend for Java code emission.
@@ -216,6 +216,15 @@ pub fn to_java_type_name(name: &str) -> String {
 /// namespaces for the IR currently being generated.
 pub(super) fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || to_java_type_name(&q.local))
+}
+
+fn union_variant_name(branch: &UnionBranch) -> String {
+    let name = to_java_type_name(&branch.variant_name);
+    if matches!(&branch.type_ref, TypeRef::Named(qname) if type_ident(qname) == name) {
+        format!("{name}Branch")
+    } else {
+        name
+    }
 }
 
 /// Convert an XML enumeration variant name to SCREAMING_SNAKE_CASE for Java enum constants.
@@ -632,11 +641,7 @@ impl JavaCodegen {
             "public static "
         };
 
-        let variant_names: Vec<String> = u
-            .branches
-            .iter()
-            .map(|b| to_java_type_name(&b.variant_name))
-            .collect();
+        let variant_names: Vec<String> = u.branches.iter().map(union_variant_name).collect();
 
         let permits_clause = variant_names
             .iter()
@@ -656,7 +661,7 @@ impl JavaCodegen {
                 .branches
                 .iter()
                 .map(|b| {
-                    let vn = to_java_type_name(&b.variant_name);
+                    let vn = union_variant_name(b);
                     format!(
                         "@JsonSubTypes.Type(value = {}.{}.class, name = {:?})",
                         java_name, vn, b.xml_name
@@ -674,7 +679,7 @@ impl JavaCodegen {
         );
 
         for branch in &u.branches {
-            let variant_name = to_java_type_name(&branch.variant_name);
+            let variant_name = union_variant_name(branch);
             let branch_type = self.context.map_type_ref(&branch.type_ref);
 
             if let Some(ref doc) = branch.documentation {
