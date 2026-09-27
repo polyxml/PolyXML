@@ -35,7 +35,7 @@ public static class Program
             serializer.Serialize(verify, decoded);
             if (verify.ToString() != initial.ToString()) throw new Exception("Round trip mismatch");
         }
-        for (var i = 0; i < 100; i++) { using var reader = new StringReader(xml); _ = serializer.Deserialize(reader); using var writer = new StringWriter(); serializer.Serialize(writer, value); }
+        for (var i = 0; i < 500; i++) { using var reader = new StringReader(xml); _ = serializer.Deserialize(reader); using var writer = new StringWriter(); serializer.Serialize(writer, value); }
         foreach (var operation in new[] { "read", "write" })
         {
             GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();

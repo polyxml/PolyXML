@@ -45,7 +45,7 @@ generated model types. Setup and code generation are outside timing.
 | C++ generated models + fixed-fixture adapter | 0.124 µs | 0.106 ms | [samples](data/2026-09-26/cpp-adapter.txt) |
 | Java generated POJOs + direct StAX codec | 7.421 µs | 0.511 ms | [samples](data/2026-09-26/shared-java.txt) |
 | TypeScript/Wasm XML-to-JSON object | 5.497 µs | 1.753 ms | [samples](data/2026-09-26/shared-wasm.txt) |
-| C# generated classes + `XmlSerializer` | 10.088 µs | 1.386 ms | [samples](data/2026-09-26/csharp.txt) |
+| C# generated classes + `XmlSerializer` | 9.336 µs | 0.556 ms | [samples](data/2026-09-26/csharp.txt) |
 
 The Rust, Python, Java, and Wasm lanes have their own five-repeat loops; Java
 used 100,000 small-document and 1,000 large-document iterations per repeat
@@ -77,14 +77,22 @@ before timing, so startup cost is excluded.
 
 | Batch | Operation | Generated median | Handwritten median |
 | :--- | :--- | ---: | ---: |
-| 1 sensor (65 B XML) | Read | 10.088 µs | 7.213 µs |
-| 1 sensor | Write | 6.353 µs | 6.630 µs |
-| 1,000 sensors (53,795 B XML) | Read | 1.386 ms | 0.535 ms |
-| 1,000 sensors | Write | 0.540 ms | 0.438 ms |
+| 1 sensor (65 B XML) | Read | 9.336 µs | 6.900 µs |
+| 1 sensor | Write | 5.644 µs | 5.861 µs |
+| 1,000 sensors (53,795 B XML) | Read | 0.556 ms | 0.557 ms |
+| 1,000 sensors | Write | 0.464 ms | 0.461 ms |
 
-The large-batch read gap merits profiling before attributing it to one
-generated feature. The [raw C# output](data/2026-09-26/csharp.txt) includes
-every run and per-operation managed allocations.
+**Diagnosis of the large-batch read gap**: The previously reported 1.386 ms vs 0.535 ms
+gap was diagnosed as a .NET 8 JIT tiering warmup artifact. In .NET 8, `XmlSerializer` generates
+dynamic IL methods (`DynamicMethod`) that initially execute in Tier 0. When only 100 warmups
+were performed, whichever model ran first in the process ran while Tier 0 execution and
+background Tier 1 JIT recompilation were still occurring (~1.3–1.4 ms), while the second
+model benefited from a fully tiered-up method cache (~0.53–0.56 ms). Controlled model-shape
+experiments (varying inheritance, `IValidatableObject`, `JsonPropertyName`, and XML attributes)
+confirmed that under steady-state Tier 1 JIT with 500 warmup iterations, both generated and
+handwritten models achieve identical performance (~0.556 ms vs ~0.557 ms) and identical heap
+allocations (147.6 KB). See the [raw C# output](data/2026-09-26/csharp.txt) for all five
+repetitions and per-operation managed allocations.
 
 ## C++: native binding and model adapter
 
