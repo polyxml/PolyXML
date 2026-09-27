@@ -465,6 +465,13 @@ pub struct SchemaIR {
 
 impl SchemaIR {
     pub fn is_external_type(&self, qname: &QName) -> bool {
+        if qname
+            .namespace
+            .as_deref()
+            .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+        {
+            return false;
+        }
         self.external_types.contains_key(qname)
     }
 

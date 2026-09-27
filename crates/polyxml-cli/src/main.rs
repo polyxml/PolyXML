@@ -486,6 +486,13 @@ fn run_module_build(
     }
 
     for qname in global.types.keys() {
+        if qname
+            .namespace
+            .as_deref()
+            .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+        {
+            continue;
+        }
         if !owners.contains_key(qname) {
             return Err(
                 format!("Imported type {qname} has no owning [modules.<name>] entry").into(),
@@ -543,13 +550,24 @@ fn run_module_build(
             ir.target_namespace = module_namespaces[module_name].clone();
             ir.elements = module_elements[module_name].clone();
             ir.types.retain(|qname, _| {
-                owners
-                    .get(qname)
-                    .is_some_and(|owner| visible.contains(owner))
+                qname
+                    .namespace
+                    .as_deref()
+                    .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+                    || owners
+                        .get(qname)
+                        .is_some_and(|owner| visible.contains(owner))
             });
             ir.external_types = owners
                 .iter()
-                .filter(|(_qname, owner)| *owner != module_name && visible.contains(*owner))
+                .filter(|(qname, owner)| {
+                    *owner != module_name
+                        && visible.contains(*owner)
+                        && !qname
+                            .namespace
+                            .as_deref()
+                            .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+                })
                 .map(|(qname, owner)| (qname.clone(), owner.clone()))
                 .collect();
             let names = match language.as_str() {
@@ -580,13 +598,24 @@ fn run_module_build(
             ir.target_namespace = module_namespaces[name].clone();
             ir.elements = module_elements[name].clone();
             ir.types.retain(|qname, _| {
-                owners
-                    .get(qname)
-                    .is_some_and(|owner| visible.contains(owner))
+                qname
+                    .namespace
+                    .as_deref()
+                    .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+                    || owners
+                        .get(qname)
+                        .is_some_and(|owner| visible.contains(owner))
             });
             ir.external_types = owners
                 .iter()
-                .filter(|(_qname, owner)| *owner != name && visible.contains(*owner))
+                .filter(|(qname, owner)| {
+                    *owner != name
+                        && visible.contains(*owner)
+                        && !qname
+                            .namespace
+                            .as_deref()
+                            .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+                })
                 .map(|(qname, owner)| (qname.clone(), owner.clone()))
                 .collect();
 
