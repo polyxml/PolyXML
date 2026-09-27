@@ -176,6 +176,13 @@ If external compilers are installed on the development machine, run the E2E veri
 - `--style record|pojo|class` is shared by Java and C#. Records remain the default;
   `pojo`/`class` select mutable models. Java's `--feature builder,direct-codec`
   must also be forwarded as `features = [...]` in both manifest forms.
+- Java `--feature validation` emits Jakarta Bean Validation annotations on
+  records and POJO fields. Keep the option disabled by default and add it to
+  the CLI feature allowlist and manifest path together. The generated Java
+  still imports `java.util.regex.Pattern` for constructor checks, so emit the
+  Bean Validation `@Pattern` with its fully qualified name to avoid the import
+  collision. Compile generated output against `jakarta.validation-api` when
+  changing this path.
 - Java mutable models/builders live in `java/models.rs`; StAX companions live in
   `java/codec.rs`. Inheritance must share field-name allocation between accessors,
   builders, and codecs. A derived builder extends its base builder and overrides
@@ -390,6 +397,13 @@ element. The TS leg needs `POLYXML_TS_TEST_MODULES` pointing at a node_modules
 with `zod@3 valibot@1 @sinclair/typebox@0.34 typescript@5` and skips otherwise.
 
 ## 11. Python Abstract Meta & Runtime Type Discovery
+
+Core streaming nil handling must check `xsi:nil` before calling
+`resolve_record_schema` for nested complex fields, including list items and
+both `Event::Start` and `Event::Empty`. Otherwise a nillable abstract type
+raises `requires xsi:type` before it can become `PolyValue::Null`.
+`test_xsi_type::nil_abstract_complex_type_skips_concrete_dispatch` covers
+both element forms and list fields.
 
 `xsi:type` dispatch is a **dynamic-runtime feature** (see
 `polyxml-core-engine` skill §5 and `docs/guides/polymorphism.md`); the

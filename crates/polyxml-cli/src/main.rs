@@ -268,6 +268,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         codec: None,
         rkyv: None,
         phf: None,
+        validation: None,
         custom_header: args.custom_header.as_deref(),
     };
     let resolved_options = languages
@@ -486,6 +487,7 @@ pub struct TargetEmitOptions<'a> {
     pub codec: Option<&'a str>,
     pub rkyv: Option<bool>,
     pub phf: Option<bool>,
+    pub validation: Option<bool>,
     pub custom_header: Option<&'a str>,
 }
 
@@ -650,6 +652,7 @@ fn emit_target_code(
                 emit_builder: opts.builder.unwrap_or(false),
                 emit_direct_codec: direct_codec,
                 validate_facets: true,
+                bean_validation: opts.validation.unwrap_or(false),
                 emit_root_aliases: true,
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };

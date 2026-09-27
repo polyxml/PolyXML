@@ -24,6 +24,7 @@ pub(crate) fn target_options(target: &config::TargetConfig) -> TargetEmitOptions
         codec: None,
         rkyv: None,
         phf: None,
+        validation: None,
         custom_header: target.custom_header.as_deref(),
     }
 }
@@ -105,7 +106,7 @@ impl<'a> TargetEmitOptions<'a> {
         }
         let supported_features: &[&str] = match target {
             "rust" => &["zero-copy", "rkyv", "phf"],
-            "java" => &["builder", "direct-codec"],
+            "java" => &["builder", "direct-codec", "validation"],
             "python" => &["slots", "kw-only"],
             _ => &[],
         };
@@ -118,6 +119,7 @@ impl<'a> TargetEmitOptions<'a> {
                 "rkyv" => &mut self.rkyv,
                 "phf" => &mut self.phf,
                 "builder" => &mut self.builder,
+                "validation" => &mut self.validation,
                 "slots" => &mut self.slots,
                 "kw-only" => &mut self.kw_only,
                 "direct-codec" => {

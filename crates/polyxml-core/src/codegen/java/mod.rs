@@ -57,6 +57,9 @@ pub struct JavaOptions {
     pub emit_direct_codec: bool,
     /// Generate facet validation in compact constructors (default: true)
     pub validate_facets: bool,
+    /// Emit Jakarta Bean Validation annotations (adds an optional API dependency).
+    #[serde(default)]
+    pub bean_validation: bool,
     /// Emit top-level aliases for root elements (default: true)
     pub emit_root_aliases: bool,
     /// Custom header text to prepend to generated files (default: None)
@@ -72,6 +75,7 @@ impl Default for JavaOptions {
             emit_builder: false,
             emit_direct_codec: false,
             validate_facets: true,
+            bean_validation: false,
             emit_root_aliases: true,
             custom_header: None,
         }
@@ -345,6 +349,9 @@ impl JavaCodegen {
         out.push_str("import java.time.*;\n");
         out.push_str("import java.math.*;\n");
         out.push_str("import java.util.regex.Pattern;\n");
+        if self.options.bean_validation {
+            out.push_str("import jakarta.validation.constraints.*;\n");
+        }
 
         if self.options.backend.is_jackson() {
             out.push('\n');
@@ -454,6 +461,12 @@ impl JavaCodegen {
 
             let field_type = self.field_type(field);
 
+            let bean_annotations = self.bean_annotations(field).join(" ");
+            let bean_prefix = if bean_annotations.is_empty() {
+                String::new()
+            } else {
+                format!("{bean_annotations} ")
+            };
             if jackson {
                 let mut annotations = Vec::new();
                 // @JsonProperty
@@ -482,9 +495,12 @@ impl JavaCodegen {
                 }
 
                 let annotation_str = annotations.join(" ");
-                components.push(format!("{} {} {}", annotation_str, field_type, field_id));
+                components.push(format!(
+                    "{}{} {} {}",
+                    bean_prefix, annotation_str, field_type, field_id
+                ));
             } else {
-                components.push(format!("{} {}", field_type, field_id));
+                components.push(format!("{}{} {}", bean_prefix, field_type, field_id));
             }
 
             if self.options.validate_facets {
@@ -714,10 +730,26 @@ impl JavaCodegen {
         };
 
         // Build the value component with optional Jackson annotations
-        let value_component = if jackson {
-            format!("@JsonValue @JacksonXmlText {} value", base_type)
+        let mut value_field = crate::ir::FieldDef::new(
+            "value",
+            "value",
+            crate::ir::FieldKind::Text,
+            s.base_type.clone(),
+        );
+        value_field.facets = Some(s.facets.clone());
+        let bean_prefix = self.bean_annotations(&value_field).join(" ");
+        let bean_prefix = if bean_prefix.is_empty() {
+            String::new()
         } else {
-            format!("{} value", base_type)
+            format!("{bean_prefix} ")
+        };
+        let value_component = if jackson {
+            format!(
+                "{bean_prefix}@JsonValue @JacksonXmlText {} value",
+                base_type
+            )
+        } else {
+            format!("{bean_prefix}{} value", base_type)
         };
 
         if checks.is_empty() && !jackson {
@@ -756,6 +788,124 @@ impl JavaCodegen {
         }
 
         let _ = writeln!(out, "{}}}", indent);
+    }
+
+    fn bean_annotations(&self, field: &crate::ir::FieldDef) -> Vec<String> {
+        if !self.options.bean_validation {
+            return Vec::new();
+        }
+        let mut annotations = Vec::new();
+        let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+        let is_optional = field.cardinality.is_optional() || field.nillable;
+        if !is_optional
+            && !matches!(
+                self.field_type(field).as_str(),
+                "boolean" | "byte" | "short" | "int" | "long" | "float" | "double"
+            )
+        {
+            // Java primitive fields cannot be null; reference fields can.
+            annotations.push("@NotNull".to_string());
+        }
+        if matches!(&field.type_ref, TypeRef::Named(_) | TypeRef::List(_)) {
+            annotations.push("@jakarta.validation.Valid".to_string());
+        }
+        let facets = field.facets.as_ref();
+        let Some(facets) = facets else {
+            return annotations;
+        };
+        let primitive = &field.type_ref;
+        let is_string = matches!(
+            primitive,
+            TypeRef::Primitive(
+                PrimitiveType::String
+                    | PrimitiveType::NormalizedString
+                    | PrimitiveType::Token
+                    | PrimitiveType::Name
+                    | PrimitiveType::NCName
+                    | PrimitiveType::QName
+                    | PrimitiveType::Language
+                    | PrimitiveType::NMTOKEN
+                    | PrimitiveType::NMTOKENS
+                    | PrimitiveType::AnyUri
+                    | PrimitiveType::Id
+                    | PrimitiveType::IdRef
+                    | PrimitiveType::IdRefs
+                    | PrimitiveType::Entity
+                    | PrimitiveType::Entities
+            )
+        );
+        let is_numeric = matches!(
+            primitive,
+            TypeRef::Primitive(
+                PrimitiveType::Byte
+                    | PrimitiveType::Short
+                    | PrimitiveType::Int
+                    | PrimitiveType::Integer
+                    | PrimitiveType::Long
+                    | PrimitiveType::Decimal
+                    | PrimitiveType::UnsignedByte
+                    | PrimitiveType::UnsignedShort
+                    | PrimitiveType::UnsignedInt
+                    | PrimitiveType::UnsignedLong
+                    | PrimitiveType::PositiveInteger
+                    | PrimitiveType::NegativeInteger
+                    | PrimitiveType::NonPositiveInteger
+                    | PrimitiveType::NonNegativeInteger
+                    | PrimitiveType::Float
+                    | PrimitiveType::Double
+            )
+        );
+        if is_list || (is_string && !is_optional) {
+            if let Some(length) = facets.length {
+                annotations.push(format!("@Size(min = {length}, max = {length})"));
+            } else if facets.min_length.is_some() || facets.max_length.is_some() {
+                annotations.push(format!(
+                    "@Size(min = {}, max = {})",
+                    facets.min_length.unwrap_or(0),
+                    facets.max_length.unwrap_or(i32::MAX as usize)
+                ));
+            }
+        }
+        if is_string && !is_optional {
+            for pattern in &facets.patterns {
+                annotations.push(format!(
+                    "@jakarta.validation.constraints.Pattern(regexp = {pattern:?})"
+                ));
+            }
+        }
+        if is_numeric
+            && !is_list
+            && !is_optional
+            && !matches!(
+                primitive,
+                TypeRef::Primitive(PrimitiveType::Float | PrimitiveType::Double)
+            )
+        {
+            for (value, minimum, inclusive) in [
+                (facets.min_inclusive.as_ref(), true, true),
+                (facets.max_inclusive.as_ref(), false, true),
+                (facets.min_exclusive.as_ref(), true, false),
+                (facets.max_exclusive.as_ref(), false, false),
+            ] {
+                if let Some(value) = value {
+                    if inclusive && !matches!(primitive, TypeRef::Primitive(PrimitiveType::Decimal))
+                    {
+                        if let Ok(integer) = value.parse::<i64>() {
+                            annotations.push(format!(
+                                "@{}({integer})",
+                                if minimum { "Min" } else { "Max" }
+                            ));
+                            continue;
+                        }
+                    }
+                    let annotation = if minimum { "DecimalMin" } else { "DecimalMax" };
+                    annotations.push(format!(
+                        "@{annotation}(value = {value:?}, inclusive = {inclusive})"
+                    ));
+                }
+            }
+        }
+        annotations
     }
 
     fn build_facet_checks(

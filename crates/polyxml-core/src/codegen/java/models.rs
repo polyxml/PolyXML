@@ -16,6 +16,13 @@ impl JavaCodegen {
         let implements = interface.map(|v| format!(", {v}")).unwrap_or_default();
         let ty_name = self.context.map_type_ref(ty);
         let _ = writeln!(out, "{indent}public {nested}final class {name} implements java.io.Serializable{implements} {{\n{indent}    private static final long serialVersionUID = 1L;");
+        if self.options.bean_validation {
+            let mut value_field = FieldDef::new("value", "value", FieldKind::Text, ty.clone());
+            value_field.facets = facets.cloned();
+            for annotation in self.bean_annotations(&value_field) {
+                let _ = writeln!(out, "{indent}    {annotation}");
+            }
+        }
         if self.options.backend.is_jackson() {
             let _ = writeln!(out, "{indent}    @JsonValue @JacksonXmlText");
         }
@@ -153,6 +160,9 @@ impl JavaCodegen {
         let own = &fields[fields.len() - s.fields.len()..];
         for (f, id) in own {
             self.emit_property_annotations(out, f, &format!("{indent}    "));
+            for annotation in self.bean_annotations(f) {
+                let _ = writeln!(out, "{indent}    {annotation}");
+            }
             let _ = writeln!(
                 out,
                 "{indent}    private {} {id} = {};",

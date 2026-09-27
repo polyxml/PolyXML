@@ -159,6 +159,7 @@ fn test_java_records_and_enums_generation() {
         emit_builder: false,
         emit_direct_codec: false,
         validate_facets: true,
+        bean_validation: false,
         emit_root_aliases: true,
         custom_header: None,
     };
@@ -249,6 +250,7 @@ fn test_java_sealed_interface_choice() {
         emit_builder: false,
         emit_direct_codec: false,
         validate_facets: true,
+        bean_validation: false,
         emit_root_aliases: true,
         custom_header: None,
     };
@@ -305,6 +307,7 @@ fn test_java_module_container_class() {
         emit_builder: false,
         emit_direct_codec: false,
         validate_facets: true,
+        bean_validation: false,
         emit_root_aliases: true,
         custom_header: None,
     };
@@ -417,6 +420,7 @@ fn test_java_jackson_backend_struct_annotations() {
         emit_builder: false,
         emit_direct_codec: false,
         validate_facets: true,
+        bean_validation: false,
         emit_root_aliases: true,
         custom_header: None,
     };
@@ -480,6 +484,7 @@ fn test_java_jackson_backend_enum_annotations() {
         emit_builder: false,
         emit_direct_codec: false,
         validate_facets: true,
+        bean_validation: false,
         emit_root_aliases: true,
         custom_header: None,
     };
@@ -530,6 +535,7 @@ fn test_java_jackson_backend_union_annotations() {
         emit_builder: false,
         emit_direct_codec: false,
         validate_facets: true,
+        bean_validation: false,
         emit_root_aliases: true,
         custom_header: None,
     };
@@ -574,6 +580,7 @@ fn test_java_jackson_backend_simple_type_annotations() {
         emit_builder: false,
         emit_direct_codec: false,
         validate_facets: true,
+        bean_validation: false,
         emit_root_aliases: true,
         custom_header: None,
     };
@@ -626,6 +633,55 @@ fn test_java_jackson_backend_from_str_loose() {
         Some(JavaBackend::Standard)
     );
     assert_eq!(JavaBackend::from_str_loose("unknown"), None);
+}
+
+#[test]
+fn test_java_bean_validation_annotations_are_opt_in() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="Code"><xs:restriction base="xs:string">
+        <xs:minLength value="2"/><xs:maxLength value="8"/><xs:pattern value="[A-Z]+"/>
+      </xs:restriction></xs:simpleType>
+      <xs:simpleType name="Count"><xs:restriction base="xs:int">
+        <xs:minInclusive value="1"/><xs:maxInclusive value="10"/>
+      </xs:restriction></xs:simpleType>
+      <xs:simpleType name="Price"><xs:restriction base="xs:decimal">
+        <xs:minExclusive value="0.0"/><xs:maxExclusive value="99.9"/>
+      </xs:restriction></xs:simpleType>
+      <xs:complexType name="Order"><xs:sequence>
+        <xs:element name="code" type="Code"/>
+        <xs:element name="count" type="Count"/>
+        <xs:element name="price" type="Price"/>
+      </xs:sequence></xs:complexType>
+    </xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(schema)
+        .unwrap();
+    let plain = JavaCodegen::new(JavaOptions::default()).generate_files(&ir);
+    assert!(plain
+        .iter()
+        .all(|(_, code)| !code.contains("jakarta.validation")));
+    let files = JavaCodegen::new(JavaOptions {
+        bean_validation: true,
+        ..Default::default()
+    })
+    .generate_files(&ir);
+    let source = |name: &str| {
+        files
+            .iter()
+            .find(|(file, _)| file == name)
+            .unwrap()
+            .1
+            .as_str()
+    };
+    assert!(source("Code.java").contains("@Size(min = 2, max = 8)"));
+    assert!(source("Code.java")
+        .contains("@jakarta.validation.constraints.Pattern(regexp = \"[A-Z]+\")"));
+    assert!(source("Count.java").contains("@Min(1)"));
+    assert!(source("Count.java").contains("@Max(10)"));
+    assert!(source("Price.java").contains("@DecimalMin(value = \"0.0\", inclusive = false)"));
+    assert!(source("Price.java").contains("@DecimalMax(value = \"99.9\", inclusive = false)"));
+    assert!(source("Order.java").contains("@NotNull"));
+    assert!(source("Order.java").contains("@jakarta.validation.Valid"));
 }
 
 #[test]

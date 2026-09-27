@@ -98,10 +98,16 @@ including with `--dry-run`.
 | Python | `dataclass`, `pydantic` | `dataclass` (dataclass backend only) | `slots`, `kw-only` (dataclass backend only) |
 | Rust | `standard` | — | `zero-copy`, `phf`; `rkyv` is accepted but [currently incompatible with rkyv 0.8](../languages/rust.md) |
 | TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | — |
-| Java | `standard`, `jackson` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec` |
+| Java | `standard`, `jackson` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec`, `validation` |
+
 | C# | `standard`, `source-gen` | `record-class` (default), `record-struct`, `class` (mutable) | — |
 | C++ | `standard`, `glaze` | — | — |
 | Go | `standard`, `easyjson`, `sonic` ([Sonic tag limitation](../languages/go.md)) | — | — |
+
+Java's `--feature validation` (or `features = ["validation"]` in a manifest)
+adds Jakarta Bean Validation annotations to generated records and mutable
+classes. Add `jakarta.validation:jakarta.validation-api:3.1.0` to the consuming
+Java project. Without the feature, generated models need no Jakarta API.
 
 Defaults are unchanged: Rust zero-copy and Python slots/keyword-only fields are
 already enabled. Future features such as `aot`, Python plain `class`,
@@ -109,7 +115,7 @@ and C# mutable `struct` are rejected until their generators support them.
 
 ```bash
 polyxml generate schema.xsd --lang rust --feature phf
-polyxml generate schema.xsd --lang java --style pojo --feature builder,direct-codec
+polyxml generate schema.xsd --lang java --style pojo --feature builder --feature direct-codec
 polyxml generate schema.xsd --lang csharp --backend source-gen --style record-struct
 ```
 
