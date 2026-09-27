@@ -1,3 +1,15 @@
+# [0.26.0](https://github.com/polyxml/PolyXML/compare/v0.25.0...v0.26.0) (2026-09-27)
+
+
+### Bug Fixes
+
+* handle xsi:nil before abstract type dispatch ([#86](https://github.com/polyxml/PolyXML/issues/86)) ([31c9c83](https://github.com/polyxml/PolyXML/commit/31c9c83da4f30aacf0f929c71cb87dc2b8aba8c6))
+
+
+### Features
+
+* **java:** emit opt-in Jakarta validation annotations ([#84](https://github.com/polyxml/PolyXML/issues/84)) ([7cc2ab8](https://github.com/polyxml/PolyXML/commit/7cc2ab80f271fd67389cb02e54aabb56f29b3044))
+
 # [0.25.0](https://github.com/polyxml/PolyXML/compare/v0.24.2...v0.25.0) (2026-09-27)
 
 
