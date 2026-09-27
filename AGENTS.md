@@ -156,6 +156,7 @@ Custom agent runbooks and procedures are stored as skills in `.agents/skills/<sk
 - **`polyxml-codegen-workflow`**: Playbook for developing, refactoring, and verifying code generators across all 7 target languages (Rust, Python, C++, Java, TypeScript, Go, C#), plumbing options from core to CLI/manifest, and validating output.
 - **`polyxml-core-engine`**: High-performance streaming XML parser (`quick-xml`), zero-allocation conversions (`lexical-core`), and Tarjan SCC cycle-cutting architecture in `crates/polyxml-core`.
 - **`polyxml-abi3-workflow`**: Maturin develop, `abi3-py312` conformance audits, dual-language testing, and 100% statement/branch coverage.
+- **`polyxml-benchmark-workflow`**: Shared fixtures, smoke versus publishable runs, raw-result retention, and strict documentation checks.
 
 When working in this repository:
 1. **Consult & Use Skills**: When working on specific subsystems, refer to the corresponding skill in `.agents/skills/`.

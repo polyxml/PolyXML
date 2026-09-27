@@ -41,8 +41,8 @@ equivalent) and never at this root.
 | C# models | [`csharp/`](csharp/README.md) | .NET Stopwatch | `./benchmarks/csharp/run.sh` |
 | TypeScript/Wasm | [`typescript-wasm/`](typescript-wasm/README.md) | Node, Bun, Chromium | See [`typescript-wasm/README.md`](typescript-wasm/README.md) and [methodology](../docs/benchmarks/wasm-vs-js.md) |
 
-The Go, C++, and C# readers use the [same byte-for-byte sensor XML fixtures](workloads/sensor-batch/README.md).
-Their different runtimes and serializers still require separate interpretation.
+Readers in all seven targets can use the [same byte-for-byte sensor XML fixtures](workloads/sensor-batch/README.md).
+Their different return values, runtimes, and serializers still require separate interpretation.
 
 The Rust Criterion suite lives inside its crate because `cargo bench` requires
 `benches/` next to the crate manifest — it is the one deliberate exception to the
@@ -84,7 +84,7 @@ Suite READMEs document their own tooling; these rules apply to all of them:
    the run at 60% of available RAM in an isolated cgroup (kernel OOM-kills
    only the runaway process instead of freezing the host; `ulimit`
    fallback where systemd is unavailable). The suite entry points
-   (`run_all.sh`, `cli/benchmark.sh`, `scripts/perf_stat.sh`) already
+   (`run_all.sh`, `cli/benchmark.sh`, `rust-phf-e2e/run.sh`, `scripts/perf_stat.sh`) already
    re-exec through it; wrap any ad-hoc `cargo bench`/`--release` build the
    same way. Tune with `POLYXML_MEMCAP_PCT`, opt out with
    `POLYXML_MEMCAP_DISABLE=1`.

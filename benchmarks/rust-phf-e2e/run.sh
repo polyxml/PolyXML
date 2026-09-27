@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
+if [ -z "${POLYXML_MEMCAP_LEVEL:-}" ]; then
+    exec "$root/scripts/memcap.sh" "$0" "$@"
+fi
 cd "$root/benchmarks/rust-phf-e2e"
 python3 generate.py
 for size in 16 120; do

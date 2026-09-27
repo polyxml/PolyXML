@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"os"
@@ -60,6 +61,16 @@ func BenchmarkXML(b *testing.B) {
 				}
 				if err := tc.read(input); err != nil {
 					b.Fatal(err)
+				}
+				output, err := xml.Marshal(struct {
+					XMLName xml.Name `xml:"Batch"`
+					Items   any      `xml:"Sensor"`
+				}{Items: tc.values})
+				if err != nil {
+					b.Fatal(err)
+				}
+				if !bytes.Equal(output, input) {
+					b.Fatal("writer output differs from shared fixture")
 				}
 				b.Run(tc.name+"/read", func(b *testing.B) {
 					b.SetBytes(int64(len(input)))
