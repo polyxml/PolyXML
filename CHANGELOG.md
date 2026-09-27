@@ -1,3 +1,10 @@
+# [0.27.0](https://github.com/polyxml/PolyXML/compare/v0.26.0...v0.27.0) (2026-09-27)
+
+
+### Features
+
+* validate Gregorian partial date types across targets ([#87](https://github.com/polyxml/PolyXML/issues/87)) ([cefdeb8](https://github.com/polyxml/PolyXML/commit/cefdeb8f53b62387d914faac1857499f3b98572f))
+
 # [0.26.0](https://github.com/polyxml/PolyXML/compare/v0.25.0...v0.26.0) (2026-09-27)
 
 
