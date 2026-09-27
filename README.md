@@ -53,18 +53,20 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 5. **🛡️ Controlled XML Entity Handling**: The native streaming runtime resolves standard and numeric character references in memory and does not fetch external entities while parsing XML. Schema compilation separately reads local XSD includes and imports.
 
-### PolyXML vs. Existing Solutions
+### Why PolyXML Across Ecosystems
 
-| Feature / Capability | PolyXML | `xsdata` | JAXB (`xjc`) | CodeSynthesis XSD |
-| :--- | :---: | :---: | :---: | :---: |
-| **Supported Ecosystems** | **7 languages simultaneously**<br>*(Rust, Python, Go, C++, Java, TS, C#)* | Python only | Java only | C++ only |
-| **Streaming XML Engine** | **⚡ Zero-copy native streaming**<br>*(sub-microsecond per packet)* | Interpreted DOM / tree | StAX / DOM | Pull parser |
-| **Python XML Performance** | **⚡ 10.0x faster read / 23.5x write** | Baseline | N/A | N/A |
-| **Ahead-of-Time Native PyO3** | **⚡ 8.4x faster AOT extensions**<br>*(134k ops/s @ 7.4 µs on USAF UCI)* | ❌ No | ❌ No | ❌ No |
-| **Dual XML ↔ JSON Binding** | **✅ Built-in on exact same models**<br>*(9x–15x faster than xsdata JSON)* | Slow reflection | Third-party Jackson | ❌ No |
-| **Massive Complex Schemas** | **✅ Tarjan cycle-cutting**<br>*(USAF UCI: 8.3 MB, 5,558 types)* | Fails / OOM on large schemas | High memory overhead | High compilation RAM |
-| **W3C XSTS Conformance** | **✅ >99.8% schema compilation** | Partial | High | High |
-| **Open Source License** | **✅ Permissive MIT** | MIT | CDDL / GPL | **⚠️ Commercial / GPL dual-license** |
+Instead of relying on single-language generators with divergent capabilities, PolyXML unifies your data contracts while generating idiomatic, high-performance code tailored to each target:
+
+- **☕ Java (22+)**: Immutable records with sealed interface choices and pattern matching, direct streaming codecs without runtime reflection overhead, and optional Jakarta validation (`@Size`, `@Pattern`, `@Min`, `@Max`).
+- **🐍 Python (3.12+)**: Modern `@dataclass(slots=True)` and Pydantic V2 models, up to **10.0x faster read / 23.5x write** than `xsdata`, with optional Ahead-of-Time native PyO3 compiled extensions.
+- **🔷 C# / .NET (8+)**: Modern primary constructor `record` types, polymorphic choice unions preserving document order, and native `System.Text.Json` source-gen compatibility.
+- **🐹 Go (1.22+)**: Idiomatic structs with `xml:",any"` document order preservation, strict choice exclusivity validation, and simultaneous JSON annotations.
+- **🌐 TypeScript (5+)**: Discriminated unions, `as const` enums, and optional runtime Zod, Valibot, or TypeBox validation schemas.
+- **🦀 Rust**: Zero-copy borrowed streaming (`Cow<'a, str>`), Tarjan SCC cycle boxing (`Box<T>`), and fast `quick-xml` codecs.
+- **⚡ C++ (20/23)**: Modern value types (`std::variant`, `std::optional`, concepts), CMake/Meson export, zero Apache Xerces dependency, and a **100% permissive MIT license** (eliminating commercial/GPL dual-licensing traps).
+
+> 📖 **Evaluating PolyXML against your current toolchain?**  
+> Read our in-depth **[Architectural Comparison & Migration Guide](docs/why-polyxml.md)** for a detailed, transparent breakdown and benchmarks across JAXB (`xjc`), `XmlSchemaClassGenerator`, `xsdata`, `xuri/xgen`, `cxsd`, and `CodeSynthesis XSD`.
 
 ---
 
