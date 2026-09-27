@@ -832,6 +832,11 @@ impl JavaCodegen {
                     | PrimitiveType::IdRefs
                     | PrimitiveType::Entity
                     | PrimitiveType::Entities
+                    | PrimitiveType::GDay
+                    | PrimitiveType::GMonth
+                    | PrimitiveType::GYear
+                    | PrimitiveType::GYearMonth
+                    | PrimitiveType::GMonthDay
             )
         );
         let is_numeric = matches!(
@@ -939,6 +944,11 @@ impl JavaCodegen {
                     | PrimitiveType::IdRefs
                     | PrimitiveType::Entity
                     | PrimitiveType::Entities
+                    | PrimitiveType::GDay
+                    | PrimitiveType::GMonth
+                    | PrimitiveType::GYear
+                    | PrimitiveType::GYearMonth
+                    | PrimitiveType::GMonthDay
             ),
             _ => false,
         };

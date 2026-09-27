@@ -1,9 +1,58 @@
 use std::sync::Arc;
 
 use polyxml::error::PolyXmlError;
+use polyxml::ir::PrimitiveType;
 use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
 use polyxml::value::PolyValue;
 use polyxml::{deserialize, serialize};
+
+#[test]
+fn test_gregorian_partial_date_lexical_validation() {
+    use polyxml::converters::ValueConverter;
+
+    for (kind, valid, invalid) in [
+        (PrimitiveType::GDay, "---15Z", "---32"),
+        (PrimitiveType::GMonth, "--04+14:00", "--04+14:01"),
+        (PrimitiveType::GYear, "-0045", "012345"),
+        (PrimitiveType::GYearMonth, "2026-09-05:30", "2026-13"),
+        (PrimitiveType::GMonthDay, "--02-29", "--02-30"),
+    ] {
+        let scalar = ScalarType::XmlGregorian(kind);
+        assert_eq!(
+            ValueConverter::parse_scalar(&scalar, valid.as_bytes(), "date").unwrap(),
+            PolyValue::String(valid.into())
+        );
+        assert!(ValueConverter::parse_scalar(&scalar, invalid.as_bytes(), "date").is_err());
+    }
+}
+
+#[test]
+fn test_xsd_gregorian_fields_round_trip_and_reject_invalid_dates() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="Calendar"><xs:sequence>
+        <xs:element name="day" type="xs:gDay"/>
+        <xs:element name="month" type="xs:gMonth"/>
+        <xs:element name="year" type="xs:gYear"/>
+        <xs:element name="yearMonth" type="xs:gYearMonth"/>
+        <xs:element name="monthDay" type="xs:gMonthDay"/>
+      </xs:sequence></xs:complexType>
+      <xs:element name="calendar" type="Calendar"/>
+    </xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(xsd)
+        .unwrap();
+    assert_eq!(ir.types.len(), 6);
+    let schema = ModelSchema::from_ir(&ir, Some("calendar")).unwrap();
+    let xml = br#"<calendar><day>---15Z</day><month>--04+14:00</month><year>-0045</year><yearMonth>2026-09-05:30</yearMonth><monthDay>--02-29</monthDay></calendar>"#;
+    let value = deserialize(xml, Arc::clone(&schema)).unwrap();
+    let out = serialize("calendar", &value, &schema, None).unwrap();
+    assert_eq!(deserialize(&out, Arc::clone(&schema)).unwrap(), value);
+    let invalid = br#"<calendar><day>---32</day><month>--04</month><year>2026</year><yearMonth>2026-09</yearMonth><monthDay>--02-29</monthDay></calendar>"#;
+    assert!(deserialize(invalid, Arc::clone(&schema)).is_err());
+    let mut bad_value = std::collections::HashMap::new();
+    bad_value.insert("day".into(), PolyValue::String("---32".into()));
+    assert!(serialize("calendar", &PolyValue::Object(bad_value), &schema, None).is_err());
+}
 
 #[test]
 fn test_all_scalar_types() {

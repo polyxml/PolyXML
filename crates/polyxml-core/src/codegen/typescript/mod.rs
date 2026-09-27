@@ -759,6 +759,11 @@ impl TypeScriptCodegen {
                     | PrimitiveType::IdRefs
                     | PrimitiveType::Entity
                     | PrimitiveType::Entities
+                    | PrimitiveType::GDay
+                    | PrimitiveType::GMonth
+                    | PrimitiveType::GYear
+                    | PrimitiveType::GYearMonth
+                    | PrimitiveType::GMonthDay
             ),
             _ => false,
         };
@@ -836,6 +841,11 @@ impl TypeScriptCodegen {
                     | PrimitiveType::NCName
                     | PrimitiveType::Language
                     | PrimitiveType::AnyUri
+                    | PrimitiveType::GDay
+                    | PrimitiveType::GMonth
+                    | PrimitiveType::GYear
+                    | PrimitiveType::GYearMonth
+                    | PrimitiveType::GMonthDay
             ),
             _ => false,
         };
@@ -909,6 +919,11 @@ impl TypeScriptCodegen {
                     | PrimitiveType::NCName
                     | PrimitiveType::Language
                     | PrimitiveType::AnyUri
+                    | PrimitiveType::GDay
+                    | PrimitiveType::GMonth
+                    | PrimitiveType::GYear
+                    | PrimitiveType::GYearMonth
+                    | PrimitiveType::GMonthDay
             ),
             _ => false,
         };

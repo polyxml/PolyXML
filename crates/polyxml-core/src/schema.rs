@@ -19,6 +19,7 @@ pub enum ScalarType {
     XmlDateTime,
     XmlTime,
     XmlDuration,
+    XmlGregorian(crate::ir::PrimitiveType),
     Any,
 }
 
@@ -218,6 +219,11 @@ impl ModelSchema {
                 PrimitiveType::DateTime => ScalarType::XmlDateTime,
                 PrimitiveType::Time => ScalarType::XmlTime,
                 PrimitiveType::Date => ScalarType::XmlDate,
+                PrimitiveType::GDay
+                | PrimitiveType::GMonth
+                | PrimitiveType::GYear
+                | PrimitiveType::GYearMonth
+                | PrimitiveType::GMonthDay => ScalarType::XmlGregorian(prim),
                 PrimitiveType::Int
                 | PrimitiveType::Integer
                 | PrimitiveType::NonPositiveInteger

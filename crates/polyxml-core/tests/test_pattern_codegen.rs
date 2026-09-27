@@ -26,6 +26,59 @@ const SCHEMA: &str = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="document" type="Document"/>
 </xs:schema>"#;
 
+const GREGORIAN_SCHEMA: &str = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="Calendar"><xs:sequence>
+    <xs:element name="day" type="xs:gDay"/>
+    <xs:element name="month" type="xs:gMonth"/>
+    <xs:element name="year" type="xs:gYear"/>
+    <xs:element name="yearMonth" type="xs:gYearMonth"/>
+    <xs:element name="monthDay" type="xs:gMonthDay"/>
+  </xs:sequence></xs:complexType>
+</xs:schema>"#;
+
+#[test]
+fn gregorian_primitives_emit_validated_types_across_targets() {
+    let ir = XsdParser::new().parse_str(GREGORIAN_SCHEMA).unwrap();
+    assert_eq!(ir.types.len(), 6);
+    let rust = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+    assert!(rust.contains("validate_GDay_patterns"));
+    assert!(rust.contains("validate_GMonthDay_patterns"));
+    let go = GoCodegen::new(GoOptions::default()).generate_module(&ir);
+    assert!(go.contains("func (s GDay) Validate() error"));
+    assert!(go.contains("func (s *GMonthDay) UnmarshalText(text []byte) error"));
+    let cpp = CppCodegen::new(CppOptions::default()).generate_header(&ir);
+    assert!(cpp.contains("validate_GDay_patterns"));
+    let java = JavaCodegen::new(JavaOptions::default()).generate_module(&ir, "Models");
+    assert!(java.contains("Pattern.compile(\"---"));
+    let python = PythonCodegen::new(PythonOptions {
+        backend: PythonBackend::Pydantic,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+    assert!(python.contains("type GDay = Annotated[str, Field(pattern="));
+    let ts = TypeScriptCodegen::new(TypeScriptOptions {
+        backend: TypeScriptBackend::Zod,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+    assert!(ts.contains("GDaySchema = z.string().regex("));
+    let valibot = TypeScriptCodegen::new(TypeScriptOptions {
+        backend: TypeScriptBackend::Valibot,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+    assert!(valibot.contains("GDaySchema = v.pipe(v.string(), v.regex("));
+    let typebox = TypeScriptCodegen::new(TypeScriptOptions {
+        backend: TypeScriptBackend::TypeBox,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+    assert!(typebox.contains("GDaySchema = Type.String({ pattern:"));
+    let csharp = CSharpCodegen::new(CSharpOptions::default()).generate_module(&ir);
+    assert!(csharp.contains("record GDay("));
+    assert!(csharp.contains("Regex.IsMatch(Value.ToString()"));
+}
+
 fn schema() -> SchemaIR {
     let dir = tempdir().unwrap();
     let path = dir.path().join("pattern.xsd");

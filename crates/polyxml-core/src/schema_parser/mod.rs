@@ -167,6 +167,7 @@ impl XsdParser {
         // Frame post-passes: inherit pattern facets up derivation chains
         // and expand named model group references. Both are idempotent.
         // Cycle detection runs last so fields spliced in from groups are covered.
+        add_gregorian_types(&mut ir);
         inherit_pattern_facets(&mut ir);
         self.expand_group_refs(&mut ir, self.frame_depth == 0);
         ir.resolve_cycles();
@@ -1287,6 +1288,80 @@ impl XsdParser {
                 p.group = QName::new(Some(ns.to_string()), p.group.local.clone());
             }
         }
+    }
+}
+
+/// Give XSD Gregorian primitives named, validated types in every target.
+/// The original primitive remains the base of each synthesized simple type.
+fn add_gregorian_types(ir: &mut SchemaIR) {
+    const NS: &str = "urn:polyxml:builtins:gregorian";
+    const TZ: &str = r"(?:Z|[+-](?:(?:0[0-9]|1[0-3]):[0-5][0-9]|14:00))?";
+    fn pattern(kind: PrimitiveType) -> Option<String> {
+        let body = match kind {
+            PrimitiveType::GDay => r"---(?:0[1-9]|[12][0-9]|3[01])",
+            PrimitiveType::GMonth => r"--(?:0[1-9]|1[0-2])",
+            PrimitiveType::GYear => r"-?(?:[0-9]{4}|[1-9][0-9]{4,})",
+            PrimitiveType::GYearMonth => r"-?(?:[0-9]{4}|[1-9][0-9]{4,})-(?:0[1-9]|1[0-2])",
+            PrimitiveType::GMonthDay => {
+                r"--(?:02-(?:0[1-9]|1[0-9]|2[0-9])|(?:04|06|09|11)-(?:0[1-9]|[12][0-9]|30)|(?:01|03|05|07|08|10|12)-(?:0[1-9]|[12][0-9]|3[01]))"
+            }
+            _ => return None,
+        };
+        Some(format!("{body}{TZ}"))
+    }
+    fn name(kind: PrimitiveType) -> &'static str {
+        match kind {
+            PrimitiveType::GDay => "GDay",
+            PrimitiveType::GMonth => "GMonth",
+            PrimitiveType::GYear => "GYear",
+            PrimitiveType::GYearMonth => "GYearMonth",
+            PrimitiveType::GMonthDay => "GMonthDay",
+            _ => unreachable!(),
+        }
+    }
+    fn rewrite(ty: &mut TypeRef, used: &mut HashSet<PrimitiveType>) {
+        match ty {
+            TypeRef::Primitive(kind) if pattern(*kind).is_some() => {
+                used.insert(*kind);
+                *ty = TypeRef::Named(QName::new(Some(NS), name(*kind)));
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => rewrite(inner, used),
+            _ => {}
+        }
+    }
+    let mut used = HashSet::new();
+    for element in ir.elements.values_mut() {
+        rewrite(&mut element.type_ref, &mut used);
+    }
+    for def in ir.types.values_mut() {
+        match def {
+            TypeDef::Struct(s) => {
+                for field in &mut s.fields {
+                    rewrite(&mut field.type_ref, &mut used);
+                }
+            }
+            TypeDef::Enum(e) => rewrite(&mut e.base_type, &mut used),
+            TypeDef::Union(u) => {
+                for branch in &mut u.branches {
+                    rewrite(&mut branch.type_ref, &mut used);
+                }
+            }
+            TypeDef::Simple(s) => rewrite(&mut s.base_type, &mut used),
+        }
+    }
+    for kind in used {
+        let qname = QName::new(Some(NS), name(kind));
+        ir.types.entry(qname.clone()).or_insert_with(|| {
+            TypeDef::Simple(Box::new(SimpleTypeDef {
+                qname,
+                base_type: TypeRef::Primitive(kind),
+                facets: RestrictionFacets {
+                    patterns: vec![pattern(kind).unwrap()],
+                    ..Default::default()
+                },
+                documentation: Some("Validated W3C Gregorian partial date".into()),
+            }))
+        });
     }
 }
 

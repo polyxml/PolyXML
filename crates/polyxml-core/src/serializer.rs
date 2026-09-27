@@ -5,8 +5,9 @@ use std::io::Cursor;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
 
+use crate::converters::ValueConverter;
 use crate::error::{PolyXmlError, Result};
-use crate::schema::{FieldKind, ModelSchema, ValueType};
+use crate::schema::{FieldKind, ModelSchema, ScalarType, ValueType};
 use crate::value::PolyValue;
 
 /// XML Schema Instance namespace, needed to write `xsi:type` selectors.
@@ -219,6 +220,13 @@ impl XmlSerializer {
         }
     }
 
+    fn validate_scalar(ty: &ValueType, text: &str, field_name: &str) -> Result<()> {
+        if let ValueType::Scalar(scalar @ ScalarType::XmlGregorian(_)) = ty {
+            ValueConverter::parse_scalar(scalar, text.as_bytes(), field_name)?;
+        }
+        Ok(())
+    }
+
     fn write_model<W: std::io::Write>(
         writer: &mut Writer<W>,
         tag_name: &[u8],
@@ -305,6 +313,7 @@ impl XmlSerializer {
                         };
                         let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                         if let Some(attr_str) = Self::format_scalar_to(val, &mut buf) {
+                            Self::validate_scalar(&field.val_type, attr_str, &field.name)?;
                             elem.push_attribute((attr_name.as_ref(), attr_str));
                         }
                     }
@@ -343,6 +352,7 @@ impl XmlSerializer {
             if let Some(val) = get_field(text_idx, &field.name) {
                 let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                 if let Some(text_content) = Self::format_scalar_to(val, &mut buf) {
+                    Self::validate_scalar(&field.val_type, text_content, &field.name)?;
                     if !text_content.is_empty() {
                         writer
                             .write_event(Event::Text(BytesText::new(text_content)))
@@ -352,6 +362,9 @@ impl XmlSerializer {
                     for item in items {
                         let mut item_buf = [0u8; lexical_core::BUFFER_SIZE];
                         if let Some(text_content) = Self::format_scalar_to(item, &mut item_buf) {
+                            if let ValueType::List(inner) = &field.val_type {
+                                Self::validate_scalar(inner, text_content, &field.name)?;
+                            }
                             if !text_content.is_empty() {
                                 writer
                                     .write_event(Event::Text(BytesText::new(text_content)))
@@ -377,6 +390,7 @@ impl XmlSerializer {
                         ValueType::Scalar(_) => {
                             let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                             if let Some(text) = Self::format_scalar_to(val, &mut buf) {
+                                Self::validate_scalar(&field.val_type, text, &field.name)?;
                                 let local_child = std::str::from_utf8(&field.xml_name)?;
                                 let child_tag = if let Some(ctx) = ns_ctx {
                                     ctx.qualify_element(local_child, child_element_ns)
@@ -404,6 +418,7 @@ impl XmlSerializer {
                                             if let Some(text) =
                                                 Self::format_scalar_to(item, &mut buf)
                                             {
+                                                Self::validate_scalar(inner, text, &field.name)?;
                                                 let local_child =
                                                     std::str::from_utf8(&field.xml_name)?;
                                                 let child_tag = if let Some(ctx) = ns_ctx {

@@ -26,6 +26,12 @@ This skill documents the high-performance design patterns and strict constraints
    - Resolve refs leniently like `parser.rs::append_general_ref`: `is_char_ref()`/`resolve_char_ref()` for `&#NN;`/`&#xNN;`, `escape::resolve_xml_entity()` for `amp`/`lt`/`gt`/`quot`/`apos`, else push the raw name (never error — a document the core accepts must not fail in generated code).
    - Never enable `trim_text` on a reader that assembles split text: per-segment trimming loses spaces around refs (`x &amp; y` → `x&y`). Trim the assembled buffer once at element end (the transcoder `End` arm).
    - Attribute values arrive raw too — always `escape::unescape` them (`parse_attributes`, the transcoder's Start/Empty attr arms).
+   - XSD Gregorian partial dates map to `ScalarType::XmlGregorian` and pass
+     through `converters::valid_gregorian` on parse. Serialization checks the
+     same scalar before writing attributes, text, and elements. Keep this
+     byte-level validator aligned with schema parser synthetic simple-type
+     patterns: `+14:00` is valid, `+14:01` is not, and `gMonthDay` needs
+     month-specific day limits.
 5. **Document Transcoding Is Buffered**:
    - `transcoder::xml_to_json` and `json_to_xml` accept complete byte slices and return complete byte vectors. The schema-free path constructs a `serde_json::Value` tree; the CLI reads all stdin or file input before calling it. Pipes do not make this API incremental or zero-copy. Keep CLI help and docs distinct from `XmlItemStream` and the Wasm record-stream API.
 

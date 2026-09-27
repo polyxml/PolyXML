@@ -109,6 +109,13 @@ adds Jakarta Bean Validation annotations to generated records and mutable
 classes. Add `jakarta.validation:jakarta.validation-api:3.1.0` to the consuming
 Java project. Without the feature, generated models need no Jakarta API.
 
+Schemas using `xs:gDay`, `xs:gMonth`, `xs:gYear`, `xs:gYearMonth`, or
+`xs:gMonthDay` generate named partial date types with lexical pattern checks.
+The string value is retained, including any timezone suffix. Generated
+validators reject invalid ranges such as `---32`, `--13`, `--02-30`, and
+offsets beyond `14:00`; the schema-backed Rust parser checks the same values
+when reading XML.
+
 Defaults are unchanged: Rust zero-copy and Python slots/keyword-only fields are
 already enabled. Future features such as `aot`, Python plain `class`,
 and C# mutable `struct` are rejected until their generators support them.

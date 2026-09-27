@@ -183,6 +183,13 @@ If external compilers are installed on the development machine, run the E2E veri
   Bean Validation `@Pattern` with its fully qualified name to avoid the import
   collision. Compile generated output against `jakarta.validation-api` when
   changing this path.
+- Gregorian partial date builtins are already `PrimitiveType` variants. The
+  schema parser's `add_gregorian_types` pass wraps uses in named simple types
+  with patterns so existing pattern validation paths run across generators.
+  When extending the patterns, keep the core streaming converter and the
+  generated validators aligned, including the `14:00` timezone boundary and
+  month-specific day limits. Java's `build_facet_checks` and TypeScript's
+  Zod/Valibot/TypeBox facet helpers must classify these primitives as strings.
 - Java mutable models/builders live in `java/models.rs`; StAX companions live in
   `java/codec.rs`. Inheritance must share field-name allocation between accessors,
   builders, and codecs. A derived builder extends its base builder and overrides
