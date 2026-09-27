@@ -1,4 +1,17 @@
-# C++ generated-model XML adapter benchmark
+# C++ XML benchmarks
+
+The **native binding lane** exercises PolyXML's actual C++ API over the Rust
+C ABI. Run `./benchmarks/cpp/run_runtime.sh` after installing a C++20 compiler
+and Rust. It builds `polyxml-c`, creates a scalar `Sensor` schema once, checks
+an XML round trip, and measures read and write for a 50-byte sensor message.
+Five repeated timings are printed per operation. The native API currently
+supports scalar schema fields through `SchemaBuilder`; this lane does not
+materialize generated C++ models or the 1,000-sensor shared batch.
+
+Use `BENCH_ITERATIONS=2 ./benchmarks/cpp/run_runtime.sh` for a smoke run. Keep
+native-binding numbers separate from the generated-model adapter below.
+
+## Generated-model adapter lane
 
 Run `./benchmarks/cpp/run.sh` from the repository root after
 `cargo build -p polyxml-cli`. Requires a C++20 compiler.

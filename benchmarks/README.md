@@ -37,7 +37,7 @@ equivalent) and never at this root.
 | CLI startup | [`cli/`](cli/README.md) | hyperfine | `./benchmarks/cli/benchmark.sh` |
 | Java four-runtime | [`java/`](java/README.md) | JMH (Maven) | See [`java/README.md`](java/README.md) |
 | Go models | [`go/`](go/README.md) | `go test -bench` | `./benchmarks/go/run.sh` |
-| C++ XML adapter | [`cpp/`](cpp/README.md) | C++20 chrono | `./benchmarks/cpp/run.sh` |
+| C++ native binding + XML adapter | [`cpp/`](cpp/README.md) | C++20 chrono | `./benchmarks/cpp/run_runtime.sh` and `./benchmarks/cpp/run.sh` |
 | C# models | [`csharp/`](csharp/README.md) | .NET Stopwatch | `./benchmarks/csharp/run.sh` |
 | TypeScript/Wasm | [`typescript-wasm/`](typescript-wasm/README.md) | Node, Bun, Chromium | See [`typescript-wasm/README.md`](typescript-wasm/README.md) and [methodology](../docs/benchmarks/wasm-vs-js.md) |
 
