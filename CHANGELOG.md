@@ -1,3 +1,10 @@
+## [0.24.1](https://github.com/polyxml/PolyXML/compare/v0.24.0...v0.24.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **go:** synchronize polyxml.h with crates/polyxml-c/include/polyxml.h for CI check ([7f1fe9a](https://github.com/polyxml/PolyXML/commit/7f1fe9a21d218c8bf6486e080d6482b1d4085ba5))
+
 # [0.24.0](https://github.com/polyxml/PolyXML/compare/v0.23.3...v0.24.0) (2026-09-26)
 
 
