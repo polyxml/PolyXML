@@ -11,7 +11,7 @@ The [Python AOT vs Dataclass benchmark](python-aot-vs-dataclass.md) details the 
 
 PolyXML is engineered to process gigabytes of XML per second by leveraging Rust's zero-cost abstractions, `quick-xml` streaming events, and `lexical-core` numeric conversions.
 
-The repository includes reusable benchmark suites for [Rust, Python, Java, Go, C++, C#, and TypeScript/Wasm](../../benchmarks/README.md). The Go and C# suites compare generated models with handwritten equivalents using the same standard XML serializer. The C++ suite measures a narrow XML adapter into generated models because the C++ generator does not yet emit an XML codec; its numbers must not be presented as PolyXML C++ codec throughput. The [suite catalog](../../benchmarks/README.md) gives each entry point and methodology.
+The repository includes reusable benchmark suites for [Rust, Python, Java, Go, C++, C#, and TypeScript/Wasm](https://github.com/polyxml/PolyXML/blob/main/benchmarks/README.md). The Go and C# suites compare generated models with handwritten equivalents using the same standard XML serializer. The C++ suite measures a narrow XML adapter into generated models because the C++ generator does not yet emit an XML codec; its numbers must not be presented as PolyXML C++ codec throughput. The [suite catalog](https://github.com/polyxml/PolyXML/blob/main/benchmarks/README.md) gives each entry point and methodology.
 
 > 🚀 **Looking for architectural comparisons with legacy compilers?**
 > Check out **[Why PolyXML? (The Architecture of Modern XML)](../why-polyxml.md)** for in-depth comparisons against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
