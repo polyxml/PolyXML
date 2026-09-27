@@ -1,3 +1,10 @@
+# [0.29.0](https://github.com/polyxml/PolyXML/compare/v0.28.0...v0.29.0) (2026-09-27)
+
+
+### Features
+
+* preserve ordered mixed XML content across targets ([#88](https://github.com/polyxml/PolyXML/issues/88)) ([e16525e](https://github.com/polyxml/PolyXML/commit/e16525efadba2c66f92b188a6ed01f406a6d0e66))
+
 # [0.28.0](https://github.com/polyxml/PolyXML/compare/v0.27.0...v0.28.0) (2026-09-27)
 
 
