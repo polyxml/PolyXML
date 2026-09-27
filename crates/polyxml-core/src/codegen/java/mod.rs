@@ -8,7 +8,8 @@ use heck::{AsLowerCamelCase, AsPascalCase, AsShoutySnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+    build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
+    set_type_name_map, LanguageContext,
 };
 use crate::ir::{
     EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
@@ -215,7 +216,8 @@ pub(super) fn type_ident(q: &QName) -> String {
 
 /// Convert an XML enumeration variant name to SCREAMING_SNAKE_CASE for Java enum constants.
 pub fn to_java_enum_constant(name: &str) -> String {
-    let raw = AsShoutySnakeCase(name).to_string();
+    let normalized = normalize_symbol_name(name);
+    let raw = AsShoutySnakeCase(&normalized).to_string();
     let sanitized = if raw.is_empty() {
         "EMPTY".to_string()
     } else if raw.chars().next().is_some_and(|c| c.is_ascii_digit()) {

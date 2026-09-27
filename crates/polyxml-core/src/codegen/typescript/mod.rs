@@ -5,7 +5,8 @@ use heck::{AsLowerCamelCase, AsPascalCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+    build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
+    set_type_name_map, LanguageContext,
 };
 use crate::ir::{
     EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
@@ -178,14 +179,16 @@ pub fn to_ts_type_name(name: &str) -> String {
 
 /// Convert an XML enumeration/choice variant name to a PascalCase TypeScript variant identifier.
 pub fn to_ts_variant_name(name: &str) -> String {
-    let raw = AsPascalCase(name).to_string();
-    if raw.is_empty() {
+    let normalized = normalize_symbol_name(name);
+    let raw = AsPascalCase(&normalized).to_string();
+    let safe = if raw.is_empty() {
         "Empty".to_string()
     } else if raw.chars().next().is_some_and(|c| c.is_ascii_digit()) {
         format!("Value{}", raw)
     } else {
         raw
-    }
+    };
+    sanitize_keyword(&safe, "ts")
 }
 
 /// Code generator producing modern TypeScript 5+ models and optional Zod schemas from SchemaIR.
@@ -407,8 +410,9 @@ impl TypeScriptCodegen {
 
         // Companion const object for runtime lookups & autocomplete
         let _ = writeln!(out, "export const {} = {{", ts_name);
+        let mut seen = HashSet::new();
         for v in &e.variants {
-            let variant_key = to_ts_variant_name(&v.name);
+            let variant_key = self.unique_variant_name(&v.name, &mut seen);
             let _ = writeln!(out, "  {}: {:?},", variant_key, v.value);
         }
         out.push_str("} as const;\n\n");
@@ -467,9 +471,15 @@ impl TypeScriptCodegen {
             self.emit_docstring(out, doc, "");
         }
 
+        let mut seen = HashSet::new();
+        let kind_names: Vec<String> = u
+            .branches
+            .iter()
+            .map(|b| self.unique_variant_name(&b.variant_name, &mut seen))
+            .collect();
+
         let _ = writeln!(out, "export type {} =", ts_name);
-        for branch in &u.branches {
-            let kind_name = to_ts_variant_name(&branch.variant_name);
+        for (branch, kind_name) in u.branches.iter().zip(&kind_names) {
             let branch_type = self.context.map_type_ref(&branch.type_ref);
             let _ = writeln!(
                 out,
@@ -488,8 +498,7 @@ impl TypeScriptCodegen {
                     "export const {} = z.discriminatedUnion(\"kind\", [",
                     schema_name
                 );
-                for branch in &u.branches {
-                    let kind_name = to_ts_variant_name(&branch.variant_name);
+                for (branch, kind_name) in u.branches.iter().zip(&kind_names) {
                     let branch_zod = self.zod_expr_for_type(&branch.type_ref);
                     let _ = writeln!(
                         out,
@@ -501,8 +510,7 @@ impl TypeScriptCodegen {
             }
             TypeScriptBackend::Valibot => {
                 let _ = writeln!(out, "export const {} = v.variant(\"kind\", [", schema_name);
-                for branch in &u.branches {
-                    let kind_name = to_ts_variant_name(&branch.variant_name);
+                for (branch, kind_name) in u.branches.iter().zip(&kind_names) {
                     let branch_vali = self.valibot_expr_for_type(&branch.type_ref);
                     let _ = writeln!(
                         out,
@@ -514,8 +522,7 @@ impl TypeScriptCodegen {
             }
             TypeScriptBackend::TypeBox => {
                 let _ = writeln!(out, "export const {} = Type.Union([", schema_name);
-                for branch in &u.branches {
-                    let kind_name = to_ts_variant_name(&branch.variant_name);
+                for (branch, kind_name) in u.branches.iter().zip(&kind_names) {
                     let branch_tb = self.typebox_expr_for_type(&branch.type_ref);
                     let _ = writeln!(
                         out,
@@ -1243,6 +1250,18 @@ impl TypeScriptCodegen {
 
     fn unique_field_name(&self, name: &str, seen: &mut HashSet<String>) -> String {
         let base = to_ts_field_identifier(name);
+        let mut candidate = base.clone();
+        let mut counter = 1;
+        while seen.contains(&candidate) {
+            counter += 1;
+            candidate = format!("{}_{}", base, counter);
+        }
+        seen.insert(candidate.clone());
+        candidate
+    }
+
+    fn unique_variant_name(&self, name: &str, seen: &mut HashSet<String>) -> String {
+        let base = to_ts_variant_name(name);
         let mut candidate = base.clone();
         let mut counter = 1;
         while seen.contains(&candidate) {

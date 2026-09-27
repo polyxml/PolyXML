@@ -1421,7 +1421,8 @@ fn sanitize_field_name(name: &str) -> String {
 }
 
 fn sanitize_variant_name(name: &str) -> String {
-    let s = heck::AsPascalCase(name).to_string();
+    let normalized = crate::codegen::normalize_symbol_name(name);
+    let s = heck::AsPascalCase(&normalized).to_string();
     if s.is_empty() {
         "Variant".to_string()
     } else if s.chars().next().unwrap().is_ascii_digit() {

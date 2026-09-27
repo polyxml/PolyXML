@@ -1,10 +1,12 @@
+use std::collections::HashSet;
 use std::fmt::Write as FmtWrite;
 
 use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+    build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
+    set_type_name_map, LanguageContext,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
@@ -202,7 +204,8 @@ pub fn to_go_field_name(raw: &str) -> String {
 
 /// Converts an enumeration variant into a typed Go constant identifier (`EnumNameVariant`).
 pub fn to_go_constant_name(type_name: &str, raw: &str) -> String {
-    let pascal = AsPascalCase(raw).to_string();
+    let normalized_sym = normalize_symbol_name(raw);
+    let pascal = AsPascalCase(&normalized_sym).to_string();
     let normalized = normalize_go_initialisms(&pascal);
     let safe_var = if normalized.is_empty() {
         "Value".to_string()
@@ -435,6 +438,35 @@ impl GoCodegen {
         }
     }
 
+    fn unique_field_name(&self, raw: &str, seen: &mut HashSet<String>) -> String {
+        let base = to_go_field_name(raw);
+        let mut name = base.clone();
+        let mut index = 2;
+        while seen.contains(&name) {
+            name = format!("{}_{}", base, index);
+            index += 1;
+        }
+        seen.insert(name.clone());
+        name
+    }
+
+    fn unique_constant_name(
+        &self,
+        enum_name: &str,
+        raw: &str,
+        seen: &mut HashSet<String>,
+    ) -> String {
+        let base = to_go_constant_name(enum_name, raw);
+        let mut name = base.clone();
+        let mut index = 2;
+        while seen.contains(&name) {
+            name = format!("{}_{}", base, index);
+            index += 1;
+        }
+        seen.insert(name.clone());
+        name
+    }
+
     fn emit_enum(&self, out: &mut String, enum_def: &EnumDef) {
         let enum_name = type_ident(&enum_def.qname);
         if let Some(ref doc) = enum_def.documentation {
@@ -445,12 +477,18 @@ impl GoCodegen {
 
         writeln!(out, "type {} string\n", enum_name).unwrap();
 
+        let mut seen = HashSet::new();
+        let const_names: Vec<String> = enum_def
+            .variants
+            .iter()
+            .map(|v| self.unique_constant_name(&enum_name, &v.name, &mut seen))
+            .collect();
+
         writeln!(out, "const (").unwrap();
-        for variant in &enum_def.variants {
+        for (variant, const_name) in enum_def.variants.iter().zip(&const_names) {
             if let Some(ref doc) = variant.documentation {
                 writeln!(out, "    // {}", doc).unwrap();
             }
-            let const_name = to_go_constant_name(&enum_name, &variant.name);
             writeln!(
                 out,
                 "    {} {} = \"{}\"",
@@ -463,11 +501,6 @@ impl GoCodegen {
         // IsValid() bool method
         writeln!(out, "func (e {}) IsValid() bool {{", enum_name).unwrap();
         writeln!(out, "    switch e {{").unwrap();
-        let const_names: Vec<String> = enum_def
-            .variants
-            .iter()
-            .map(|v| to_go_constant_name(&enum_name, &v.name))
-            .collect();
         writeln!(out, "    case {}:", const_names.join(", ")).unwrap();
         writeln!(out, "        return true").unwrap();
         writeln!(out, "    default:").unwrap();
@@ -490,11 +523,17 @@ impl GoCodegen {
 
         // Choice container struct
         writeln!(out, "type {} struct {{", choice_name).unwrap();
-        for branch in &u.branches {
+        let mut seen = HashSet::new();
+        let branch_field_names: Vec<String> = u
+            .branches
+            .iter()
+            .map(|b| self.unique_field_name(&b.variant_name, &mut seen))
+            .collect();
+
+        for (branch, field_name) in u.branches.iter().zip(&branch_field_names) {
             if let Some(ref doc) = branch.documentation {
                 writeln!(out, "    // {}", doc).unwrap();
             }
-            let field_name = to_go_field_name(&branch.variant_name);
             let mapped_type = self.context.map_type_ref(&branch.type_ref);
             let mut tag_parts = Vec::new();
             if self.options.emit_xml_tags {
@@ -517,8 +556,7 @@ impl GoCodegen {
 
         // Selected() string helper
         writeln!(out, "func (c {}) Selected() string {{", choice_name).unwrap();
-        for branch in &u.branches {
-            let field_name = to_go_field_name(&branch.variant_name);
+        for (branch, field_name) in u.branches.iter().zip(&branch_field_names) {
             writeln!(out, "    if c.{} != nil {{", field_name).unwrap();
             writeln!(out, "        return \"{}\"", branch.xml_name).unwrap();
             writeln!(out, "    }}").unwrap();
@@ -529,8 +567,7 @@ impl GoCodegen {
         // Validate() error method
         writeln!(out, "func (c {}) Validate() error {{", choice_name).unwrap();
         writeln!(out, "    count := 0").unwrap();
-        for branch in &u.branches {
-            let field_name = to_go_field_name(&branch.variant_name);
+        for field_name in &branch_field_names {
             writeln!(out, "    if c.{} != nil {{ count++ }}", field_name).unwrap();
         }
         writeln!(out, "    if count > 1 {{").unwrap();
@@ -566,8 +603,7 @@ impl GoCodegen {
             writeln!(out, "        case xml.StartElement:").unwrap();
             writeln!(out, "            switch t.Name.Local {{").unwrap();
 
-            for branch in &u.branches {
-                let field_name = to_go_field_name(&branch.variant_name);
+            for (branch, field_name) in u.branches.iter().zip(&branch_field_names) {
                 let mapped_type = self.context.map_type_ref(&branch.type_ref);
                 writeln!(out, "            case \"{}\":", branch.xml_name).unwrap();
                 writeln!(out, "                var v {}", mapped_type).unwrap();
@@ -665,7 +701,7 @@ impl GoCodegen {
             }
         }
 
-        if let Some(base_type_str) = simple_content_base {
+        if let Some(ref base_type_str) = simple_content_base {
             let has_value_field = s
                 .fields
                 .iter()
@@ -690,22 +726,52 @@ impl GoCodegen {
             }
         }
 
+        let mut seen = HashSet::new();
+        if self.options.emit_xml_tags {
+            seen.insert("XMLName".to_string());
+        }
+        if simple_content_base.is_some() {
+            let has_value_field = s
+                .fields
+                .iter()
+                .any(|f| f.name == "value" || f.kind == FieldKind::Text);
+            if !has_value_field {
+                seen.insert("Value".to_string());
+            }
+        }
+
+        let field_names: Vec<String> = s
+            .fields
+            .iter()
+            .map(|f| self.unique_field_name(&f.name, &mut seen))
+            .collect();
+
+        let mut seen_json = HashSet::new();
+        if simple_content_base.is_some() {
+            let has_value_field = s
+                .fields
+                .iter()
+                .any(|f| f.name == "value" || f.kind == FieldKind::Text);
+            if !has_value_field {
+                seen_json.insert("value".to_string());
+            }
+        }
+
         // Fields
-        for f in &s.fields {
+        for (f, field_name) in s.fields.iter().zip(&field_names) {
             if let Some(ref doc) = f.documentation {
                 writeln!(out, "    // {}", doc).unwrap();
             }
 
-            let field_name = to_go_field_name(&f.name);
             let field_type = self.resolve_field_type(f);
-            let tag = self.build_field_struct_tags(f);
+            let tag = self.build_field_struct_tags(f, &mut seen_json);
             writeln!(out, "    {} {}{}", field_name, field_type, tag).unwrap();
         }
 
         writeln!(out, "}}\n").unwrap();
 
         if self.options.validate_facets {
-            self.emit_struct_validator(out, s, ir);
+            self.emit_struct_validator(out, s, ir, &field_names);
         }
     }
 
@@ -725,7 +791,7 @@ impl GoCodegen {
         }
     }
 
-    fn build_field_struct_tags(&self, f: &FieldDef) -> String {
+    fn build_field_struct_tags(&self, f: &FieldDef, seen_json: &mut HashSet<String>) -> String {
         let mut parts = Vec::new();
 
         if self.options.emit_xml_tags {
@@ -754,11 +820,19 @@ impl GoCodegen {
 
         if self.options.emit_json_tags || self.options.backend == GoBackend::Sonic {
             let is_opt = f.cardinality.is_optional() || f.nillable;
-            let json_name = if f.kind == FieldKind::Text {
+            let raw_json_name = if f.kind == FieldKind::Text {
                 "value".to_string()
             } else {
                 f.xml_name.clone()
             };
+            let mut json_name = raw_json_name.clone();
+            let mut counter = 2;
+            while seen_json.contains(&json_name) {
+                json_name = format!("{}_{}", raw_json_name, counter);
+                counter += 1;
+            }
+            seen_json.insert(json_name.clone());
+
             let json_val = if is_opt {
                 format!("{},omitempty", json_name)
             } else {
@@ -779,13 +853,18 @@ impl GoCodegen {
         }
     }
 
-    fn emit_struct_validator(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
+    fn emit_struct_validator(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ir: &SchemaIR,
+        field_names: &[String],
+    ) {
         let struct_name = type_ident(&s.qname);
         writeln!(out, "func (s {}) Validate() error {{", struct_name).unwrap();
 
         let mut has_checks = false;
-        for f in &s.fields {
-            let field_name = to_go_field_name(&f.name);
+        for (f, field_name) in s.fields.iter().zip(field_names) {
             let is_opt = f.cardinality.is_optional() || f.nillable;
 
             if super::patterned_simple(&f.type_ref, ir).is_some() {

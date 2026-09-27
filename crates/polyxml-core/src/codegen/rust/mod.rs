@@ -5,8 +5,8 @@ use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, flatten_fields, lookup_type_name, sanitize_keyword, set_type_name_map,
-    LanguageContext,
+    build_type_name_map, flatten_fields, lookup_type_name, normalize_symbol_name, sanitize_keyword,
+    set_type_name_map, LanguageContext,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR, SimpleTypeDef, StructDef,
@@ -160,7 +160,8 @@ pub fn to_rust_variant_identifier(val: &str) -> String {
         return "Empty".to_string();
     }
 
-    let cleaned: String = trimmed
+    let normalized = normalize_symbol_name(trimmed);
+    let cleaned: String = normalized
         .chars()
         .map(|c| if c.is_alphanumeric() { c } else { ' ' })
         .collect();

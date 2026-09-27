@@ -5,7 +5,8 @@ use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+    build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
+    set_type_name_map, LanguageContext,
 };
 use crate::ir::{
     EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
@@ -224,7 +225,11 @@ pub fn to_cpp_field_name(raw: &str) -> String {
 
 /// Converts an enumeration variant raw value into a safe C++ scoped enum identifier.
 pub fn to_cpp_enum_variant(raw: &str) -> String {
-    let pascal = AsPascalCase(raw).to_string();
+    if raw.trim().is_empty() {
+        return "Unknown".to_string();
+    }
+    let normalized = normalize_symbol_name(raw);
+    let pascal = AsPascalCase(&normalized).to_string();
     let safe = if pascal.is_empty() {
         "Unknown".to_string()
     } else if pascal.starts_with(|c: char| c.is_ascii_digit()) {
@@ -253,6 +258,39 @@ impl CppCodegen {
             options,
             context: CppLanguageContext,
         }
+    }
+
+    fn unique_field_name(
+        &self,
+        struct_name: &str,
+        raw: &str,
+        seen: &mut HashSet<String>,
+    ) -> String {
+        let base = to_cpp_field_name(raw);
+        let mut name = base.clone();
+        if name.eq_ignore_ascii_case(struct_name) {
+            name.push_str("_value");
+        }
+        let stem = name.clone();
+        let mut index = 2;
+        while seen.contains(&name) || name.eq_ignore_ascii_case(struct_name) {
+            name = format!("{}_{}", stem, index);
+            index += 1;
+        }
+        seen.insert(name.clone());
+        name
+    }
+
+    fn unique_enum_variant(&self, raw: &str, seen: &mut HashSet<String>) -> String {
+        let base = to_cpp_enum_variant(raw);
+        let mut name = base.clone();
+        let mut index = 2;
+        while seen.contains(&name) {
+            name = format!("{}_{}", base, index);
+            index += 1;
+        }
+        seen.insert(name.clone());
+        name
     }
 
     /// Generate complete header-only source (`.hpp`).
@@ -501,8 +539,15 @@ endif()
                     writeln!(out, "    static constexpr auto value = enumerate();").unwrap();
                 } else {
                     writeln!(out, "    static constexpr auto value = enumerate(").unwrap();
-                    for (i, v) in enum_def.variants.iter().enumerate() {
-                        let var_name = to_cpp_enum_variant(&v.name);
+                    let mut seen = HashSet::new();
+                    let variant_names: Vec<String> = enum_def
+                        .variants
+                        .iter()
+                        .map(|v| self.unique_enum_variant(&v.name, &mut seen))
+                        .collect();
+                    for (i, (v, var_name)) in
+                        enum_def.variants.iter().zip(&variant_names).enumerate()
+                    {
                         let comma = if i + 1 < enum_def.variants.len() {
                             ","
                         } else {
@@ -527,6 +572,7 @@ endif()
                 writeln!(out, "    using T = {};", full_type).unwrap();
 
                 let mut field_bindings = Vec::new();
+                let mut seen = HashSet::new();
 
                 // Check for simple_content_base "value"
                 if let Some(ref base_qname) = s.base_type {
@@ -538,12 +584,13 @@ endif()
                         && (PrimitiveType::from_xsd_name(&base_qname.local).is_some()
                             || matches!(ir.types.get(base_qname), Some(TypeDef::Simple(_))))
                     {
+                        seen.insert("value".to_string());
                         field_bindings.push(r#""value", &T::value"#.to_string());
                     }
                 }
 
                 for f in &s.fields {
-                    let field_name = to_cpp_field_name(&f.name);
+                    let field_name = self.unique_field_name(&struct_name, &f.name, &mut seen);
                     field_bindings.push(format!("{:?}, &T::{}", f.xml_name, field_name));
                 }
 
@@ -671,11 +718,17 @@ concept XmlModel = requires(T a) {{
         let enum_name = type_ident(&enum_def.qname);
         writeln!(out, "enum class {} {{", enum_name).unwrap();
 
-        for variant in &enum_def.variants {
+        let mut seen = HashSet::new();
+        let variant_names: Vec<String> = enum_def
+            .variants
+            .iter()
+            .map(|v| self.unique_enum_variant(&v.name, &mut seen))
+            .collect();
+
+        for (variant, var_name) in enum_def.variants.iter().zip(&variant_names) {
             if let Some(ref doc) = variant.documentation {
                 writeln!(out, "    /// {}", doc).unwrap();
             }
-            let var_name = to_cpp_enum_variant(&variant.name);
             writeln!(out, "    {},", var_name).unwrap();
         }
         writeln!(out, "}};\n").unwrap();
@@ -689,8 +742,7 @@ concept XmlModel = requires(T a) {{
             )
             .unwrap();
             writeln!(out, "    switch (value) {{").unwrap();
-            for variant in &enum_def.variants {
-                let var_name = to_cpp_enum_variant(&variant.name);
+            for (variant, var_name) in enum_def.variants.iter().zip(&variant_names) {
                 writeln!(
                     out,
                     "        case {}::{}: return \"{}\";",
@@ -718,8 +770,7 @@ concept XmlModel = requires(T a) {{
                 enum_name, func_name
             )
             .unwrap();
-            for variant in &enum_def.variants {
-                let var_name = to_cpp_enum_variant(&variant.name);
+            for (variant, var_name) in enum_def.variants.iter().zip(&variant_names) {
                 writeln!(
                     out,
                     "    if (s == \"{}\") return {}::{};",
@@ -816,7 +867,7 @@ concept XmlModel = requires(T a) {{
 
         writeln!(out, "struct {}{} {{", struct_name, base_clause).unwrap();
 
-        if let Some(base_type_str) = simple_content_base {
+        if let Some(ref base_type_str) = simple_content_base {
             let has_value_field = s
                 .fields
                 .iter()
@@ -828,8 +879,6 @@ concept XmlModel = requires(T a) {{
                     || base_type_str.starts_with("std::uint")
                 {
                     " = 0"
-                } else if base_type_str == "bool" {
-                    " = false"
                 } else {
                     " = {}"
                 };
@@ -837,12 +886,27 @@ concept XmlModel = requires(T a) {{
             }
         }
 
+        let mut seen = HashSet::new();
+        if simple_content_base.is_some() {
+            let has_value_field = s
+                .fields
+                .iter()
+                .any(|f| f.name == "value" || f.kind == crate::ir::FieldKind::Text);
+            if !has_value_field {
+                seen.insert("value".to_string());
+            }
+        }
+        let field_names: Vec<String> = s
+            .fields
+            .iter()
+            .map(|f| self.unique_field_name(&struct_name, &f.name, &mut seen))
+            .collect();
+
         // Fields
-        for f in &s.fields {
+        for (f, field_name) in s.fields.iter().zip(&field_names) {
             if let Some(ref doc) = f.documentation {
                 writeln!(out, "    /// {}", doc).unwrap();
             }
-            let field_name = to_cpp_field_name(&f.name);
             let (field_type, init_val) = self.resolve_field_type_and_init(f);
             writeln!(out, "    {} {}{};", field_type, field_name, init_val).unwrap();
         }
@@ -857,7 +921,7 @@ concept XmlModel = requires(T a) {{
         }
 
         if self.options.validate_facets {
-            self.emit_struct_validator(out, s, ir);
+            self.emit_struct_validator(out, s, ir, &field_names);
         }
 
         writeln!(out, "}};\n").unwrap();
@@ -929,13 +993,19 @@ concept XmlModel = requires(T a) {{
         }
     }
 
-    fn emit_struct_validator(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
+    fn emit_struct_validator(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ir: &SchemaIR,
+        field_names: &[String],
+    ) {
         writeln!(out, "\n    [[nodiscard]] bool validate() const noexcept {{").unwrap();
 
         let mut has_checks = false;
-        for f in &s.fields {
+        for (f, field_name) in s.fields.iter().zip(field_names) {
             if let Some(simple) = super::patterned_simple(&f.type_ref, ir) {
-                let field = to_cpp_field_name(&f.name);
+                let field = field_name.clone();
                 let name = type_ident(&simple.qname);
                 let is_string = self
                     .context
@@ -963,7 +1033,6 @@ concept XmlModel = requires(T a) {{
                 }
             }
             if let Some(ref facets) = f.facets {
-                let field_name = to_cpp_field_name(&f.name);
                 let is_opt = f.cardinality.is_optional() || f.nillable;
 
                 if is_opt {
@@ -976,7 +1045,7 @@ concept XmlModel = requires(T a) {{
                     );
                     writeln!(out, "        }}").unwrap();
                 } else {
-                    self.emit_facet_checks(out, facets, &field_name, "        ");
+                    self.emit_facet_checks(out, facets, field_name, "        ");
                 }
                 has_checks = true;
             }

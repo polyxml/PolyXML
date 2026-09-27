@@ -3,13 +3,15 @@
 //! Emits idiomatic C# 12 records with primary constructors, standard System.Xml.Serialization
 //! attributes, polymorphic xs:choice abstract records, and IValidatableObject facet boundary checks.
 
+use std::collections::HashSet;
 use std::fmt::Write as FmtWrite;
 
 use heck::{AsLowerCamelCase, AsPascalCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+    build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
+    set_type_name_map, LanguageContext,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
@@ -135,7 +137,8 @@ pub fn to_csharp_param_name(raw: &str) -> String {
 
 /// Sanitizes an identifier into a PascalCase C# enum variant.
 pub fn to_csharp_variant_name(raw: &str) -> String {
-    let pascal = AsPascalCase(raw).to_string();
+    let normalized = normalize_symbol_name(raw);
+    let pascal = AsPascalCase(&normalized).to_string();
     let safe = if pascal.is_empty() {
         "Value".to_string()
     } else if pascal.starts_with(|c: char| c.is_ascii_digit()) {
@@ -428,8 +431,14 @@ impl CSharpCodegen {
         writeln!(out, "{}public enum {}", indent, enum_name).unwrap();
         writeln!(out, "{}{{", indent).unwrap();
 
-        for variant in &e.variants {
-            let variant_name = to_csharp_variant_name(&variant.name);
+        let mut seen_variants = HashSet::new();
+        let variant_names: Vec<String> = e
+            .variants
+            .iter()
+            .map(|v| self.unique_variant_name(&v.name, &mut seen_variants))
+            .collect();
+
+        for (variant, variant_name) in e.variants.iter().zip(&variant_names) {
             if let Some(ref doc) = variant.documentation {
                 self.emit_docstring(out, doc, &format!("{}    ", indent));
             }
@@ -453,8 +462,7 @@ impl CSharpCodegen {
         )
         .unwrap();
         writeln!(out, "{}    {{", indent).unwrap();
-        for variant in &e.variants {
-            let variant_name = to_csharp_variant_name(&variant.name);
+        for variant_name in &variant_names {
             writeln!(
                 out,
                 "{}        {}.{} => true,",
@@ -473,8 +481,7 @@ impl CSharpCodegen {
         )
         .unwrap();
         writeln!(out, "{}    {{", indent).unwrap();
-        for variant in &e.variants {
-            let variant_name = to_csharp_variant_name(&variant.name);
+        for (variant, variant_name) in e.variants.iter().zip(&variant_names) {
             writeln!(
                 out,
                 "{}        {}.{} => \"{}\",",
@@ -717,6 +724,13 @@ impl CSharpCodegen {
             format!(" : {}", base_clause.join(", "))
         };
 
+        let mut seen_props = HashSet::new();
+        let prop_names: Vec<String> = s
+            .fields
+            .iter()
+            .map(|f| self.unique_property_name(&f.name, &mut seen_props, Some(&struct_name)))
+            .collect();
+
         if !self.options.use_records {
             writeln!(
                 out,
@@ -725,8 +739,7 @@ impl CSharpCodegen {
             )
             .unwrap();
             writeln!(out, "{}    public {}() {{ }}", indent, struct_name).unwrap();
-            for f in &s.fields {
-                let name = to_csharp_property_name(&f.name, Some(&struct_name));
+            for (f, name) in s.fields.iter().zip(&prop_names) {
                 let ty = self.map_field_type(f, ir);
                 let attrs = self
                     .build_field_attributes(f, ir)
@@ -744,7 +757,7 @@ impl CSharpCodegen {
                 .unwrap();
             }
             if self.options.emit_validation {
-                self.emit_struct_validator(out, s, indent);
+                self.emit_struct_validator(out, s, &prop_names, indent);
             }
             writeln!(out, "{}}}\n", indent).unwrap();
             return;
@@ -764,8 +777,7 @@ impl CSharpCodegen {
 
         writeln!(out, "{}public {} {}(", indent, record_keyword, struct_name).unwrap();
 
-        for (i, f) in s.fields.iter().enumerate() {
-            let prop_name = to_csharp_property_name(&f.name, Some(&struct_name));
+        for (i, (f, prop_name)) in s.fields.iter().zip(&prop_names).enumerate() {
             let field_type = self.map_field_type(f, ir);
             let is_opt = f.cardinality.is_optional()
                 || f.nillable
@@ -822,14 +834,49 @@ impl CSharpCodegen {
 
         // IValidatableObject implementation
         if self.options.emit_validation {
-            self.emit_struct_validator(out, s, indent);
+            self.emit_struct_validator(out, s, &prop_names, indent);
         }
 
         writeln!(out, "{}}}\n", indent).unwrap();
     }
 
-    fn emit_struct_validator(&self, out: &mut String, s: &StructDef, indent: &str) {
-        let struct_name = type_ident(&s.qname);
+    fn unique_property_name(
+        &self,
+        name: &str,
+        seen: &mut HashSet<String>,
+        enclosing: Option<&str>,
+    ) -> String {
+        let base = to_csharp_property_name(name, enclosing);
+        let mut candidate = base.clone();
+        let mut counter = 1;
+        while seen.contains(&candidate) {
+            counter += 1;
+            candidate = format!("{}{}", base, counter);
+        }
+        seen.insert(candidate.clone());
+        candidate
+    }
+
+    fn unique_variant_name(&self, name: &str, seen: &mut HashSet<String>) -> String {
+        let base = to_csharp_variant_name(name);
+        let mut candidate = base.clone();
+        let mut counter = 1;
+        while seen.contains(&candidate) {
+            counter += 1;
+            candidate = format!("{}{}", base, counter);
+        }
+        seen.insert(candidate.clone());
+        candidate
+    }
+
+    fn emit_struct_validator(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        prop_names: &[String],
+        indent: &str,
+    ) {
+        let _struct_name = type_ident(&s.qname);
         let new_kw = if !self.options.use_records {
             if s.base_type.is_some() {
                 "override "
@@ -853,8 +900,7 @@ impl CSharpCodegen {
             writeln!(out, "{}        foreach (var result in base.Validate(validationContext)) yield return result;", indent).unwrap();
         }
         let mut has_checks = false;
-        for f in &s.fields {
-            let prop_name = to_csharp_property_name(&f.name, Some(&struct_name));
+        for (f, prop_name) in s.fields.iter().zip(prop_names) {
             let is_opt = f.cardinality.is_optional()
                 || f.nillable
                 || (f.cardinality.is_list() && f.cardinality.min_occurs == 0);
@@ -866,12 +912,12 @@ impl CSharpCodegen {
                     self.emit_facet_checks(
                         out,
                         facets,
-                        &prop_name,
+                        prop_name,
                         &format!("{}            ", indent),
                     );
                     writeln!(out, "{}        }}", indent).unwrap();
                 } else {
-                    self.emit_facet_checks(out, facets, &prop_name, &format!("{}        ", indent));
+                    self.emit_facet_checks(out, facets, prop_name, &format!("{}        ", indent));
                 }
                 has_checks = true;
             }

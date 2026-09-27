@@ -151,13 +151,67 @@ pub fn sanitize_keyword(name: &str, target_language: &str) -> String {
 
     if keywords.contains(name) {
         match target_language.to_lowercase().as_str() {
-            "rust" => format!("r#{}", name),
+            "rust" => {
+                // In Rust, 'self', 'Self', 'super', and 'crate' cannot be raw identifiers
+                if matches!(name, "self" | "Self" | "super" | "crate") {
+                    format!("{}_", name)
+                } else {
+                    format!("r#{}", name)
+                }
+            }
             "csharp" | "c#" | "cs" => format!("@{}", name),
             _ => format!("{}_", name),
         }
     } else {
         name.to_string()
     }
+}
+
+/// Normalizes an identifier or enumeration symbol by mapping common mathematical
+/// and punctuation symbols into English words so that non-alphanumeric XML
+/// enumeration values (e.g. "+", "-", "*", "100%", "2G") produce valid identifiers
+/// across all target languages.
+pub fn normalize_symbol_name(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return "Empty".to_string();
+    }
+
+    match trimmed {
+        "+" => return "Plus".to_string(),
+        "-" => return "Minus".to_string(),
+        "*" => return "Star".to_string(),
+        "/" => return "Slash".to_string(),
+        "%" => return "Percent".to_string(),
+        "=" => return "Equal".to_string(),
+        "<" => return "LessThan".to_string(),
+        ">" => return "GreaterThan".to_string(),
+        "<=" => return "LessThanOrEqual".to_string(),
+        ">=" => return "GreaterThanOrEqual".to_string(),
+        "!=" => return "NotEqual".to_string(),
+        "&" => return "And".to_string(),
+        "|" => return "Or".to_string(),
+        "~" => return "Tilde".to_string(),
+        "^" => return "Caret".to_string(),
+        "@" => return "At".to_string(),
+        "#" => return "Hash".to_string(),
+        "$" => return "Dollar".to_string(),
+        _ => {}
+    }
+
+    let mut out = String::new();
+    for c in trimmed.chars() {
+        match c {
+            '%' => out.push_str("Percent"),
+            '+' => out.push_str("Plus"),
+            '#' => out.push_str("Hash"),
+            '@' => out.push_str("At"),
+            '$' => out.push_str("Dollar"),
+            '=' => out.push_str("Equal"),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 fn rust_keywords() -> &'static HashSet<&'static str> {
@@ -183,6 +237,9 @@ fn python_keywords() -> &'static HashSet<&'static str> {
             "False",
             "None",
             "True",
+            "false",
+            "none",
+            "true",
             "and",
             "as",
             "assert",
@@ -586,6 +643,12 @@ fn csharp_keywords() -> &'static HashSet<&'static str> {
             "volatile",
             "while",
             "record",
+            "init",
+            "scoped",
+            "file",
+            "nint",
+            "nuint",
+            "required",
         ]
         .into_iter()
         .collect()
