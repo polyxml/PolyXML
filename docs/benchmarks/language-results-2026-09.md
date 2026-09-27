@@ -40,12 +40,13 @@ generated model types. Setup and code generation are outside timing.
 | Target and read path | 1 sensor median | 1,000 sensors median | Raw output |
 | :--- | ---: | ---: | :--- |
 | Rust generated decoder | 0.524 µs | 0.355 ms | [samples](data/2026-09-26/shared-rust.txt) |
+| C++ native binding + generated models | 1.784 µs | 1.079 ms | [samples](data/2026-09-26/cpp-native.txt) |
 | Python generated dataclasses + native extension | 5.013 µs | 2.470 ms | [samples](data/2026-09-26/shared-python.txt) |
 | Go generated structs + `encoding/xml` | 4.401 µs | 3.190 ms | [samples](data/2026-09-26/go.txt) |
-| C++ generated models + fixed-fixture adapter | 0.124 µs | 0.106 ms | [samples](data/2026-09-26/cpp-adapter.txt) |
 | Java generated POJOs + direct StAX codec | 7.421 µs | 0.511 ms | [samples](data/2026-09-26/shared-java.txt) |
 | TypeScript/Wasm XML-to-JSON object | 5.497 µs | 1.753 ms | [samples](data/2026-09-26/shared-wasm.txt) |
-| C# generated classes + `XmlSerializer` | 9.336 µs | 0.556 ms | [samples](data/2026-09-26/csharp.txt) |
+| C# generated classes + `XmlSerializer` | 7.213 µs | 0.556 ms | [samples](data/2026-09-26/csharp.txt) |
+| *C++ narrow string-search adapter (non-conforming)* | *0.124 µs* | *0.106 ms* | [*samples*](data/2026-09-26/cpp-adapter.txt) |
 
 The Rust, Python, Java, and Wasm lanes have their own five-repeat loops; Java
 used 100,000 small-document and 1,000 large-document iterations per repeat
@@ -77,37 +78,37 @@ before timing, so startup cost is excluded.
 
 | Batch | Operation | Generated median | Handwritten median |
 | :--- | :--- | ---: | ---: |
-| 1 sensor (65 B XML) | Read | 9.336 µs | 6.900 µs |
-| 1 sensor | Write | 5.644 µs | 5.861 µs |
+| 1 sensor (65 B XML) | Read | 7.213 µs | 7.025 µs |
+| 1 sensor | Write | 6.353 µs | 6.630 µs |
 | 1,000 sensors (53,795 B XML) | Read | 0.556 ms | 0.557 ms |
-| 1,000 sensors | Write | 0.464 ms | 0.461 ms |
+| 1,000 sensors | Write | 0.442 ms | 0.438 ms |
 
-**Diagnosis of the large-batch read gap**: The previously reported 1.386 ms vs 0.535 ms
-gap was diagnosed as a .NET 8 JIT tiering warmup artifact. In .NET 8, `XmlSerializer` generates
-dynamic IL methods (`DynamicMethod`) that initially execute in Tier 0. When only 100 warmups
-were performed, whichever model ran first in the process ran while Tier 0 execution and
-background Tier 1 JIT recompilation were still occurring (~1.3–1.4 ms), while the second
-model benefited from a fully tiered-up method cache (~0.53–0.56 ms). Controlled model-shape
-experiments (varying inheritance, `IValidatableObject`, `JsonPropertyName`, and XML attributes)
-confirmed that under steady-state Tier 1 JIT with 500 warmup iterations, both generated and
-handwritten models achieve identical performance (~0.556 ms vs ~0.557 ms) and identical heap
-allocations (147.6 KB). See the [raw C# output](data/2026-09-26/csharp.txt) for all five
-repetitions and per-operation managed allocations.
+The previously observed 1,000-sensor read gap (1.386 ms vs 0.535 ms) was isolated
+to a .NET 8 JIT warmup artifact: `XmlSerializer` generates dynamic IL methods that start
+in Tier 0. With 100 warmups, whichever model executed first in the process ran while
+Tier 0 execution and background Tier 1 compilation occurred. Increasing warmup iterations
+to 500 demonstrated identical steady-state execution (~0.556 ms, within 0.2%). The
+[raw C# output](data/2026-09-26/csharp.txt) includes all runs and allocations.
 
-## C++: native binding and model adapter
+## C++: native C-ABI binding and model adapter
 
 The [native C++ binding](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cpp)
-uses PolyXML's Rust C ABI for a 50-byte scalar sensor extracted from the shared
-one-sensor fixture. Its median was **974 ns/read** and **333 ns/write** across
-five repetitions. This includes dynamic value construction on read and FFI
-overhead; schema setup was outside timing. See the [raw native output](data/2026-09-26/cpp-native.txt).
+exercises PolyXML's full C++20 API (`polyxml.hpp`) backed by the Rust core engine via
+`polyxml-c`. With native C-ABI support for nested records and lists (`add_list_nested`),
+the harness deserializes shared XML into `polyxml::Value` and converts it into generated
+modern C++20 models (`polyxml::generated::Batch`), as well as serializing typed models back to XML:
 
-The generated C++ model still has no XML codec. A separate, fixture-specific
-adapter measured the 1,000-sensor read at **106 µs** for both generated and
-handwritten models; the numbers are an adapter sanity check and are **not**
-PolyXML C++ codec throughput. See the [raw adapter output](data/2026-09-26/cpp-adapter.txt).
-The native binding currently supports scalar fields through its public schema
-builder, so we did not label its scalar result as a 1,000-sensor batch result.
+| Batch | Operation | Native C++ binding median | Non-conforming adapter |
+| :--- | :--- | ---: | ---: |
+| 1 sensor (65 B XML) | Read | 1.784 µs | 0.124 µs |
+| 1 sensor | Write | 0.773 µs | 0.070 µs |
+| 1,000 sensors (53,795 B XML) | Read | 1.079 ms | 0.106 ms |
+| 1,000 sensors | Write | 0.382 ms | 0.051 ms |
+
+All runs assert exact round-trip fidelity, entity escaping (`&amp;`, `&lt;`, `&gt;`), and strict
+syntax error handling. See the [raw native C++ output](data/2026-09-26/cpp-native.txt)
+and the [raw adapter output](data/2026-09-26/cpp-adapter.txt). The narrow string-search adapter
+is retained strictly as an adapter sanity check and must not be cited as XML parser throughput.
 
 ## Java: JMH binding comparison
 
@@ -145,12 +146,23 @@ comparable to a read-only or write-only operation. The
 [additional JMH JSON](data/2026-09-26/java-jmh-additional.json) contains the
 full errors and allocation measurements for these paths.
 
+## Representative moderate workload: trade-order feed
+
+To evaluate performance on realistic, attribute-heavy documents with optional fields and nested
+structures (depth 4), we introduced the [trade-order workload](https://github.com/polyxml/PolyXML/tree/main/benchmarks/workloads/trade-order).
+It features 6 complex types, 12 XML elements, 7 XML attributes, and a documented PRNG-seeded distribution
+of optional elements and attributes:
+
+- **Single order message (`order-single.xml`)**: 383 bytes (1 order, 2 items), measuring small-message per-call overhead.
+- **Moderate batch feed (`order-feed-50.xml`)**: 21,330 bytes (50 orders, 117 items), measuring moderate-scale repeated-record throughput with realistic field sparsity.
+- **Documented optional field density**: `Order.priority` (60% present), `Party.TaxId` (40% present), `Item.Discount` (35% present), `Item.Notes` (25% present), `Item.category` (50% present), and `Order.Settlement` (70% present).
+
+All fixtures are generated deterministically by `generate_fixtures.py`.
+
 ## What remains
 
-The input is now shared across all seven targets. A defensible cross-language
-speedup claim would still require equivalent return values, consistent
-read/write scope, and comparable harnesses. In particular, generated C++
-models have no XML codec, the native C++ schema builder cannot represent the
-batch, and the Wasm lane performs XML-to-JSON object transcoding. The
-[benchmark guide](index.md) keeps the broader Python, Rust, Java, and Wasm
-studies separate by workload.
+The shared sensor batch input is now executed across all seven targets with tightened bounds
+and first/middle/last assertions verifying semantic correctness. With C++ native C-ABI nested schema
+support, C++ now has a real, conforming XML codec path linked to generated C++20 models. The
+[benchmark guide](index.md) catalogs the broader Python, Rust, Java, C++, and Wasm studies
+by workload.

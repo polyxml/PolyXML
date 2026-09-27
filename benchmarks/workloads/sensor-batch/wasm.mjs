@@ -13,7 +13,11 @@ for (const [count, iterations] of [[1, 10000], [1000, 100]]) {
   const xml = readFileSync(new URL(`./sensor-${count}.xml`, import.meta.url), 'utf8')
   const first = wasm.xmlToJson(xml).Batch.Sensor
   const sensors = Array.isArray(first) ? first : [first]
-  if (sensors.length !== count || sensors.at(-1).Id !== `sensor-${count - 1}` || sensors.at(-1).Value !== count - 1) {
+  const mid = Math.floor(count / 2)
+  if (sensors.length !== count ||
+      sensors[0].Id !== 'sensor-0' || sensors[0].Value !== 0 ||
+      sensors[mid].Id !== `sensor-${mid}` || sensors[mid].Value !== mid ||
+      sensors.at(-1).Id !== `sensor-${count - 1}` || sensors.at(-1).Value !== count - 1) {
     throw new Error('Wasm decoded unexpected sensor values')
   }
   for (let i = 0; i < 100; i++) wasm.xmlToJson(xml)

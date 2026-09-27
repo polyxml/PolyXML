@@ -1,0 +1,48 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="OrderFeed" type="OrderFeedType"/>
+
+  <xs:complexType name="OrderFeedType">
+    <xs:sequence>
+      <xs:element name="Order" type="OrderType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="feedId" type="xs:string" use="required"/>
+    <xs:attribute name="timestamp" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="OrderType">
+    <xs:sequence>
+      <xs:element name="Party" type="PartyType"/>
+      <xs:element name="Item" type="ItemType" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="Settlement" type="SettlementType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="orderId" type="xs:string" use="required"/>
+    <xs:attribute name="currency" type="xs:string" use="required"/>
+    <xs:attribute name="priority" type="xs:int" use="optional"/>
+  </xs:complexType>
+
+  <xs:complexType name="PartyType">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string"/>
+      <xs:element name="TaxId" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="partyId" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="ItemType">
+    <xs:sequence>
+      <xs:element name="Quantity" type="xs:int"/>
+      <xs:element name="UnitPrice" type="xs:double"/>
+      <xs:element name="Discount" type="xs:double" minOccurs="0"/>
+      <xs:element name="Notes" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="sku" type="xs:string" use="required"/>
+    <xs:attribute name="category" type="xs:string" use="optional"/>
+  </xs:complexType>
+
+  <xs:complexType name="SettlementType">
+    <xs:sequence>
+      <xs:element name="Status" type="xs:string"/>
+      <xs:element name="Venue" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

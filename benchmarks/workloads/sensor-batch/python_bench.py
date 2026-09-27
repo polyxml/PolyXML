@@ -29,6 +29,10 @@ def main() -> None:
         xml = (here / f"sensor-{count}.xml").read_bytes()
         value = BatchType.from_xml(xml)
         assert len(value.sensor) == count
+        assert value.sensor[0].id == "sensor-0"
+        assert value.sensor[0].value == 0
+        assert value.sensor[count // 2].id == f"sensor-{count // 2}"
+        assert value.sensor[count // 2].value == count // 2
         assert value.sensor[-1].id == f"sensor-{count - 1}"
         assert value.sensor[-1].value == count - 1
         for _ in range(100):

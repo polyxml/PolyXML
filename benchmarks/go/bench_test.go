@@ -37,7 +37,10 @@ func BenchmarkXML(b *testing.B) {
 					if err := xml.Unmarshal(data, &v); err != nil {
 						return err
 					}
-					if len(v.Items) != count || v.Items[count-1].ID != generated[count-1].ID || v.Items[count-1].Value != generated[count-1].Value {
+					if len(v.Items) != count ||
+						v.Items[0].ID != generated[0].ID || v.Items[0].Value != generated[0].Value ||
+						v.Items[count/2].ID != generated[count/2].ID || v.Items[count/2].Value != generated[count/2].Value ||
+						v.Items[count-1].ID != generated[count-1].ID || v.Items[count-1].Value != generated[count-1].Value {
 						return fmt.Errorf("generated round trip mismatch")
 					}
 					return nil
@@ -49,7 +52,10 @@ func BenchmarkXML(b *testing.B) {
 					if err := xml.Unmarshal(data, &v); err != nil {
 						return err
 					}
-					if len(v.Items) != count || v.Items[count-1].ID != plain[count-1].ID || v.Items[count-1].Value != plain[count-1].Value {
+					if len(v.Items) != count ||
+						v.Items[0].ID != plain[0].ID || v.Items[0].Value != plain[0].Value ||
+						v.Items[count/2].ID != plain[count/2].ID || v.Items[count/2].Value != plain[count/2].Value ||
+						v.Items[count-1].ID != plain[count-1].ID || v.Items[count-1].Value != plain[count-1].Value {
 						return fmt.Errorf("baseline round trip mismatch")
 					}
 					return nil

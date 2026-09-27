@@ -18,6 +18,8 @@ public:
     explicit Exception(const std::string& msg) : std::runtime_error(msg) {}
 };
 
+class Schema;
+
 class Value {
 public:
     Value(polyxml_value_t* raw, bool owns) : raw_(raw), owns_(owns) {}
@@ -86,12 +88,110 @@ public:
         return std::nullopt;
     }
 
+    [[nodiscard]] std::size_t size() const {
+        size_t len = 0;
+        if (polyxml_value_get_list_len(raw_, &len) == POLYXML_OK) {
+            return len;
+        }
+        return 0;
+    }
+
+    [[nodiscard]] std::optional<Value> get_item(std::size_t idx) const {
+        const polyxml_value_t* item = polyxml_value_get_list_item(raw_, idx);
+        if (item) {
+            return Value(const_cast<polyxml_value_t*>(item), false);
+        }
+        return std::nullopt;
+    }
+
+    [[nodiscard]] std::optional<Value> operator[](std::size_t idx) const {
+        return get_item(idx);
+    }
+
     [[nodiscard]] std::optional<Value> get(const std::string& key) const {
         const polyxml_value_t* field = polyxml_value_get_field(raw_, key.c_str());
         if (field) {
             return Value(const_cast<polyxml_value_t*>(field), false);
         }
         return std::nullopt;
+    }
+
+    [[nodiscard]] std::optional<Value> operator[](const std::string& key) const {
+        return get(key);
+    }
+
+    static Value create_record(const Schema& schema);
+
+    static Value create_list(std::size_t capacity = 0) {
+        polyxml_value_t* raw = capacity > 0
+            ? polyxml_value_create_list_with_capacity(capacity)
+            : polyxml_value_create_list();
+        if (!raw) throw Exception("Failed to create list value");
+        return Value(raw, true);
+    }
+
+    static Value create_string(std::string_view s) {
+        polyxml_value_t* raw = polyxml_value_create_string(s.data(), s.size());
+        if (!raw) throw Exception("Failed to create string value");
+        return Value(raw, true);
+    }
+
+    static Value create_int(int64_t val) {
+        polyxml_value_t* raw = polyxml_value_create_int(val);
+        if (!raw) throw Exception("Failed to create int value");
+        return Value(raw, true);
+    }
+
+    static Value create_float(double val) {
+        polyxml_value_t* raw = polyxml_value_create_float(val);
+        if (!raw) throw Exception("Failed to create float value");
+        return Value(raw, true);
+    }
+
+    static Value create_bool(bool val) {
+        polyxml_value_t* raw = polyxml_value_create_bool(val);
+        if (!raw) throw Exception("Failed to create bool value");
+        return Value(raw, true);
+    }
+
+    static Value create_null() {
+        polyxml_value_t* raw = polyxml_value_create_null();
+        if (!raw) throw Exception("Failed to create null value");
+        return Value(raw, true);
+    }
+
+    [[nodiscard]] Value clone() const {
+        polyxml_value_t* raw = polyxml_value_clone(raw_);
+        if (!raw) throw Exception("Failed to clone value");
+        return Value(raw, true);
+    }
+
+    void set(const std::string& key, Value&& child) {
+        if (!child.raw_ || !child.owns_) {
+            throw Exception("Child value must be owned");
+        }
+        polyxml_value_t* child_raw = child.raw_;
+        child.raw_ = nullptr;
+        child.owns_ = false;
+        auto code = polyxml_value_set_field(raw_, key.c_str(), child_raw);
+        if (code != POLYXML_OK) {
+            polyxml_value_free(child_raw);
+            throw Exception("Failed to set field '" + key + "' (code: " + std::to_string(code) + ")");
+        }
+    }
+
+    void append(Value&& item) {
+        if (!item.raw_ || !item.owns_) {
+            throw Exception("Item value must be owned");
+        }
+        polyxml_value_t* item_raw = item.raw_;
+        item.raw_ = nullptr;
+        item.owns_ = false;
+        auto code = polyxml_value_list_append(raw_, item_raw);
+        if (code != POLYXML_OK) {
+            polyxml_value_free(item_raw);
+            throw Exception("Failed to append item to list (code: " + std::to_string(code) + ")");
+        }
     }
 
     [[nodiscard]] const polyxml_value_t* raw() const { return raw_; }
@@ -110,6 +210,12 @@ public:
 private:
     std::shared_ptr<polyxml_schema_t> raw_;
 };
+
+inline Value Value::create_record(const Schema& schema) {
+    polyxml_value_t* raw = polyxml_value_create_record(schema.raw());
+    if (!raw) throw Exception("Failed to create record value");
+    return Value(raw, true);
+}
 
 class SchemaBuilder {
 public:
@@ -134,6 +240,24 @@ public:
     SchemaBuilder& add_element(const std::string& name, const std::string& xml_name, polyxml_scalar_type_t scalar_type, const std::string& namespace_uri = "") {
         const char* ns = namespace_uri.empty() ? nullptr : namespace_uri.c_str();
         polyxml_schema_builder_add_field_with_namespace(raw_, name.c_str(), xml_name.c_str(), POLYXML_FIELD_ELEMENT, scalar_type, ns);
+        return *this;
+    }
+
+    SchemaBuilder& add_nested(const std::string& name, const std::string& xml_name, const Schema& nested_schema, const std::string& namespace_uri = "") {
+        const char* ns = namespace_uri.empty() ? nullptr : namespace_uri.c_str();
+        polyxml_schema_builder_add_nested_field(raw_, name.c_str(), xml_name.c_str(), nested_schema.raw(), ns);
+        return *this;
+    }
+
+    SchemaBuilder& add_list_nested(const std::string& name, const std::string& xml_name, const Schema& item_schema, const std::string& namespace_uri = "") {
+        const char* ns = namespace_uri.empty() ? nullptr : namespace_uri.c_str();
+        polyxml_schema_builder_add_list_nested_field(raw_, name.c_str(), xml_name.c_str(), item_schema.raw(), ns);
+        return *this;
+    }
+
+    SchemaBuilder& add_list_scalar(const std::string& name, const std::string& xml_name, polyxml_scalar_type_t scalar_type, const std::string& namespace_uri = "") {
+        const char* ns = namespace_uri.empty() ? nullptr : namespace_uri.c_str();
+        polyxml_schema_builder_add_list_scalar_field(raw_, name.c_str(), xml_name.c_str(), scalar_type, ns);
         return *this;
     }
 

@@ -18,7 +18,7 @@ suite works; it is not a performance result.
 | Python | Typed binding vs Python XML libraries; JSON vs `xsdata`; binary vs `pickle`; AOT | [Python suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python), [JSON](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python-json), [Binary](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python-binary), [AOT](https://github.com/polyxml/PolyXML/tree/main/benchmarks/python-aot) | [XML results](#1-python-deserialization-serialization-throughput), [JSON, binary & AOT study](python-json-binary-aot-2026-09.md), [AOT study](python-aot-vs-dataclass.md) |
 | Java | Generated POJOs, JAXB, Jackson, and Panama | [JMH suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java) | [September 2026 measurements](language-results-2026-09.md#java-jmh-binding-comparison) |
 | Go | Generated structs vs equivalent handwritten structs, both using `encoding/xml` | [Go suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/go) | [September 2026 measurements](language-results-2026-09.md#go-generated-model-vs-handwritten-model) |
-| C++ | Native binding plus generated-model XML adapter | [C++ suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cpp) | [September 2026 measurements](language-results-2026-09.md#c-native-binding-and-model-adapter) |
+| C++ | Native C-ABI binding on shared batches plus narrow adapter sanity check | [C++ suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/cpp) | [September 2026 measurements](language-results-2026-09.md#c-native-c-abi-binding-and-model-adapter) |
 | C# | Generated vs handwritten classes, both using `XmlSerializer` | [C# suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/csharp) | [September 2026 measurements](language-results-2026-09.md#c-generated-model-vs-handwritten-model) |
 | TypeScript & Wasm | Wasm vs JavaScript parsers in Node, Bun, and Chromium | [TypeScript/Wasm suite](https://github.com/polyxml/PolyXML/tree/main/benchmarks/typescript-wasm) | [Wasm vs JavaScript study](wasm-vs-js.md), [shared sensor run](language-results-2026-09.md#shared-sensor-readers) |
 
@@ -34,10 +34,7 @@ bindings. The [repository suite catalog](https://github.com/polyxml/PolyXML/blob
 lists every entry point.
 
 !!! note "Reading the C++ numbers"
-    The C++ generator emits model types but does not yet emit an XML codec. Its
-    generated-model lane measures a fixture-specific adapter, while the native
-    lane measures the actual C++ binding over the Rust C ABI. Keep their
-    timings separate; the adapter is **not** PolyXML C++ codec throughput.
+    PolyXML provides a native C++20 binding (`polyxml.hpp`) over the Rust C ABI supporting dynamic nested and list schemas and mapping to generated C++20 models. A separate legacy narrow adapter is retained purely as a fixture sanity check. Keep their timings separate; do not cite the string-search adapter as XML parser throughput.
 
 ## Published studies
 

@@ -1,3 +1,6 @@
+// NOTE: This file is a narrow fixture-specific string search adapter sanity check,
+// NOT a conforming PolyXML XML parser. For the real, conforming PolyXML C++ parser
+// benchmark, see runtime.cpp.
 #include "sensor.hpp"
 #include <charconv>
 #include <chrono>
@@ -73,7 +76,7 @@ template<class T> void measure(const char* name, std::size_t size, int iteration
 int main() {
     const int iterations = std::getenv("BENCH_ITERATIONS") ? std::stoi(std::getenv("BENCH_ITERATIONS")) : 10000;
     for (auto size : {1u, 1000u}) {
-        measure<polyxml::generated::Sensor>("generated", size, iterations);
-        measure<BaselineSensor>("baseline", size, iterations);
+        measure<polyxml::generated::Sensor>("adapter_generated", size, iterations);
+        measure<BaselineSensor>("adapter_baseline", size, iterations);
     }
 }

@@ -47,7 +47,7 @@ equivalent) and never at this root.
 | C# models | [`csharp/`](csharp/README.md) | .NET Stopwatch | `./benchmarks/csharp/run.sh` |
 | TypeScript/Wasm | [`typescript-wasm/`](typescript-wasm/README.md) | Node, Bun, Chromium | See [`typescript-wasm/README.md`](typescript-wasm/README.md) and [methodology](../docs/benchmarks/wasm-vs-js.md) |
 
-Readers in all seven targets can use the [same byte-for-byte sensor XML fixtures](workloads/sensor-batch/README.md).
+Readers in all seven targets can use the [same byte-for-byte sensor XML fixtures](workloads/sensor-batch/README.md), and evaluate moderate nested/attribute workloads using the [trade-order workload](workloads/trade-order/README.md).
 Their different return values, runtimes, and serializers still require separate interpretation.
 
 The Rust Criterion suite lives inside its crate because `cargo bench` requires

@@ -64,6 +64,27 @@ void polyxml_schema_builder_add_field_with_namespace(
     polyxml_scalar_type_t scalar_type,
     const char* namespace_uri
 );
+void polyxml_schema_builder_add_nested_field(
+    polyxml_schema_builder_t* builder,
+    const char* name,
+    const char* xml_name,
+    const polyxml_schema_t* nested_schema,
+    const char* namespace_uri
+);
+void polyxml_schema_builder_add_list_nested_field(
+    polyxml_schema_builder_t* builder,
+    const char* name,
+    const char* xml_name,
+    const polyxml_schema_t* item_schema,
+    const char* namespace_uri
+);
+void polyxml_schema_builder_add_list_scalar_field(
+    polyxml_schema_builder_t* builder,
+    const char* name,
+    const char* xml_name,
+    polyxml_scalar_type_t scalar_type,
+    const char* namespace_uri
+);
 polyxml_schema_t* polyxml_schema_builder_build(polyxml_schema_builder_t* builder);
 void polyxml_schema_free(polyxml_schema_t* schema);
 
@@ -98,6 +119,28 @@ polyxml_error_code_t polyxml_serialize_with_options(
 );
 
 void polyxml_bytes_free(uint8_t* bytes, size_t len);
+
+/* Value Construction API */
+polyxml_value_t* polyxml_value_create_record(const polyxml_schema_t* schema);
+polyxml_value_t* polyxml_value_create_list(void);
+polyxml_value_t* polyxml_value_create_list_with_capacity(size_t capacity);
+polyxml_value_t* polyxml_value_create_string(const char* str, size_t len);
+polyxml_value_t* polyxml_value_create_int(int64_t val);
+polyxml_value_t* polyxml_value_create_float(double val);
+polyxml_value_t* polyxml_value_create_bool(bool val);
+polyxml_value_t* polyxml_value_create_null(void);
+polyxml_value_t* polyxml_value_clone(const polyxml_value_t* val);
+
+/* Field & List Modification API (transfers ownership of child/item) */
+polyxml_error_code_t polyxml_value_set_field(
+    polyxml_value_t* record,
+    const char* key,
+    polyxml_value_t* child_val
+);
+polyxml_error_code_t polyxml_value_list_append(
+    polyxml_value_t* list,
+    polyxml_value_t* item
+);
 
 /* Value Inspection API */
 const polyxml_value_t* polyxml_value_get_field(const polyxml_value_t* val, const char* key);

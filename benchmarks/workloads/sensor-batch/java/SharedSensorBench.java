@@ -14,7 +14,12 @@ public final class SharedSensorBench {
     private static void measure(int count, int iterations) throws Exception {
         byte[] xml = Files.readAllBytes(Path.of("sensor-" + count + ".xml"));
         BatchType first = decode(xml);
+        int mid = count / 2;
         if (first.getSensor().size() != count ||
+            !first.getSensor().get(0).getId().equals("sensor-0") ||
+            first.getSensor().get(0).getValue() != 0 ||
+            !first.getSensor().get(mid).getId().equals("sensor-" + mid) ||
+            first.getSensor().get(mid).getValue() != mid ||
             !first.getSensor().get(count - 1).getId().equals("sensor-" + (count - 1)) ||
             first.getSensor().get(count - 1).getValue() != count - 1) {
             throw new IllegalStateException("Generated Java decoder returned unexpected values");

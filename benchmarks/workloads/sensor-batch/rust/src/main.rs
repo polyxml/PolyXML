@@ -7,6 +7,10 @@ mod batch;
 fn measure(count: usize, xml: &str, iterations: usize) {
     let parsed = batch::BatchType::from_xml(xml).unwrap();
     assert_eq!(parsed.sensor.len(), count);
+    assert_eq!(parsed.sensor[0].id, "sensor-0");
+    assert_eq!(parsed.sensor[0].value, 0);
+    assert_eq!(parsed.sensor[count / 2].id, format!("sensor-{}", count / 2));
+    assert_eq!(parsed.sensor[count / 2].value, (count / 2) as i32);
     assert_eq!(parsed.sensor[count - 1].id, format!("sensor-{}", count - 1));
     assert_eq!(parsed.sensor[count - 1].value, (count - 1) as i32);
     for _ in 0..100 {
