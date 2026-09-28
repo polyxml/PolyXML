@@ -3,7 +3,7 @@ use polyxml::codegen::rust::{
 };
 use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR,
-    StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
+    SimpleTypeDef, StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
 };
 use polyxml::schema_parser::XsdParser;
 
@@ -1146,4 +1146,45 @@ fn test_rust_phf_dispatch_uniquifies_like_field_metas() {
         !code[start..].contains("                    \"code\" => {"),
         "bare-string arm leaked into the Option match:\n{code}"
     );
+}
+
+#[test]
+fn test_rust_simple_type_cycle_resilience() {
+    let mut ir = SchemaIR::default();
+    let q_a = QName::new(Some("urn:cycle"), "TypeA");
+    let q_b = QName::new(Some("urn:cycle"), "TypeB");
+
+    // Mutual cycle between TypeA and TypeB
+    ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+        qname: q_a.clone(),
+        base_type: TypeRef::Named(q_b.clone()),
+        facets: Default::default(),
+        documentation: None,
+    })));
+    ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+        qname: q_b.clone(),
+        base_type: TypeRef::Named(q_a.clone()),
+        facets: Default::default(),
+        documentation: None,
+    })));
+
+    let struct_fields = vec![FieldDef::new(
+        "cyclic_field",
+        "cyclic_field",
+        FieldKind::Element,
+        TypeRef::Named(q_a),
+    )];
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("urn:cycle"), "CyclicStruct"),
+        fields: struct_fields,
+        base_type: None,
+        is_abstract: false,
+        is_mixed: false,
+        documentation: None,
+    }));
+
+    let codegen = RustCodegen::new(RustOptions::default());
+    let code = codegen.generate_module(&ir);
+    assert!(code.contains("pub struct CyclicStruct"));
 }

@@ -5,8 +5,8 @@ use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, flatten_fields, lookup_type_name, sanitize_keyword, set_type_name_map,
-    LanguageContext,
+    build_type_name_map, flatten_fields, lookup_type_name, primitive_base, sanitize_keyword,
+    set_type_name_map, LanguageContext,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR, SimpleTypeDef, StructDef,
@@ -998,8 +998,17 @@ impl RustCodegen {
         }
     }
 
+    fn unwrap_type_ref<'a>(mut ty: &'a TypeRef) -> &'a TypeRef {
+        while let TypeRef::Boxed(inner) | TypeRef::List(inner) = ty {
+            ty = inner;
+        }
+        ty
+    }
+
     fn field_is_string(&self, type_ref: &TypeRef, ir: &SchemaIR) -> bool {
-        match type_ref {
+        let ty = Self::unwrap_type_ref(type_ref);
+        let base = primitive_base(ty, ir);
+        match base {
             TypeRef::Primitive(prim) => matches!(
                 prim,
                 PrimitiveType::String
@@ -1030,19 +1039,14 @@ impl RustCodegen {
                     | PrimitiveType::HexBinary
                     | PrimitiveType::AnySimpleType
             ),
-            TypeRef::Named(qname) => {
-                if let Some(TypeDef::Simple(s)) = ir.types.get(qname) {
-                    self.field_is_string(&s.base_type, ir)
-                } else {
-                    false
-                }
-            }
-            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_is_string(inner, ir),
+            _ => false,
         }
     }
 
     fn field_numeric_type(&self, type_ref: &TypeRef, ir: &SchemaIR) -> Option<&'static str> {
-        match type_ref {
+        let ty = Self::unwrap_type_ref(type_ref);
+        let base = primitive_base(ty, ir);
+        match base {
             TypeRef::Primitive(prim) => match prim {
                 PrimitiveType::Int => Some("i32"),
                 PrimitiveType::Integer
@@ -1061,30 +1065,14 @@ impl RustCodegen {
                 PrimitiveType::Float => Some("f32"),
                 _ => None,
             },
-            TypeRef::Named(qname) => {
-                if let Some(TypeDef::Simple(s)) = ir.types.get(qname) {
-                    self.field_numeric_type(&s.base_type, ir)
-                } else {
-                    None
-                }
-            }
-            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_numeric_type(inner, ir),
+            _ => None,
         }
     }
 
     fn field_is_bool(&self, type_ref: &TypeRef, ir: &SchemaIR) -> bool {
-        match type_ref {
-            TypeRef::Primitive(PrimitiveType::Boolean) => true,
-            TypeRef::Named(qname) => {
-                if let Some(TypeDef::Simple(s)) = ir.types.get(qname) {
-                    self.field_is_bool(&s.base_type, ir)
-                } else {
-                    false
-                }
-            }
-            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_is_bool(inner, ir),
-            _ => false,
-        }
+        let ty = Self::unwrap_type_ref(type_ref);
+        let base = primitive_base(ty, ir);
+        matches!(base, TypeRef::Primitive(PrimitiveType::Boolean))
     }
 
     fn field_is_enum(&self, type_ref: &TypeRef, ir: &SchemaIR) -> Option<String> {
