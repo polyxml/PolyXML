@@ -23,12 +23,14 @@ elif command -v python3 >/dev/null 2>&1; then
     python3 scripts/sync_version.py --check || exit 1
 fi
 
-# 2. Rust Workspace Compile Check (if toolchain present)
+# 2. Rust Clippy Linter Check (strict gate matching CI)
 if command -v cargo >/dev/null 2>&1; then
-    echo -e "${BLUE}Running cargo check on workspace...${NC}"
-    cargo check --workspace --tests || {
-        echo -e "${YELLOW}[WARN] Cargo check failed locally; ensuring full build in CI.${NC}"
+    echo -e "${BLUE}Running cargo clippy on workspace (-D warnings)...${NC}"
+    cargo clippy --workspace --all-targets -- -D warnings || {
+        echo -e "${RED}[FAIL] Clippy warnings detected! Fix them before pushing.${NC}"
+        exit 1
     }
+    echo -e "${GREEN}[OK] Clippy checks clean.${NC}"
 fi
 
 echo -e "${GREEN}[SUCCESS] Ready to push to remote!${NC}"
