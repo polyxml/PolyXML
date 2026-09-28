@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
     build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
-    set_type_name_map, LanguageContext,
+    set_type_name_map, write_documentation_lines, LanguageContext,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
@@ -31,6 +31,15 @@ const PATTERN_VALIDATOR_HELPER: &str = r#"def _polyxml_patterns(*patterns: str):
 
 pub mod aot;
 pub use aot::{PythonAotCodegen, PythonAotCrate, PythonAotOptions};
+
+fn write_python_docstring(out: &mut String, indent: &str, doc: &str) {
+    let escaped = doc
+        .trim()
+        .replace('\\', "\\\\")
+        .replace("\"\"\"", "\\\"\\\"\\\"")
+        .replace('\r', "");
+    let _ = writeln!(out, "{indent}\"\"\"{escaped}\"\"\"");
+}
 
 /// Target backend for Python code emission.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -444,7 +453,7 @@ impl PythonCodegen {
         let base_type = self.context.map_type_ref(&s.base_type);
 
         if let Some(ref doc) = s.documentation {
-            let _ = writeln!(out, "# {}", doc.trim());
+            write_documentation_lines(out, "# ", doc);
         }
 
         if self.options.backend == PythonBackend::Pydantic && !s.facets.is_empty() {
@@ -492,7 +501,7 @@ impl PythonCodegen {
         let _ = writeln!(out, "class {}(StrEnum):", enum_name);
 
         if let Some(ref doc) = e.documentation {
-            let _ = writeln!(out, "    \"\"\"{}\"\"\"", doc.trim());
+            write_python_docstring(out, "    ", doc);
         }
 
         if e.variants.is_empty() {
@@ -549,7 +558,7 @@ impl PythonCodegen {
         }
 
         if let Some(ref doc) = u.documentation {
-            let _ = writeln!(out, "# {}", doc.trim());
+            write_documentation_lines(out, "# ", doc);
         }
 
         if u.branches.is_empty() {
@@ -613,7 +622,8 @@ impl PythonCodegen {
         let mut has_body = false;
 
         if let Some(ref doc) = s.documentation {
-            let _ = writeln!(out, "    \"\"\"{}\"\"\"\n", doc.trim());
+            write_python_docstring(out, "    ", doc);
+            out.push('\n');
             has_body = true;
         }
 
@@ -763,7 +773,7 @@ impl PythonCodegen {
         };
 
         if let Some(ref doc) = field.documentation {
-            let _ = writeln!(out, "    # {}", doc.trim());
+            write_documentation_lines(out, "    # ", doc);
         }
 
         let _ = writeln!(out, "    {}: {} = {}", py_name, field_type, field_call);

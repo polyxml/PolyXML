@@ -12,6 +12,68 @@ use polyxml::ir::{
 use std::sync::Mutex;
 use tempfile::tempdir;
 
+#[test]
+fn emits_unrestricted_simple_types_and_validates_empty_records() {
+    let mut ir = SchemaIR::new().with_target_namespace("urn:test");
+    ir.add_type(TypeDef::Simple(Box::new(polyxml::ir::SimpleTypeDef {
+        qname: QName::new(Some("urn:test"), "DistanceType"),
+        base_type: TypeRef::Primitive(PrimitiveType::Double),
+        facets: RestrictionFacets::default(),
+        documentation: None,
+    })));
+    ir.add_type(TypeDef::Simple(Box::new(polyxml::ir::SimpleTypeDef {
+        qname: QName::new(Some("urn:test"), "PositiveDistanceType"),
+        base_type: TypeRef::Named(QName::new(Some("urn:test"), "DistanceType")),
+        facets: RestrictionFacets {
+            min_inclusive: Some("0".into()),
+            ..Default::default()
+        },
+        documentation: None,
+    })));
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("urn:test"), "EmptyType"),
+        base_type: None,
+        is_abstract: false,
+        is_mixed: false,
+        fields: vec![],
+        documentation: None,
+    }));
+    let code = CSharpCodegen::new(CSharpOptions::default()).generate_module(&ir);
+    assert!(code.contains("record DistanceType("));
+    assert!(code.contains("if (Value.Value < 0)"));
+    assert!(code.contains("record EmptyType : IValidatableObject"));
+    assert!(code.contains("IEnumerable<ValidationResult> Validate"));
+}
+
+#[test]
+fn choice_variants_avoid_record_member_names() {
+    let mut ir = SchemaIR::new().with_target_namespace("urn:test");
+    ir.add_type(TypeDef::Union(UnionDef {
+        qname: QName::new(Some("urn:test"), "ParameterValueType"),
+        branches: vec![
+            UnionBranch {
+                variant_name: "Value".into(),
+                xml_name: "Value".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                documentation: None,
+            },
+            UnionBranch {
+                variant_name: "Equals".into(),
+                xml_name: "Equals".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+    let code = CSharpCodegen::new(CSharpOptions::default()).generate_module(&ir);
+    assert!(code.contains("record ValueBranch("));
+    assert!(code.contains("record EqualsBranch("));
+    assert!(code.contains("XmlElement(\"Value\")"));
+}
+
 static DOTNET_LOCK: Mutex<()> = Mutex::new(());
 
 fn dotnet_command() -> Command {

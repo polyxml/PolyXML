@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
     build_type_name_map, flatten_fields, lookup_type_name, primitive_base, sanitize_keyword,
-    set_type_name_map, LanguageContext,
+    set_type_name_map, write_documentation_lines, LanguageContext,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR, SimpleTypeDef, StructDef,
@@ -279,7 +279,10 @@ impl RustCodegen {
             self.emit_pymodule(&mut out, ir, &sorted_types);
         }
 
-        out
+        // A field may use a raw identifier such as `r#type`. Local codec
+        // variables have a `var_` prefix, so the raw marker is neither needed
+        // nor valid there (`var_r#type` is not a Rust identifier).
+        out.replace("var_r#", "var_")
     }
 
     /// Fixed-point analysis determining which types in SchemaIR require a lifetime parameter `<'a>`.
@@ -456,7 +459,7 @@ impl RustCodegen {
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
         if let Some(ref doc) = s.documentation {
-            let _ = writeln!(out, "/// {}", doc.trim());
+            write_documentation_lines(out, "/// ", doc);
         }
 
         let base_type = self.format_rust_type_ref(&s.base_type, types_with_lifetime);
@@ -482,7 +485,7 @@ impl RustCodegen {
         let enum_name = type_ident(&e.qname);
 
         if let Some(ref doc) = e.documentation {
-            let _ = writeln!(out, "/// {}", doc.trim());
+            write_documentation_lines(out, "/// ", doc);
         }
 
         let mut derives = vec!["Debug", "Clone", "Copy", "PartialEq", "Eq", "Hash"];
@@ -520,7 +523,7 @@ impl RustCodegen {
             seen_variants.insert(var_id.clone());
 
             if let Some(ref doc) = variant.documentation {
-                let _ = writeln!(out, "    /// {}", doc.trim());
+                write_documentation_lines(out, "    /// ", doc);
             }
             if self.options.derive_serde {
                 let _ = writeln!(out, "    #[serde(rename = \"{}\")]", variant.value);
@@ -595,7 +598,7 @@ impl RustCodegen {
         let needs_lifetime = types_with_lifetime.contains(&u.qname);
 
         if let Some(ref doc) = u.documentation {
-            let _ = writeln!(out, "/// {}", doc.trim());
+            write_documentation_lines(out, "/// ", doc);
         }
 
         let mut derives = vec!["Debug", "Clone", "PartialEq"];
@@ -640,7 +643,7 @@ impl RustCodegen {
             let branch_type = self.format_rust_type_ref(&branch.type_ref, types_with_lifetime);
 
             if let Some(ref doc) = branch.documentation {
-                let _ = writeln!(out, "    /// {}", doc.trim());
+                write_documentation_lines(out, "    /// ", doc);
             }
             if self.options.derive_serde && !u.is_lexical() {
                 let _ = writeln!(out, "    #[serde(rename = \"{}\")]", branch.xml_name);
@@ -685,7 +688,7 @@ impl RustCodegen {
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
         if let Some(ref doc) = s.documentation {
-            let _ = writeln!(out, "/// {}", doc.trim());
+            write_documentation_lines(out, "/// ", doc);
         }
 
         let mut derives = vec!["Debug", "Clone", "PartialEq"];
@@ -763,7 +766,7 @@ impl RustCodegen {
         has_boxed: bool,
     ) {
         if let Some(ref doc) = field.documentation {
-            let _ = writeln!(out, "    /// {}", doc.trim());
+            write_documentation_lines(out, "    /// ", doc);
         }
 
         let is_list = field.cardinality.is_list() || field.type_ref.is_list();

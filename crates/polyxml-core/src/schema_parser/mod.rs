@@ -504,6 +504,7 @@ impl XsdParser {
                                     .push((fields.len(), resolve_qname(&r, target_ns, prefixes)));
                             }
                             skip_subtree(reader)?;
+                            depth -= 1;
                         }
                         "sequence" | "all" => {
                             let is_unbounded = get_attr_value(e, "maxOccurs")
@@ -560,6 +561,7 @@ impl XsdParser {
                                 self.consume_inline_element_type(
                                     reader, e, target_ns, prefixes, &name, &mut field, ir,
                                 )?;
+                                depth -= 1;
                                 if in_choice {
                                     if let Some(frame) = compositor_stack.last_mut() {
                                         if frame.kind == CompositorKind::Choice {
@@ -869,6 +871,7 @@ impl XsdParser {
                                 self.consume_inline_element_type(
                                     reader, e, target_ns, prefixes, "", &mut field, ir,
                                 )?;
+                                depth -= 1;
                                 def.fields.push(field);
                             }
                         }
@@ -880,6 +883,7 @@ impl XsdParser {
                                 ));
                             }
                             skip_subtree(reader)?;
+                            depth -= 1;
                         }
                         "any" => def.fields.push(parse_any_field(e)),
                         _ => {}
