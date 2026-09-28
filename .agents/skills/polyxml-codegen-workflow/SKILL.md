@@ -8,6 +8,30 @@ description: >-
 
 # PolyXML Polyglot Codegen Development & Verification Playbook
 
+## Large multi-schema regression caution
+
+The corpus's UCI 2.5 `defense_uci` module is a useful real-world regression,
+but it contains thousands of types. Run generation and destination-language
+compilers one at a time under `scripts/memcap.sh` and a timeout. Do not launch
+parallel full-module compiles on a small workstation. For a quick parser sanity
+check, `polyxml validate UCI_MessageDefinitions_v2_5_0.xsd` should report
+thousands of types, not just a handful. If it does not, inspect the schema
+parser's depth accounting after consuming nested element or group subtrees:
+the consumed child's closing event is not returned to the parent reader loop.
+
+Multiline `<xs:documentation>` must prefix every physical line when emitted as
+Python or Rust comments. Rust raw field identifiers such as `r#type` must use
+ordinary identifiers for prefixed local codec variables (`var_type`).
+
+C++ simple type aliases need dependency order (`using AreaType =
+DoubleNonNegativeType` requires the base alias first). In C#, unrestricted
+named simple types still need declarations because other generated types refer
+to them. Empty records that implement `IValidatableObject` need a `Validate`
+method, and validation of a derived simple type may need to reach through
+multiple `.Value` wrappers. C# choice variants called `Value` or `Equals`
+collide with generated record members; rename the generated variant class
+while preserving its XML name.
+
 This skill outlines the architectural patterns, options plumbing, and test workflows for the schema compiler and code generators in `crates/polyxml-core/src/codegen/` and `crates/polyxml-cli`.
 
 ---

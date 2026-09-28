@@ -244,11 +244,32 @@ fn type_ident(q: &QName) -> String {
 
 fn choice_variant_name(branch: &UnionBranch) -> String {
     let name = to_csharp_type_name(&branch.variant_name);
-    if matches!(&branch.type_ref, TypeRef::Named(qname) if type_ident(qname) == name) {
+    if matches!(
+        name.as_str(),
+        "Value" | "Equals" | "GetHashCode" | "ToString"
+    ) || matches!(&branch.type_ref, TypeRef::Named(qname) if type_ident(qname) == name)
+    {
         format!("{name}Branch")
     } else {
         name
     }
+}
+
+fn simple_value_target(base: &TypeRef, ir: &SchemaIR) -> String {
+    let mut target = "Value".to_string();
+    let mut current = base;
+    let mut seen = HashSet::new();
+    while let TypeRef::Named(qname) = current {
+        if !seen.insert(qname.clone()) {
+            break;
+        }
+        let Some(TypeDef::Simple(simple)) = ir.types.get(qname) else {
+            break;
+        };
+        target.push_str(".Value");
+        current = &simple.base_type;
+    }
+    target
 }
 
 impl CSharpCodegen {
@@ -315,7 +336,7 @@ impl CSharpCodegen {
                 if !simple.facets.patterns.is_empty() {
                     simple.base_type = super::primitive_base(&simple.base_type, ir).clone();
                 }
-                self.emit_simple(&mut out, &simple, indent);
+                self.emit_simple(&mut out, &simple, ir, indent);
             }
         }
 
@@ -510,8 +531,10 @@ impl CSharpCodegen {
         writeln!(out, "{}}}\n", indent).unwrap();
     }
 
-    fn emit_simple(&self, out: &mut String, s: &SimpleTypeDef, indent: &str) {
-        if !s.facets.is_empty() || !self.options.use_records {
+    fn emit_simple(&self, out: &mut String, s: &SimpleTypeDef, ir: &SchemaIR, indent: &str) {
+        // Named simple types may be referenced by structs and choices even
+        // when they have no facets, so every one needs a declaration.
+        {
             let type_name = type_ident(&s.qname);
             let base_type = self.context.map_type_ref(&s.base_type);
 
@@ -550,7 +573,8 @@ impl CSharpCodegen {
                 .unwrap();
                 if self.options.emit_validation {
                     writeln!(out, "{}    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)\n{}    {{", indent, indent).unwrap();
-                    self.emit_facet_checks(out, &s.facets, "Value", &format!("{}        ", indent));
+                    let value = simple_value_target(&s.base_type, ir);
+                    self.emit_facet_checks(out, &s.facets, &value, &format!("{}        ", indent));
                     writeln!(out, "{}        yield break;\n{}    }}", indent, indent).unwrap();
                 }
                 writeln!(out, "{}}}\n", indent).unwrap();
@@ -579,7 +603,8 @@ impl CSharpCodegen {
             )
             .unwrap();
             writeln!(out, "{}    {{", indent).unwrap();
-            self.emit_facet_checks(out, &s.facets, "Value", &format!("{}        ", indent));
+            let value = simple_value_target(&s.base_type, ir);
+            self.emit_facet_checks(out, &s.facets, &value, &format!("{}        ", indent));
             writeln!(out, "{}        yield break;", indent).unwrap();
             writeln!(out, "{}    }}", indent).unwrap();
             writeln!(out, "{}}}\n", indent).unwrap();
@@ -1076,12 +1101,24 @@ impl CSharpCodegen {
 
         // Collect fields and parameters
         if s.fields.is_empty() {
-            writeln!(
-                out,
-                "{}public {} {}{};",
-                indent, record_keyword, struct_name, implements_str
-            )
-            .unwrap();
+            if self.options.emit_validation {
+                writeln!(
+                    out,
+                    "{}public {} {}{}",
+                    indent, record_keyword, struct_name, implements_str
+                )
+                .unwrap();
+                writeln!(out, "{}{{", indent).unwrap();
+                self.emit_struct_validator(out, s, &prop_names, indent);
+                writeln!(out, "{}}}", indent).unwrap();
+            } else {
+                writeln!(
+                    out,
+                    "{}public {} {}{};",
+                    indent, record_keyword, struct_name, implements_str
+                )
+                .unwrap();
+            }
             writeln!(out).unwrap();
             return;
         }

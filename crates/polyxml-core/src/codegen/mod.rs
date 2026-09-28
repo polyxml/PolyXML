@@ -24,6 +24,16 @@ pub use python::{
 pub use rust::{RustCodegen, RustOptions};
 pub use typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 
+/// Prefix every physical XSD documentation line so embedded newlines cannot
+/// escape a generated source comment.
+pub(crate) fn write_documentation_lines(out: &mut String, prefix: &str, doc: &str) {
+    for line in doc.trim().lines() {
+        out.push_str(prefix);
+        out.push_str(line.trim_end_matches('\r'));
+        out.push('\n');
+    }
+}
+
 use crate::ir::{FieldDef, PrimitiveType, QName, SchemaIR, StructDef, TypeRef};
 
 #[derive(Debug, Error)]

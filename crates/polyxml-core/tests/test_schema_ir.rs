@@ -8,6 +8,26 @@ use polyxml::ir::{
 use polyxml::schema_parser::XsdParser;
 
 #[test]
+fn consumed_child_subtrees_do_not_swallow_following_types() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test">
+      <xs:complexType name="First"><xs:sequence>
+        <xs:element name="nested"><xs:complexType><xs:sequence><xs:element name="value" type="xs:string"/></xs:sequence></xs:complexType></xs:element>
+        <xs:group ref="missing"><xs:annotation><xs:documentation>ignored</xs:documentation></xs:annotation></xs:group>
+      </xs:sequence></xs:complexType>
+      <xs:complexType name="Second"><xs:sequence><xs:element name="other" type="xs:string"/></xs:sequence></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let first = match &ir.types[&QName::new(Some("urn:test"), "First")] {
+        TypeDef::Struct(value) => value,
+        other => panic!("expected struct: {other:?}"),
+    };
+    assert_eq!(first.fields.len(), 1);
+    assert!(ir
+        .types
+        .contains_key(&QName::new(Some("urn:test"), "Second")));
+}
+
+#[test]
 fn test_parse_lexical_union_member_types_and_inline_members() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:test" targetNamespace="urn:test">
       <xs:simpleType name="DateOrCode"><xs:union memberTypes="xs:date xs:string">

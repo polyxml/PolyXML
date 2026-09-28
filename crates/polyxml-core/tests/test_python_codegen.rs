@@ -5,6 +5,18 @@ use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, OccursLimit, PrimitiveType, QName,
     RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
 };
+use polyxml::schema_parser::XsdParser;
+
+#[test]
+fn multiline_xsd_documentation_stays_inside_python_comments() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test">
+      <xs:simpleType name="Code"><xs:annotation><xs:documentation>First line
+        Second line</xs:documentation></xs:annotation><xs:restriction base="xs:string"/></xs:simpleType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let code = PythonCodegen::new(PythonOptions::default()).generate_module(&ir);
+    assert!(code.contains("# First line\n#         Second line"));
+}
 
 #[test]
 fn test_identifier_sanitization() {

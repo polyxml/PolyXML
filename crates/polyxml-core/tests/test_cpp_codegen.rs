@@ -12,6 +12,28 @@ use polyxml::ir::{
 };
 
 #[test]
+fn simple_aliases_follow_their_base_types() {
+    let mut ir = SchemaIR::new().with_target_namespace("urn:test");
+    ir.add_type(TypeDef::Simple(Box::new(polyxml::ir::SimpleTypeDef {
+        qname: QName::new(Some("urn:test"), "AreaType"),
+        base_type: TypeRef::Named(QName::new(Some("urn:test"), "DoubleNonNegativeType")),
+        facets: RestrictionFacets::default(),
+        documentation: None,
+    })));
+    ir.add_type(TypeDef::Simple(Box::new(polyxml::ir::SimpleTypeDef {
+        qname: QName::new(Some("urn:test"), "DoubleNonNegativeType"),
+        base_type: TypeRef::Primitive(PrimitiveType::Double),
+        facets: RestrictionFacets::default(),
+        documentation: None,
+    })));
+    let code = CppCodegen::new(CppOptions::default()).generate_header(&ir);
+    assert!(
+        code.find("using DoubleNonNegativeType =").unwrap()
+            < code.find("using AreaType =").unwrap()
+    );
+}
+
+#[test]
 fn test_cpp_sanitization() {
     assert_eq!(to_cpp_field_name("class"), "class_");
     assert_eq!(to_cpp_field_name("default"), "default_");

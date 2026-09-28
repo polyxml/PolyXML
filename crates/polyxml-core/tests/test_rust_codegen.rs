@@ -36,6 +36,22 @@ fn test_rust_identifier_sanitization() {
 }
 
 #[test]
+fn multiline_docs_and_raw_field_names_are_valid_source() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test">
+      <xs:complexType name="Sample"><xs:annotation><xs:documentation>First line
+        Second line</xs:documentation></xs:annotation><xs:sequence>
+        <xs:element name="type" type="xs:string"/>
+      </xs:sequence></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+    assert!(code.contains("/// First line\n///         Second line"));
+    assert!(code.contains("pub r#type:"));
+    assert!(code.contains("var_type"));
+    assert!(!code.contains("var_r#"));
+}
+
+#[test]
 fn test_rust_zero_copy_codegen() {
     let mut ir = SchemaIR::new().with_target_namespace("https://example.com/crm");
 

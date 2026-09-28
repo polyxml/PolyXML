@@ -656,9 +656,13 @@ concept XmlModel = requires(T a) {{
     }
 
     fn emit_types(&self, out: &mut String, ir: &SchemaIR) {
-        // Emit simple type aliases first
-        for type_def in ir.emitted_types() {
-            if let TypeDef::Simple(simple) = type_def {
+        let sorted_qnames = self.topological_sort_types(ir);
+
+        // Aliases must follow their base aliases, which may sort later by name.
+        for qname in &sorted_qnames {
+            if let Some(TypeDef::Simple(simple)) =
+                ir.types.get(qname).filter(|_| !ir.is_external_type(qname))
+            {
                 self.emit_simple_type(out, simple, ir);
             }
         }
@@ -671,8 +675,6 @@ concept XmlModel = requires(T a) {{
         }
 
         // Topologically sort structs and unions (DAG order)
-        let sorted_qnames = self.topological_sort_types(ir);
-
         for qname in sorted_qnames {
             if ir.is_external_type(&qname) {
                 continue;
