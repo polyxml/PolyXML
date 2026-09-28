@@ -1,3 +1,11 @@
+## [0.30.2](https://github.com/polyxml/PolyXML/compare/v0.30.1...v0.30.2) (2026-09-28)
+
+
+### Bug Fixes
+
+* **rust:** elide needless lifetime in unwrap_type_ref for clippy ([da39f01](https://github.com/polyxml/PolyXML/commit/da39f0172af758950220c8768e06d96419fb229c))
+* **rust:** use cycle-safe primitive_base in field type inspection ([43364e8](https://github.com/polyxml/PolyXML/commit/43364e88586113bd2551a3d04ba5930c663ab65c))
+
 ## [0.30.1](https://github.com/polyxml/PolyXML/compare/v0.30.0...v0.30.1) (2026-09-27)
 
 
