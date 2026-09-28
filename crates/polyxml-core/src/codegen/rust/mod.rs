@@ -998,7 +998,7 @@ impl RustCodegen {
         }
     }
 
-    fn unwrap_type_ref<'a>(mut ty: &'a TypeRef) -> &'a TypeRef {
+    fn unwrap_type_ref(mut ty: &TypeRef) -> &TypeRef {
         while let TypeRef::Boxed(inner) | TypeRef::List(inner) = ty {
             ty = inner;
         }
