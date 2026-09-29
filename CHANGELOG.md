@@ -1,3 +1,10 @@
+## [0.30.5](https://github.com/polyxml/PolyXML/compare/v0.30.4...v0.30.5) (2026-09-29)
+
+
+### Bug Fixes
+
+* cut C++ mixed-content dependency cycles ([#96](https://github.com/polyxml/PolyXML/issues/96)) ([425fbba](https://github.com/polyxml/PolyXML/commit/425fbba6feb18cfd224e179060e0bfa833d7055e))
+
 ## [0.30.4](https://github.com/polyxml/PolyXML/compare/v0.30.3...v0.30.4) (2026-09-29)
 
 
