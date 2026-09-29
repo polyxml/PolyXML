@@ -482,9 +482,11 @@ For a cyclic dependency, box a struct field or a union branch with
 `std::unique_ptr` and recompute the order; only cut an edge when a path leads
 back to its owner. A cyclic edge may point backward in a provisional order,
 so use graph reachability rather than position to choose cuts. The HL7 CDA
-corpus previously referenced lowercase `cs` while its simple-type declaration
-was commented out; restore that declaration in the corpus before interpreting
-C++ compile errors. Verify with the bounded `hl7_cda` C++ module check.
+`datatypes-base.xsd` intentionally comments out its local `cs` declaration
+and includes `datatypes-rX-cs.xsd` instead. The corpus must retain that
+included file; uncommenting the local declaration diverges from HL7 and
+would duplicate `cs` when the include is present. Verify with the bounded
+`hl7_cda` C++ module check.
 
 ## 11. Python Abstract Meta & Runtime Type Discovery
 
