@@ -34,6 +34,64 @@ fn simple_aliases_follow_their_base_types() {
 }
 
 #[test]
+fn mixed_content_mutual_cycle_compiles() {
+    use polyxml::schema_parser::XsdParser;
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test">
+      <xs:complexType name="Cd"><xs:sequence><xs:element name="originalText" type="t:Ed" minOccurs="0"/></xs:sequence></xs:complexType>
+      <xs:complexType name="Ed" mixed="true"><xs:sequence><xs:element name="concept" type="t:Cd" minOccurs="0"/></xs:sequence></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let code = CppCodegen::new(CppOptions::default()).generate_header(&ir);
+    let dir = tempdir().unwrap();
+    let header = dir.path().join("model.hpp");
+    fs::write(&header, code).unwrap();
+    fs::write(
+        dir.path().join("main.cpp"),
+        "#include \"model.hpp\"\nint main() { return 0; }\n",
+    )
+    .unwrap();
+    let result = Command::new("g++")
+        .args(["-std=c++20", "-fsyntax-only", "-fmax-errors=3"])
+        .arg(dir.path().join("main.cpp"))
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn mixed_content_self_cycle_compiles() {
+    use polyxml::schema_parser::XsdParser;
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test">
+      <xs:complexType name="Thumbnail" mixed="true"><xs:sequence>
+        <xs:element name="thumbnail" type="t:Thumbnail" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let code = CppCodegen::new(CppOptions::default()).generate_header(&ir);
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("model.hpp"), code).unwrap();
+    fs::write(
+        dir.path().join("main.cpp"),
+        "#include \"model.hpp\"\nint main() { return 0; }\n",
+    )
+    .unwrap();
+    let result = Command::new("g++")
+        .args(["-std=c++20", "-fsyntax-only", "-fmax-errors=3"])
+        .arg(dir.path().join("main.cpp"))
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn test_cpp_sanitization() {
     assert_eq!(to_cpp_field_name("class"), "class_");
     assert_eq!(to_cpp_field_name("default"), "default_");

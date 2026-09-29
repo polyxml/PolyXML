@@ -478,11 +478,13 @@ for inherited field names redeclared by the derived type, including in the
 C++ dependency order must include mixed-content unions and inheritance.
 `std::vector<Struct>` can hold an incomplete struct at declaration, while
 `std::variant` aliases and `std::optional<Struct>` require complete types.
-For a cyclic dependency, box a struct field with `std::unique_ptr` and
-recompute the order; only cut an edge when a path leads back to its owner.
-The HL7 CDA corpus has a separate invalid reference to lowercase `cs` (its
-simple-type declaration is commented out), so its full C++ check currently
-fails before the cycle fix can be verified there.
+For a cyclic dependency, box a struct field or a union branch with
+`std::unique_ptr` and recompute the order; only cut an edge when a path leads
+back to its owner. A cyclic edge may point backward in a provisional order,
+so use graph reachability rather than position to choose cuts. The HL7 CDA
+corpus previously referenced lowercase `cs` while its simple-type declaration
+was commented out; restore that declaration in the corpus before interpreting
+C++ compile errors. Verify with the bounded `hl7_cda` C++ module check.
 
 ## 11. Python Abstract Meta & Runtime Type Discovery
 

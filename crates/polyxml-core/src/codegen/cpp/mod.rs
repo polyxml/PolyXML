@@ -674,15 +674,19 @@ concept XmlModel = requires(T a) {{
             }
         }
 
-        // Topologically sort structs and unions (DAG order)
+        // Cut cyclic value dependencies through struct fields or union branches,
+        // then emit types in dependency order.
+        let mut prepared = ir.clone();
+        let sorted_qnames = self.order_with_forward_cuts(&mut prepared);
+
         for qname in sorted_qnames {
-            if ir.is_external_type(&qname) {
+            if prepared.is_external_type(&qname) {
                 continue;
             }
-            if let Some(type_def) = ir.types.get(&qname) {
+            if let Some(type_def) = prepared.types.get(&qname) {
                 match type_def {
                     TypeDef::Union(u) => self.emit_union(out, u),
-                    TypeDef::Struct(s) => self.emit_struct(out, s, ir),
+                    TypeDef::Struct(s) => self.emit_struct(out, s, &prepared),
                     TypeDef::Simple(_) | TypeDef::Enum(_) => {}
                 }
             }
@@ -1126,7 +1130,120 @@ concept XmlModel = requires(T a) {{
         }
     }
 
-    /// Topologically sort types (DAG) to ensure value types are declared before use.
+    /// Box cyclic value edges until the C++ dependency graph can be ordered.
+    fn order_with_forward_cuts(&self, ir: &mut SchemaIR) -> Vec<QName> {
+        loop {
+            let order = self.topological_sort_types(ir);
+            let mut candidate: Option<(bool, QName, usize)> = None;
+            for (owner, def) in &ir.types {
+                let TypeDef::Struct(structure) = def else {
+                    continue;
+                };
+                for (index, field) in structure.fields.iter().enumerate() {
+                    if field.is_cycle_cut || field.cardinality.is_list() {
+                        continue;
+                    }
+                    let TypeRef::Named(target) = &field.type_ref else {
+                        continue;
+                    };
+                    if !matches!(ir.types.get(target), Some(TypeDef::Struct(_)))
+                        || !self.has_cpp_dependency_path(ir, target, owner, &mut HashSet::new())
+                    {
+                        continue;
+                    }
+                    let optional = field.cardinality.is_optional() || field.nillable;
+                    if candidate
+                        .as_ref()
+                        .is_none_or(|(was_optional, _, _)| optional && !was_optional)
+                    {
+                        candidate = Some((optional, owner.clone(), index));
+                    }
+                }
+            }
+            let Some((_, owner, index)) = candidate else {
+                let union_cut = ir.types.iter().find_map(|(owner, def)| {
+                    let TypeDef::Union(union) = def else {
+                        return None;
+                    };
+                    union
+                        .branches
+                        .iter()
+                        .enumerate()
+                        .find_map(|(index, branch)| {
+                            let TypeRef::Named(target) = &branch.type_ref else {
+                                return None;
+                            };
+                            (matches!(ir.types.get(target), Some(TypeDef::Struct(_)))
+                                && self.has_cpp_dependency_path(
+                                    ir,
+                                    target,
+                                    owner,
+                                    &mut HashSet::new(),
+                                ))
+                            .then(|| (owner.clone(), index))
+                        })
+                });
+                let Some((owner, index)) = union_cut else {
+                    return order;
+                };
+                if let Some(TypeDef::Union(union)) = ir.types.get_mut(&owner) {
+                    let branch = &mut union.branches[index];
+                    branch.type_ref = TypeRef::Boxed(Box::new(branch.type_ref.clone()));
+                }
+                continue;
+            };
+            if let Some(TypeDef::Struct(structure)) = ir.types.get_mut(&owner) {
+                structure.fields[index].is_cycle_cut = true;
+            }
+        }
+    }
+
+    fn has_cpp_dependency_path(
+        &self,
+        ir: &SchemaIR,
+        current: &QName,
+        goal: &QName,
+        seen: &mut HashSet<QName>,
+    ) -> bool {
+        if current == goal {
+            return true;
+        }
+        if !seen.insert(current.clone()) {
+            return false;
+        }
+        let mut deps = Vec::new();
+        match ir.types.get(current) {
+            Some(TypeDef::Struct(structure)) => {
+                if let Some(base) = &structure.base_type {
+                    deps.push(base.clone());
+                }
+                for field in &structure.fields {
+                    if !field.is_cycle_cut
+                        && !(field.cardinality.is_list()
+                            && matches!(&field.type_ref, TypeRef::Named(target) if matches!(ir.types.get(target), Some(TypeDef::Struct(_)))))
+                    {
+                        self.collect_type_dependencies(&field.type_ref, ir, current, &mut deps);
+                    }
+                }
+            }
+            Some(TypeDef::Union(union)) => {
+                for branch in &union.branches {
+                    if !matches!(&branch.type_ref, TypeRef::Boxed(inner) if matches!(inner.as_ref(), TypeRef::Named(target) if matches!(ir.types.get(target), Some(TypeDef::Struct(_)))))
+                    {
+                        self.collect_type_dependencies(&branch.type_ref, ir, current, &mut deps);
+                    }
+                }
+            }
+            Some(TypeDef::Simple(simple)) => {
+                self.collect_type_dependencies(&simple.base_type, ir, current, &mut deps);
+            }
+            _ => {}
+        }
+        deps.iter()
+            .any(|dep| self.has_cpp_dependency_path(ir, dep, goal, seen))
+    }
+
+    /// Put definitions before every value use that requires a complete type.
     fn topological_sort_types(&self, ir: &SchemaIR) -> Vec<QName> {
         let mut in_degree: HashMap<QName, usize> = HashMap::new();
         let mut adj: HashMap<QName, Vec<QName>> = HashMap::new();
@@ -1147,14 +1264,20 @@ concept XmlModel = requires(T a) {{
                     }
                     for f in &s.fields {
                         // Skip cycle cuts because they use std::unique_ptr (only need forward declarations)
-                        if !f.is_cycle_cut {
+                        if !f.is_cycle_cut
+                            && !(f.cardinality.is_list()
+                                && matches!(&f.type_ref, TypeRef::Named(target) if matches!(ir.types.get(target), Some(TypeDef::Struct(_)))))
+                        {
                             self.collect_type_dependencies(&f.type_ref, ir, qname, &mut deps);
                         }
                     }
                 }
                 TypeDef::Union(u) => {
                     for b in &u.branches {
-                        self.collect_type_dependencies(&b.type_ref, ir, qname, &mut deps);
+                        if !matches!(&b.type_ref, TypeRef::Boxed(inner) if matches!(inner.as_ref(), TypeRef::Named(target) if matches!(ir.types.get(target), Some(TypeDef::Struct(_)))))
+                        {
+                            self.collect_type_dependencies(&b.type_ref, ir, qname, &mut deps);
+                        }
                     }
                 }
                 TypeDef::Simple(s) => {
