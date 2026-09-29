@@ -28,6 +28,47 @@ fn consumed_child_subtrees_do_not_swallow_following_types() {
 }
 
 #[test]
+fn consumed_particles_do_not_swallow_following_declarations() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test">
+      <xs:group name="Shared"><xs:sequence>
+        <xs:element name="inside"><xs:annotation><xs:documentation>text</xs:documentation></xs:annotation></xs:element>
+      </xs:sequence></xs:group>
+      <xs:complexType name="First"><xs:sequence>
+        <xs:group ref="t:Shared"><xs:annotation/></xs:group>
+        <xs:element name="child" type="xs:string"><xs:annotation/></xs:element>
+      </xs:sequence></xs:complexType>
+      <xs:complexType name="Second"><xs:sequence><xs:element name="value" type="xs:string"/></xs:sequence></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let first = match &ir.types[&QName::new(Some("urn:test"), "First")] {
+        TypeDef::Struct(value) => value,
+        _ => panic!("expected struct"),
+    };
+    assert!(first.fields.iter().any(|field| field.name == "inside"));
+    assert!(first.fields.iter().any(|field| field.name == "child"));
+    assert!(ir
+        .types
+        .contains_key(&QName::new(Some("urn:test"), "Second")));
+}
+
+#[test]
+fn global_attribute_reference_uses_declared_type() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test">
+      <xs:complexType name="Object"><xs:attribute ref="t:id" use="required"/></xs:complexType>
+      <xs:attribute name="id" type="xs:ID"><xs:annotation><xs:documentation>identifier</xs:documentation></xs:annotation></xs:attribute>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let object = match &ir.types[&QName::new(Some("urn:test"), "Object")] {
+        TypeDef::Struct(value) => value,
+        _ => panic!("expected struct"),
+    };
+    assert_eq!(
+        object.fields[0].type_ref,
+        TypeRef::Primitive(PrimitiveType::Id)
+    );
+}
+
+#[test]
 fn test_parse_lexical_union_member_types_and_inline_members() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:test" targetNamespace="urn:test">
       <xs:simpleType name="DateOrCode"><xs:union memberTypes="xs:date xs:string">

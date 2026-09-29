@@ -599,11 +599,30 @@ impl TypeScriptCodegen {
             self.emit_docstring(out, doc, "");
         }
 
-        let mut extends_clause = String::new();
-        if let Some(ref base) = s.base_type {
-            let base_name = type_ident(base);
-            extends_clause = format!(" extends {}", base_name);
+        let base_name = s.base_type.as_ref().map(type_ident);
+        let mut inherited_fields = HashSet::new();
+        let mut current_base = s.base_type.as_ref();
+        let mut visited_bases = HashSet::new();
+        while let Some(base_qname) = current_base {
+            if !visited_bases.insert(base_qname.clone()) {
+                break;
+            }
+            let Some(TypeDef::Struct(base)) = ir.types.get(base_qname) else {
+                break;
+            };
+            let mut seen = HashSet::new();
+            for field in &base.fields {
+                inherited_fields.insert(self.unique_field_name(&field.name, &mut seen));
+            }
+            current_base = base.base_type.as_ref();
         }
+        let mut own_seen = HashSet::new();
+        let overridden = s
+            .fields
+            .iter()
+            .map(|field| self.unique_field_name(&field.name, &mut own_seen))
+            .filter(|name| inherited_fields.contains(name))
+            .collect::<Vec<_>>();
 
         let readonly_prefix = if self.options.readonly_fields {
             "readonly "
@@ -611,13 +630,29 @@ impl TypeScriptCodegen {
             ""
         };
 
-        if self.options.use_interface {
-            let _ = writeln!(out, "export interface {}{} {{", ts_name, extends_clause);
-        } else if extends_clause.is_empty() {
-            let _ = writeln!(out, "export type {} = {{", ts_name);
+        if let Some(base_name) = &base_name {
+            if overridden.is_empty() {
+                if self.options.use_interface {
+                    let _ = writeln!(out, "export interface {} extends {} {{", ts_name, base_name);
+                } else {
+                    let _ = writeln!(out, "export type {} = {} & {{", ts_name, base_name);
+                }
+            } else {
+                let keys = overridden
+                    .iter()
+                    .map(|name| format!("{name:?}"))
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+                let _ = writeln!(
+                    out,
+                    "export type {} = Omit<{}, {}> & {{",
+                    ts_name, base_name, keys
+                );
+            }
+        } else if self.options.use_interface {
+            let _ = writeln!(out, "export interface {} {{", ts_name);
         } else {
-            let base_name = type_ident(s.base_type.as_ref().unwrap());
-            let _ = writeln!(out, "export type {} = {} & {{", ts_name, base_name);
+            let _ = writeln!(out, "export type {} = {{", ts_name);
         }
 
         let mut seen_fields = HashSet::new();

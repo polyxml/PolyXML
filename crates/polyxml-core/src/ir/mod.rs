@@ -456,6 +456,9 @@ pub struct SchemaIR {
     pub namespaces: Vec<NamespaceDeclaration>,
     pub types: BTreeMap<QName, TypeDef>,
     pub elements: BTreeMap<QName, ElementDef>,
+    /// Declared types of global attributes, used to resolve `<xs:attribute ref>`.
+    #[serde(default)]
+    pub attributes: BTreeMap<QName, TypeRef>,
     pub substitution_groups: HashMap<QName, Vec<QName>>,
     /// Type owners outside the module currently being emitted. Definitions
     /// remain in `types` so generators can resolve their field semantics.

@@ -6,6 +6,35 @@ use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
     SchemaIR, SimpleTypeDef, StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
 };
+use polyxml::schema_parser::XsdParser;
+use std::{fs, process::Command};
+use tempfile::tempdir;
+
+#[test]
+fn mixed_content_inheritance_compiles_with_widened_items() {
+    let schema = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/ts_mixed_content_inheritance.xsd"
+    );
+    let ir = XsdParser::new().parse_file(schema).unwrap();
+    let code = TypeScriptCodegen::new(TypeScriptOptions::default()).generate_module(&ir);
+    assert!(code.contains("export type Ed = Omit<Bin, \"items\"> & {"));
+    if Command::new("tsc").arg("--version").output().is_ok() {
+        let dir = tempdir().unwrap();
+        let source = dir.path().join("models.ts");
+        fs::write(&source, code).unwrap();
+        let result = Command::new("tsc")
+            .args(["--noEmit", "--skipLibCheck", "--target", "ES2020"])
+            .arg(&source)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stdout)
+        );
+    }
+}
 
 #[test]
 fn test_ts_identifier_sanitization() {

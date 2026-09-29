@@ -379,8 +379,12 @@ impl GoCodegen {
             .values()
             .any(|def| matches!(def, TypeDef::Union(u) if u.is_lexical()))
         {
-            imports.push("\"strconv\"");
-            imports.push("\"strings\"");
+            if body.contains("strconv.") {
+                imports.push("\"strconv\"");
+            }
+            if body.contains("strings.") {
+                imports.push("\"strings\"");
+            }
         }
         if has_time {
             imports.push("\"time\"");
@@ -765,6 +769,11 @@ impl GoCodegen {
         for (branch, field) in u.branches.iter().zip(&fields) {
             let mapped = self.context.map_type_ref(&branch.type_ref);
             if let TypeRef::Named(qname) = &branch.type_ref {
+                if matches!(ir.types.get(qname), Some(TypeDef::Union(inner)) if inner.is_lexical())
+                {
+                    let _ = writeln!(out, "    {{ var escaped strings.Builder; if err := xml.EscapeText(&escaped, []byte(value)); err != nil {{ return err }}; var v {mapped}; if err := xml.Unmarshal([]byte(\"<v>\"+escaped.String()+\"</v>\"), &v); err == nil {{ c.{field} = &v; return nil }} }}");
+                    continue;
+                }
                 if let Some(TypeDef::Enum(def)) = ir.types.get(qname) {
                     let comparisons = def
                         .variants
@@ -861,6 +870,11 @@ impl GoCodegen {
         );
         out.push_str("    count := 0\n    var value string\n");
         for (branch, field) in u.branches.iter().zip(&fields) {
+            if matches!(&branch.type_ref, TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Union(inner)) if inner.is_lexical()))
+            {
+                let _ = writeln!(out, "    if c.{field} != nil {{ data, err := xml.Marshal(c.{field}); if err != nil {{ return err }}; if err := xml.Unmarshal(data, &value); err != nil {{ return err }}; count++ }}");
+                continue;
+            }
             let expr = if matches!(
                 super::primitive_base(&branch.type_ref, ir),
                 TypeRef::Primitive(PrimitiveType::Date)
@@ -1264,10 +1278,15 @@ impl GoCodegen {
         }
 
         writeln!(out, "// Root XML Element Type Aliases").unwrap();
+        let mut declared: HashSet<String> = ir
+            .types
+            .values()
+            .map(|def| type_ident(def.qname()))
+            .collect();
         for elem in ir.elements.values() {
             let elem_alias = to_go_type_name(&elem.qname.local);
             let target_type = self.context.map_type_ref(&elem.type_ref);
-            if elem_alias != target_type {
+            if elem_alias != target_type && declared.insert(elem_alias.clone()) {
                 if let Some(ref doc) = elem.documentation {
                     for line in doc.lines() {
                         let trimmed = line.trim();

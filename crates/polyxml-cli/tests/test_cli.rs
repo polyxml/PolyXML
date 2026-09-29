@@ -2478,6 +2478,9 @@ package = "enterprise::models"
     let billing_java =
         fs::read_to_string(out_dir.join("java/billing/BillingMessage.java")).unwrap();
     assert!(billing_java.contains("import com.enterprise.models.common.Person;"));
+    let auth_java = fs::read_to_string(out_dir.join("java/auth/AuthMessage.java")).unwrap();
+    assert!(auth_java.contains("com.enterprise.models.common.Person shared"));
+    assert!(auth_java.contains("Person local"));
 
     // 7. C++: common has Person, billing includes common.hpp and aliases using enterprise::models::common::Person
     let common_cpp = fs::read_to_string(out_dir.join("cpp/common/common.hpp")).unwrap();
@@ -2520,4 +2523,40 @@ package = "enterprise::models"
     assert!(auth_cpp.contains("struct Person"));
     assert!(auth_cpp.contains("struct AuthMessage"));
     assert!(auth_cpp.contains("using Person2 = enterprise::models::common::Person;"));
+
+    if Command::new("go").arg("version").output().is_ok() {
+        let build = Command::new("go")
+            .args(["build", "./..."])
+            .current_dir(out_dir.join("go"))
+            .output()
+            .unwrap();
+        assert!(
+            build.status.success(),
+            "{}",
+            String::from_utf8_lossy(&build.stderr)
+        );
+    }
+    if Command::new("javac").arg("-version").output().is_ok() {
+        let sources = [
+            "common/Person.java",
+            "auth/Person.java",
+            "auth/AuthMessage.java",
+            "billing/BillingMessage.java",
+        ];
+        let output = Command::new("javac")
+            .arg("-d")
+            .arg(dir.path().join("classes"))
+            .args(
+                sources
+                    .iter()
+                    .map(|source| out_dir.join("java").join(source)),
+            )
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }

@@ -444,6 +444,46 @@ satisfying two restriction steps, and reject lists/optionals carrying a bad
 element. The TS leg needs `POLYXML_TS_TEST_MODULES` pointing at a node_modules
 with `zod@3 valibot@1 @sinclair/typebox@0.34 typescript@5` and skips otherwise.
 
+### Composite module compile checks
+
+For composite module builds, compile generated Java and Go source rather than
+checking import text alone. The small `shared_modules` CLI fixture covers an
+imported type whose local name is disambiguated (`Person2`), which Java must
+reference by its fully qualified owning package name. The NeTEx corpus can
+also expose parser placeholders left by `<xs:element ref>` in both fields and
+choice branches. Resolve those references against global element declarations
+after includes/imports and group expansion, before cycle detection. The
+CLI's Java import scan must include fields inherited through external base
+types because Java records flatten those fields into derived records. The
+Gregorian builtin synthesis pass runs once per parser frame, so it must leave
+the base type of an already synthesized builtin untouched; otherwise Go emits
+self-referential aliases such as `type GDay GDay`.
+When the schema parser consumes a nested element or group subtree, decrement
+the enclosing type/group depth exactly once; otherwise later top-level
+declarations disappear from generated modules. Global `<xs:attribute ref>`
+fields need their declared attribute type resolved after imports and includes.
+Go lexical unions may contain other lexical unions: parse the nested branch
+through its XML decoder and serialize its selected lexical value, rather than
+casting text to the nested union struct.
+Go root element aliases must reserve normalized names already used by types
+and earlier aliases: distinct XML names such as `item` and `item_` both become
+the Go identifier `Item`.
+
+TypeScript mixed-content derived types may redeclare `items` with a wider
+union. An `interface extends` rejects that override (TS2430), and a plain
+intersection keeps the narrower inherited type. Use `Omit<Base, "items"> &`
+for inherited field names redeclared by the derived type, including in the
+`use_interface = false` mode; the HL7 CDA corpus compile check exercises it.
+
+C++ dependency order must include mixed-content unions and inheritance.
+`std::vector<Struct>` can hold an incomplete struct at declaration, while
+`std::variant` aliases and `std::optional<Struct>` require complete types.
+For a cyclic dependency, box a struct field with `std::unique_ptr` and
+recompute the order; only cut an edge when a path leads back to its owner.
+The HL7 CDA corpus has a separate invalid reference to lowercase `cs` (its
+simple-type declaration is commented out), so its full C++ check currently
+fails before the cycle fix can be verified there.
+
 ## 11. Python Abstract Meta & Runtime Type Discovery
 
 Core streaming nil handling must check `xsi:nil` before calling

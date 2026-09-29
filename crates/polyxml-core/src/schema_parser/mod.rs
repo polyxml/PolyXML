@@ -171,6 +171,7 @@ impl XsdParser {
         inherit_pattern_facets(&mut ir);
         self.expand_group_refs(&mut ir, self.frame_depth == 0);
         if self.frame_depth == 0 {
+            resolve_global_field_refs(&mut ir);
             compile_mixed_types(&mut ir);
         }
         ir.resolve_cycles();
@@ -304,6 +305,22 @@ impl XsdParser {
                                 ir.add_element(elem_def);
                             }
                         }
+                        "attribute" => {
+                            if let (Some(name), Some(ty)) =
+                                (get_attr_value(e, "name"), get_attr_value(e, "type"))
+                            {
+                                ir.attributes
+                                    .entry(QName::new(target_namespace.as_deref(), name))
+                                    .or_insert_with(|| {
+                                        resolve_type_ref(
+                                            &ty,
+                                            target_namespace.as_deref(),
+                                            &prefixes,
+                                        )
+                                    });
+                            }
+                            skip_subtree(&mut reader)?;
+                        }
                         "group" => {
                             // Named model group definition.
                             if let Some(gname) = get_attr_value(e, "name") {
@@ -371,6 +388,21 @@ impl XsdParser {
                                 &prefixes,
                             ) {
                                 ir.add_element(elem_def);
+                            }
+                        }
+                        "attribute" => {
+                            if let (Some(name), Some(ty)) =
+                                (get_attr_value(e, "name"), get_attr_value(e, "type"))
+                            {
+                                ir.attributes
+                                    .entry(QName::new(target_namespace.as_deref(), name))
+                                    .or_insert_with(|| {
+                                        resolve_type_ref(
+                                            &ty,
+                                            target_namespace.as_deref(),
+                                            &prefixes,
+                                        )
+                                    });
                             }
                         }
                         "group" => {
@@ -1497,6 +1529,68 @@ fn parse_union_members(
         .collect()
 }
 
+/// Replace element-reference placeholders with their global element's declared type.
+/// Referenced elements may be defined in an included file parsed later.
+fn resolve_global_field_refs(ir: &mut SchemaIR) {
+    let elements = &ir.elements;
+    let attributes = &ir.attributes;
+    let type_names: HashSet<QName> = ir.types.keys().cloned().collect();
+    fn resolve(
+        reference: &mut TypeRef,
+        elements: &BTreeMap<QName, ElementDef>,
+        types: &HashSet<QName>,
+    ) {
+        let TypeRef::Named(qname) = reference else {
+            return;
+        };
+        if types.contains(qname) {
+            return;
+        }
+        let mut current = qname.clone();
+        let mut seen = HashSet::new();
+        while seen.insert(current.clone()) {
+            let Some(element) = elements.get(&current) else {
+                break;
+            };
+            if let TypeRef::Named(next) = &element.type_ref {
+                if !types.contains(next) && elements.contains_key(next) {
+                    current = next.clone();
+                    continue;
+                }
+            }
+            *reference = element.type_ref.clone();
+            break;
+        }
+    }
+    for def in ir.types.values_mut() {
+        match def {
+            TypeDef::Struct(structure) => {
+                for field in &mut structure.fields {
+                    match field.kind {
+                        FieldKind::Element => resolve(&mut field.type_ref, elements, &type_names),
+                        FieldKind::Attribute => {
+                            if let TypeRef::Named(qname) = &field.type_ref {
+                                if !type_names.contains(qname) {
+                                    if let Some(type_ref) = attributes.get(qname) {
+                                        field.type_ref = type_ref.clone();
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            TypeDef::Union(union) if !union.is_lexical() => {
+                for branch in &mut union.branches {
+                    resolve(&mut branch.type_ref, elements, &type_names);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Give XSD Gregorian primitives named, validated types in every target.
 /// The original primitive remains the base of each synthesized simple type.
 fn add_gregorian_types(ir: &mut SchemaIR) {
@@ -1540,6 +1634,9 @@ fn add_gregorian_types(ir: &mut SchemaIR) {
         rewrite(&mut element.type_ref, &mut used);
     }
     for def in ir.types.values_mut() {
+        if def.qname().namespace.as_deref() == Some(NS) {
+            continue;
+        }
         match def {
             TypeDef::Struct(s) => {
                 for field in &mut s.fields {
@@ -1884,6 +1981,15 @@ fn rekey_to_namespace(ir: &mut SchemaIR, ns: &str) {
     }
     ir.elements = elements;
 
+    let old_attributes = std::mem::take(&mut ir.attributes);
+    for (mut qname, mut type_ref) in old_attributes {
+        if qname.namespace.is_none() {
+            qname = QName::new(Some(ns.to_string()), qname.local);
+        }
+        rekey_type_ref(&mut type_ref, ns);
+        ir.attributes.insert(qname, type_ref);
+    }
+
     let old_subs = std::mem::take(&mut ir.substitution_groups);
     let mut subs = HashMap::new();
     for (k, v) in old_subs {
@@ -2039,6 +2145,9 @@ fn merge_ir(dest: &mut SchemaIR, src: SchemaIR) {
     }
     for (k, v) in src.elements {
         dest.elements.insert(k, v);
+    }
+    for (k, v) in src.attributes {
+        dest.attributes.insert(k, v);
     }
     for (k, v) in src.substitution_groups {
         dest.substitution_groups.entry(k).or_default().extend(v);

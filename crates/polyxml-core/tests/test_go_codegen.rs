@@ -10,6 +10,99 @@ use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
     SchemaIR, StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
 };
+use polyxml::schema_parser::XsdParser;
+
+#[test]
+fn referenced_element_uses_declared_type_after_includes() {
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("base.xsd"),
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test">
+        <xs:complexType name="Base"><xs:sequence><xs:element ref="t:description"/></xs:sequence></xs:complexType>
+        <xs:element name="description" type="xs:string"/>
+        <xs:element name="day" type="xs:gDay"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("main.xsd"),
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test">
+        <xs:include schemaLocation="base.xsd"/>
+        <xs:complexType name="Derived"><xs:complexContent><xs:extension base="t:Base"/></xs:complexContent></xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+    let ir = XsdParser::new()
+        .parse_file(dir.path().join("main.xsd"))
+        .unwrap();
+    let base = match ir.types.get(&QName::new(Some("urn:test"), "Base")).unwrap() {
+        TypeDef::Struct(value) => value,
+        _ => panic!("expected struct"),
+    };
+    assert_eq!(
+        base.fields[0].type_ref,
+        TypeRef::Primitive(PrimitiveType::String)
+    );
+    let go = GoCodegen::new(GoOptions::default()).generate_module(&ir);
+    assert!(go.contains("type GDay string"));
+    assert!(!go.contains("type GDay GDay"));
+}
+
+#[test]
+fn nested_lexical_unions_compile_and_round_trip_in_go() {
+    if Command::new("go").arg("version").output().is_err() {
+        return;
+    }
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test">
+      <xs:simpleType name="Inner"><xs:union memberTypes="xs:int xs:string"/></xs:simpleType>
+      <xs:simpleType name="Outer"><xs:union memberTypes="Inner xs:boolean"/></xs:simpleType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module nested\n\ngo 1.22\n").unwrap();
+    fs::write(
+        dir.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("models_test.go"),
+        r#"package models
+import ("encoding/xml"; "testing")
+func TestNestedUnion(t *testing.T) {
+    var value Outer
+    if err := xml.Unmarshal([]byte("<value>42</value>"), &value); err != nil { t.Fatal(err) }
+    if value.InnerValue == nil || value.InnerValue.IntValue == nil { t.Fatalf("wrong branch: %+v", value) }
+    data, err := xml.Marshal(value)
+    if err != nil { t.Fatal(err) }
+    if string(data) != "<Outer>42</Outer>" { t.Fatalf("wrong XML: %s", data) }
+}"#,
+    )
+    .unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn root_alias_names_are_unique_after_go_normalization() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test">
+      <xs:complexType name="FirstType"/>
+      <xs:complexType name="SecondType"/>
+      <xs:element name="item" type="FirstType"/>
+      <xs:element name="item_" type="SecondType"/>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let code = GoCodegen::new(GoOptions::default()).generate_module(&ir);
+    assert_eq!(code.matches("type Item = ").count(), 1);
+}
 
 #[test]
 fn test_go_sanitization() {

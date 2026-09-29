@@ -1,0 +1,17 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:polyxml:ts-mixed" xmlns:m="urn:polyxml:ts-mixed"
+           elementFormDefault="qualified">
+  <xs:complexType name="Bin" mixed="true" abstract="true">
+    <xs:sequence/>
+  </xs:complexType>
+  <xs:complexType name="Ed" mixed="true">
+    <xs:complexContent mixed="true">
+      <xs:extension base="m:Bin">
+        <xs:sequence>
+          <xs:element name="reference" type="xs:string" minOccurs="0"/>
+          <xs:element name="thumbnail" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

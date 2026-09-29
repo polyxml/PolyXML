@@ -644,7 +644,7 @@ fn run_module_build(
             let opts = target_options(&module_target).resolve(&module_target.target)?;
             let fake_schema = PathBuf::from(format!("{name}.xsd"));
             emit_target_code(&language, opts, &module_dir, &fake_schema, &ir)?;
-            let references = referenced_external_types(&ir);
+            let references = referenced_external_types(&ir, &language);
             inject_module_imports(
                 &language,
                 &module_dir,
@@ -672,7 +672,7 @@ fn run_module_build(
     Ok(())
 }
 
-fn referenced_external_types(ir: &SchemaIR) -> BTreeSet<QName> {
+fn referenced_external_types(ir: &SchemaIR, language: &str) -> BTreeSet<QName> {
     fn collect(reference: &TypeRef, names: &mut BTreeSet<QName>) {
         match reference {
             TypeRef::Named(qname) => {
@@ -683,11 +683,33 @@ fn referenced_external_types(ir: &SchemaIR) -> BTreeSet<QName> {
         }
     }
     let mut names = BTreeSet::new();
+    fn collect_base_fields(
+        qname: &QName,
+        ir: &SchemaIR,
+        names: &mut BTreeSet<QName>,
+        seen: &mut BTreeSet<QName>,
+    ) {
+        if !seen.insert(qname.clone()) {
+            return;
+        }
+        let Some(TypeDef::Struct(base)) = ir.types.get(qname) else {
+            return;
+        };
+        if let Some(parent) = &base.base_type {
+            collect_base_fields(parent, ir, names, seen);
+        }
+        for field in &base.fields {
+            collect(&field.type_ref, names);
+        }
+    }
     for def in ir.emitted_types() {
         match def {
             TypeDef::Struct(structure) => {
                 if let Some(base) = &structure.base_type {
                     names.insert(base.clone());
+                    if language == "java" {
+                        collect_base_fields(base, ir, &mut names, &mut BTreeSet::new());
+                    }
                 }
                 for field in &structure.fields {
                     collect(&field.type_ref, &mut names);
@@ -875,18 +897,44 @@ fn inject_module_imports(
                     .features
                     .iter()
                     .any(|feature| feature == "direct-codec");
+                let file_stem = path
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .unwrap_or("");
+                for (owner, types) in &by_owner {
+                    for imported in types {
+                        if imported.local_name != imported.orig_name {
+                            let qualified = format!("{root}.{owner}.{}", imported.orig_name);
+                            if direct_codec {
+                                code = replace_java_identifier(
+                                    &code,
+                                    &format!("{}Codec", imported.local_name),
+                                    &format!("{qualified}Codec"),
+                                );
+                            }
+                            code = replace_java_identifier(&code, &imported.local_name, &qualified);
+                        }
+                    }
+                }
                 let imports = by_owner
                     .iter()
                     .flat_map(|(owner, types)| {
-                        types.iter().flat_map(move |t| {
-                            let mut imports =
-                                vec![format!("import {root}.{owner}.{};\n", t.orig_name)];
-                            if direct_codec {
+                        types
+                            .iter()
+                            .filter(move |t| {
+                                t.local_name == t.orig_name && file_stem != t.orig_name
+                            })
+                            .flat_map(move |t| {
+                                let mut imports =
+                                    vec![format!("import {root}.{owner}.{};\n", t.orig_name)];
+                                if direct_codec {
+                                    imports.push(format!(
+                                        "import {root}.{owner}.{}Codec;\n",
+                                        t.orig_name
+                                    ));
+                                }
                                 imports
-                                    .push(format!("import {root}.{owner}.{}Codec;\n", t.orig_name));
-                            }
-                            imports
-                        })
+                            })
                     })
                     .collect::<String>();
                 if let Some(pos) = code.find(";\n") {
@@ -980,6 +1028,24 @@ fn inject_module_imports(
     }
     let _ = target_root;
     Ok(())
+}
+
+fn replace_java_identifier(code: &str, name: &str, replacement: &str) -> String {
+    let mut out = String::with_capacity(code.len());
+    let mut start = 0;
+    for (index, _) in code.match_indices(name) {
+        let before = code[..index].chars().next_back();
+        let after = code[index + name.len()..].chars().next();
+        let ident = |ch: char| ch.is_ascii_alphanumeric() || ch == '_' || ch == '$';
+        if before.is_some_and(ident) || after.is_some_and(ident) {
+            continue;
+        }
+        out.push_str(&code[start..index]);
+        out.push_str(replacement);
+        start = index + name.len();
+    }
+    out.push_str(&code[start..]);
+    out
 }
 
 fn run_validate(args: ValidateArgs) -> Result<(), Box<dyn std::error::Error>> {
