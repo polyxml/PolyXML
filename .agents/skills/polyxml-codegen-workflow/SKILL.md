@@ -474,6 +474,9 @@ union. An `interface extends` rejects that override (TS2430), and a plain
 intersection keeps the narrower inherited type. Use `Omit<Base, "items"> &`
 for inherited field names redeclared by the derived type, including in the
 `use_interface = false` mode; the HL7 CDA corpus compile check exercises it.
+The RailML TypeScript corpus check exercises implicit `xml:lang` attributes
+from Dublin Core and a choice-bearing derived type (`eTrackNode`) that must
+remain a struct so its children can extend it.
 
 C++ dependency order must include mixed-content unions and inheritance.
 `std::vector<Struct>` can hold an incomplete struct at declaration, while

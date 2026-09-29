@@ -189,7 +189,12 @@ impl XsdParser {
 
         let mut ir = SchemaIR::new();
         let mut target_namespace = None;
-        let mut prefixes = HashMap::new();
+        // The `xml` prefix is bound by XML itself, even when the schema omits
+        // an explicit xmlns:xml declaration (as Dublin Core's dc.xsd does).
+        let mut prefixes = HashMap::from([(
+            "xml".to_string(),
+            "http://www.w3.org/XML/1998/namespace".to_string(),
+        )]);
         let mut buf = Vec::new();
 
         // Pass 1: Parse root schema attributes and build prefix table
@@ -698,7 +703,10 @@ impl XsdParser {
                             if frame.kind == CompositorKind::Choice {
                                 let choice_is_unbounded = frame.is_unbounded
                                     || compositor_stack.iter().any(|c| c.is_unbounded);
-                                if choice_is_unbounded && !frame.choice_branches.is_empty() {
+                                if (choice_is_unbounded
+                                    || (compositor_stack.is_empty() && base_type.is_some()))
+                                    && !frame.choice_branches.is_empty()
+                                {
                                     let choice_name =
                                         unique_type_name(ir, target_ns, &format!("{}Choice", name));
                                     let choice_qname = QName::new(target_ns, choice_name);
@@ -710,10 +718,15 @@ impl XsdParser {
                                     ir.add_type(TypeDef::Union(choice_def));
 
                                     fields.truncate(frame.fields_start);
-                                    let mut item_field_name = "items".to_string();
+                                    let field_base = if choice_is_unbounded {
+                                        "items"
+                                    } else {
+                                        "choice"
+                                    };
+                                    let mut item_field_name = field_base.to_string();
                                     let mut counter = 2;
                                     while fields.iter().any(|f| f.name == item_field_name) {
-                                        item_field_name = format!("items_{}", counter);
+                                        item_field_name = format!("{field_base}_{counter}");
                                         counter += 1;
                                     }
                                     fields.push(FieldDef {
@@ -722,7 +735,13 @@ impl XsdParser {
                                         namespace: None,
                                         kind: FieldKind::Element,
                                         type_ref: TypeRef::Named(choice_qname),
-                                        cardinality: Cardinality::unbounded(frame.min_occurs),
+                                        cardinality: if choice_is_unbounded {
+                                            Cardinality::unbounded(frame.min_occurs)
+                                        } else if frame.min_occurs == 0 {
+                                            Cardinality::optional_one()
+                                        } else {
+                                            Cardinality::required_one()
+                                        },
                                         nillable: false,
                                         default_value: None,
                                         fixed_value: None,

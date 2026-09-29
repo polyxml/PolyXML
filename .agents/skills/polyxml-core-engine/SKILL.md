@@ -97,6 +97,13 @@ Key mechanisms (regression-locked in `crates/polyxml-core/tests/test_schema_audi
    that list in document order; serialize each item in the same order. Keep
    attributes outside the list and choose a distinct synthetic field name if
    an actual schema field already uses `items`.
+9. **Implicit XML namespace and derived choices**: preload the reserved `xml`
+   prefix as `http://www.w3.org/XML/1998/namespace` even when `xmlns:xml` is
+   absent. Global `xml:lang` attribute references then resolve to the imported
+   declaration instead of an undefined `Lang` model type. A bounded top-level
+   `xs:choice` inside a complex-type extension must keep the derived struct
+   and its base; represent the choice as a synthetic union field. Only
+   base-less choice-only types may become standalone unions.
 
 ## 5. `xsi:type` Polymorphic Dispatch
 

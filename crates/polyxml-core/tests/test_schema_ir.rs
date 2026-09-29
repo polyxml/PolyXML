@@ -93,6 +93,62 @@ fn global_attribute_reference_uses_declared_type() {
 }
 
 #[test]
+fn xml_prefix_is_available_without_explicit_declaration() {
+    let dir = tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("xml.xsd"),
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.w3.org/XML/1998/namespace">
+          <xs:attribute name="lang" type="xs:language"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+    let main = dir.path().join("dc.xsd");
+    std::fs::write(
+        &main,
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:dc">
+          <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+          <xs:complexType name="SimpleLiteral"><xs:attribute ref="xml:lang"/></xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+    let ir = XsdParser::new().parse_file(&main).unwrap();
+    let TypeDef::Struct(literal) = &ir.types[&QName::new(Some("urn:dc"), "SimpleLiteral")] else {
+        panic!("expected SimpleLiteral struct");
+    };
+    assert_eq!(
+        literal.fields[0].type_ref,
+        TypeRef::Primitive(PrimitiveType::Language)
+    );
+}
+
+#[test]
+fn derived_complex_type_keeps_base_and_bounded_choice() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:test" targetNamespace="urn:test">
+      <xs:complexType name="Base"><xs:attribute name="id" type="xs:string"/></xs:complexType>
+      <xs:complexType name="Node"><xs:complexContent><xs:extension base="t:Base"><xs:choice>
+        <xs:element name="left" type="xs:string"/><xs:element name="right" type="xs:int"/>
+      </xs:choice></xs:extension></xs:complexContent></xs:complexType>
+      <xs:complexType name="Child"><xs:complexContent><xs:extension base="t:Node">
+        <xs:attribute name="flag" type="xs:boolean"/>
+      </xs:extension></xs:complexContent></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let TypeDef::Struct(node) = &ir.types[&QName::new(Some("urn:test"), "Node")] else {
+        panic!("derived choice must remain a struct");
+    };
+    assert_eq!(node.base_type, Some(QName::new(Some("urn:test"), "Base")));
+    assert_eq!(node.fields.len(), 1);
+    assert_eq!(node.fields[0].name, "choice");
+    let TypeRef::Named(choice_name) = &node.fields[0].type_ref else {
+        panic!("choice field must refer to a union");
+    };
+    let TypeDef::Union(choice) = &ir.types[choice_name] else {
+        panic!("choice field must refer to a union");
+    };
+    assert_eq!(choice.branches.len(), 2);
+}
+
+#[test]
 fn test_parse_lexical_union_member_types_and_inline_members() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:test" targetNamespace="urn:test">
       <xs:simpleType name="DateOrCode"><xs:union memberTypes="xs:date xs:string">
