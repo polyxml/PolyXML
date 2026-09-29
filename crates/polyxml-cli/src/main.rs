@@ -70,6 +70,10 @@ pub struct GenerateArgs {
     #[arg(value_name = "SCHEMA")]
     pub schemas: Vec<PathBuf>,
 
+    /// Global element(s) to generate, including reachable and polymorphic types
+    #[arg(long = "root-element", value_name = "ELEMENT")]
+    pub root_elements: Vec<String>,
+
     /// Target language(s) to emit (python, rust, cpp, java, ts, go, csharp)
     #[arg(short = 'l', long = "lang", value_name = "LANG")]
     pub lang: Vec<String>,
@@ -233,6 +237,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
             || args.out.is_some()
             || args.custom_header.is_some()
             || args.strict_facets
+            || !args.root_elements.is_empty()
         {
             return Err("Generation options require explicit schema paths. For manifest builds, set target options in polyxml.toml.".into());
         }
@@ -279,7 +284,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         .collect::<std::io::Result<Vec<_>>>()?;
 
     let mut parser = XsdParser::new();
-    let mut compiled_schemas = Vec::new();
+    let mut parsed_schemas = Vec::new();
 
     for schema_path in &args.schemas {
         if !schema_path.exists() {
@@ -287,10 +292,9 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
 
         println!("Parsing schema: {}", schema_path.display());
-        let ir = parser.parse_file(schema_path)?;
-        report_schema_ir(&ir);
-        compiled_schemas.push((schema_path.clone(), ir));
+        parsed_schemas.push((schema_path.clone(), parser.parse_file(schema_path)?));
     }
+    let compiled_schemas = select_compiled_schemas(parsed_schemas, &args.root_elements)?;
 
     if args.dry_run {
         println!("\nDry run completed successfully. No files written.");
@@ -321,6 +325,55 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn select_compiled_schemas(
+    parsed: Vec<(PathBuf, SchemaIR)>,
+    roots: &[String],
+) -> Result<Vec<(PathBuf, SchemaIR)>, Box<dyn std::error::Error>> {
+    if roots.is_empty() {
+        for (_, ir) in &parsed {
+            report_schema_ir(ir);
+        }
+        return Ok(parsed);
+    }
+
+    // Resolve names across the complete input set so a root can belong to any
+    // one schema, while an ambiguous local name still fails consistently.
+    let mut root_index = SchemaIR::new();
+    for (_, ir) in &parsed {
+        root_index.elements.extend(ir.elements.clone());
+    }
+    let requested = root_index.select_root_elements(roots)?;
+    let mut selected = Vec::new();
+    for (path, ir) in parsed {
+        let local_roots: Vec<String> = requested
+            .elements
+            .keys()
+            .filter(|qname| ir.elements.contains_key(*qname))
+            .map(|qname| {
+                format!(
+                    "{{{}}}{}",
+                    qname.namespace.as_deref().unwrap_or(""),
+                    qname.local
+                )
+            })
+            .collect();
+        if local_roots.is_empty() {
+            continue;
+        }
+        let filtered = ir.select_root_elements(&local_roots)?;
+        println!(
+            "Retained {} global elements and {} of {} types in {}",
+            filtered.elements.len(),
+            filtered.types.len(),
+            ir.types.len(),
+            path.display()
+        );
+        report_schema_ir(&filtered);
+        selected.push((path, filtered));
+    }
+    Ok(selected)
+}
+
 fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
     if !args.config.exists() {
         return Err(format!("Manifest not found: {}", args.config.display()).into());
@@ -346,14 +399,17 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut parser = XsdParser::new();
-    let mut compiled_schemas = Vec::new();
+    let mut parsed_schemas = Vec::new();
 
     for schema_path in &schema_files {
         println!("Compiling schema: {}", schema_path.display());
-        let ir = parser.parse_file(schema_path)?;
-        report_schema_ir(&ir);
-        compiled_schemas.push((schema_path.clone(), ir));
+        parsed_schemas.push((schema_path.clone(), parser.parse_file(schema_path)?));
     }
+    let roots = manifest
+        .workspace
+        .as_ref()
+        .map_or(&[][..], |ws| ws.root_elements.as_slice());
+    let compiled_schemas = select_compiled_schemas(parsed_schemas, roots)?;
 
     if targets.is_empty() {
         println!("No generation targets configured in manifest.");
@@ -470,6 +526,10 @@ fn run_module_build(
             for (qname, def) in &ir.elements {
                 if qname.namespace == ir.target_namespace {
                     elements.insert(qname.clone(), def.clone());
+                    global
+                        .elements
+                        .entry(qname.clone())
+                        .or_insert_with(|| def.clone());
                 }
             }
             global.namespaces.extend(ir.namespaces);
@@ -483,6 +543,45 @@ fn run_module_build(
         }
         module_types.insert(name.clone(), owned);
         module_elements.insert(name.clone(), elements);
+    }
+
+    let mut requested_roots = Vec::new();
+    for name in &order {
+        for root in &manifest.modules[name].root_elements {
+            if root.starts_with('{') {
+                requested_roots.push(root.clone());
+                continue;
+            }
+            let matches: Vec<_> = module_elements[name]
+                .keys()
+                .filter(|qname| qname.local == *root)
+                .collect();
+            match matches.as_slice() {
+                [] => return Err(format!("Root element '{root}' was not found in module '{name}'").into()),
+                [qname] => requested_roots.push(format!(
+                    "{{{}}}{}",
+                    qname.namespace.as_deref().unwrap_or(""),
+                    qname.local
+                )),
+                _ => return Err(format!("Root element '{root}' is ambiguous in module '{name}'; use {{namespace}}local-name").into()),
+            }
+        }
+    }
+    if !requested_roots.is_empty() {
+        let original_count = global.types.len();
+        global = global.select_root_elements(&requested_roots)?;
+        for types in module_types.values_mut() {
+            types.retain(|qname| global.types.contains_key(qname));
+        }
+        for elements in module_elements.values_mut() {
+            elements.retain(|qname, _| global.elements.contains_key(qname));
+        }
+        println!(
+            "Retained {} global elements and {} of {} types",
+            global.elements.len(),
+            global.types.len(),
+            original_count
+        );
     }
 
     for qname in global.types.keys() {

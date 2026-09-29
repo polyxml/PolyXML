@@ -8,6 +8,7 @@ complete -c polyxml -n '__fish_seen_subcommand_from generate' -s l -l lang -r -f
 complete -c polyxml -n '__fish_seen_subcommand_from generate' -s b -l backend -r -f -a '(__polyxml_values backend)'
 complete -c polyxml -n '__fish_seen_subcommand_from generate' -l style -r -f -a '(__polyxml_values style)'
 complete -c polyxml -n '__fish_seen_subcommand_from generate' -l feature -r -f -a '(__polyxml_values feature)'
+complete -c polyxml -n '__fish_seen_subcommand_from generate' -l root-element -r -f
 complete -c polyxml -n '__fish_seen_subcommand_from generate build' -l dry-run
 complete -c polyxml -n '__fish_seen_subcommand_from generate build' -l format
 complete -c polyxml -n '__fish_seen_subcommand_from generate build' -s c -l config -r

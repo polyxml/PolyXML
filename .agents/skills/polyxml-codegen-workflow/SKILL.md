@@ -10,6 +10,18 @@ description: >-
 
 ## Large multi-schema regression caution
 
+Root-scoped generation (`--root-element`, or `root_elements` in a workspace or
+module manifest) parses the complete XSD before filtering `SchemaIR`. Preserve
+all named dependencies, including boxed/list refs, while following derived
+types only from element/field/union value positions. Inherited base types are
+dependencies, not polymorphic entry points: expanding their descendants can
+pull an entire large schema back in. On full UCI 2.5, `Entity` should retain
+hundreds rather than all 5,558 types. Validate the filtered IR before emission
+and measure real selected output with a fresh output directory. Referenced
+global element fields may keep a prefixed `xml_name` (for example `t:Head`)
+while their `namespace` already contains the resolved URI; strip the lexical
+prefix before comparing against substitution-group head QNames.
+
 The corpus's UCI 2.5 `defense_uci` module is a useful real-world regression,
 but it contains thousands of types. Run generation and destination-language
 compilers one at a time under `scripts/memcap.sh` and a timeout. Do not launch

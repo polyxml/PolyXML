@@ -18,6 +18,7 @@ _polyxml() {
                 {-b,--backend}'[Serialization backend]:backend:_polyxml_values backend' \
                 '--style[Type representation]:style:_polyxml_values style' \
                 '*--feature[Opt-in enhancement]:feature:_polyxml_values feature' \
+                '*--root-element[Global root element]:element:' \
                 {-o,--out}'[Output directory]:directory:_files -/' \
                 {-c,--config}'[Workspace manifest]:file:_files' \
                 {-p,--package}'[Package or namespace]:package:' \

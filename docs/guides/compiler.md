@@ -68,6 +68,9 @@ polyxml generate --lang python --backend aot --package my_models --out ./generat
 # Generate zero-copy Rust models with inherent streaming codecs
 polyxml generate --lang rust --feature zero-copy --codecs --out ./generated/rust schema.xsd
 
+# Generate one global message and its reachable types from a large schema
+polyxml generate --lang rust --root-element Entity --out ./generated/entity uci.xsd
+
 # Generate all 7 languages simultaneously
 polyxml generate \
   --lang python \
@@ -87,6 +90,7 @@ polyxml generate \
 |---|---|---|---|
 | **Target Language** | `-l`, `--lang` | Target language (`python`, `rust`, `cpp`, `java`, `typescript`, `go`, `csharp`). Can be specified multiple times. | `python` |
 | **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `generated` |
+| **Root Elements** | `--root-element ELEMENT` | Repeatable global element selection; use `{namespace-URI}local-name` if the local name is ambiguous. | All roots and types |
 | **Model Style** | `--style` | Target-specific type representation; see the table below. | Existing target default |
 | **Enhancements** | `--feature NAME` | Repeatable; also accepts comma-separated names. | None added |
 | **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic`/`aot` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
@@ -96,6 +100,14 @@ polyxml generate \
 | **Custom Header** | `--custom-header` | Custom comment, license, or linter directive text to prepend to generated files. | `None` |
 | **Dry Run** | `--dry-run` | Validate options and parse schemas without writing to disk. | `false` |
 | **Format** | `--format` | Automatically format generated code using host toolchains (`ruff`, `cargo fmt`, `clang-format`, `gofmt`). | `false` |
+
+Root selection parses the full schema, then emits the requested element(s),
+their referenced types, substitution group members, and possible derived
+types. It reduces generated output and downstream compile work; it does not
+reduce schema parsing work or add `xsi:type` support to codecs that currently
+reject it. For a manifest build, set `root_elements = ["Entity"]` under
+`[workspace]` for ordinary builds or under `[modules.defense_uci]` for a
+module build. A missing or ambiguous root is an error even with `--dry-run`.
 
 ---
 

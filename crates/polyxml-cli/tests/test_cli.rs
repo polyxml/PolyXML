@@ -33,6 +33,192 @@ fn test_cli_generate_help() {
     assert!(stdout.contains("--strict-facets"));
     assert!(stdout.contains("--dry-run"));
     assert!(stdout.contains("--format"));
+    assert!(stdout.contains("--root-element"));
+}
+
+#[test]
+fn test_cli_root_element_selection() {
+    let dir = tempdir().unwrap();
+    let schema = dir.path().join("roots.xsd");
+    fs::write(&schema, r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:roots">
+      <xs:complexType name="SelectedType"><xs:sequence><xs:element name="Value" type="xs:string"/></xs:sequence></xs:complexType>
+      <xs:complexType name="UnusedType"><xs:sequence><xs:element name="Other" type="xs:string"/></xs:sequence></xs:complexType>
+      <xs:element name="Selected" type="SelectedType"/>
+      <xs:element name="Unused" type="UnusedType"/>
+    </xs:schema>"#).unwrap();
+    let output_dir = dir.path().join("out");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema.to_str().unwrap(),
+            "--lang",
+            "rust",
+            "--root-element",
+            "Selected",
+            "--out",
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let generated = fs::read_to_string(output_dir.join("roots.rs")).unwrap();
+    assert!(generated.contains("SelectedType"));
+    assert!(!generated.contains("UnusedType"));
+    let bad = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema.to_str().unwrap(),
+            "--root-element",
+            "Missing",
+            "--dry-run",
+        ])
+        .output()
+        .unwrap();
+    assert!(!bad.status.success());
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("not found"));
+
+    let other_schema = dir.path().join("other.xsd");
+    fs::write(
+        &other_schema,
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:other">
+          <xs:element name="Other" type="xs:string"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+    let multiple = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema.to_str().unwrap(),
+            other_schema.to_str().unwrap(),
+            "--lang",
+            "rust",
+            "--root-element",
+            "Selected",
+            "--out",
+            dir.path().join("multi-out").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        multiple.status.success(),
+        "{}",
+        String::from_utf8_lossy(&multiple.stderr)
+    );
+    assert!(!dir.path().join("multi-out/other.rs").exists());
+
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"[workspace]
+schemas = ["roots.xsd", "other.xsd"]
+root_elements = ["Selected"]
+
+[[generate]]
+target = "rust"
+output = "manifest-out"
+"#,
+    )
+    .unwrap();
+    let manifest_result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest.to_str().unwrap(), "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        manifest_result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&manifest_result.stderr)
+    );
+    assert!(String::from_utf8_lossy(&manifest_result.stdout).contains("of 2 types"));
+
+    fs::write(
+        &manifest,
+        r#"[modules.selected]
+schemas = ["roots.xsd"]
+root_elements = ["Selected"]
+
+[[generate]]
+target = "rust"
+output = "module-out"
+"#,
+    )
+    .unwrap();
+    let module_result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest.to_str().unwrap(), "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        module_result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&module_result.stderr)
+    );
+    assert!(String::from_utf8_lossy(&module_result.stdout).contains("of 2 types"));
+    let module_build = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        module_build.status.success(),
+        "{}",
+        String::from_utf8_lossy(&module_build.stderr)
+    );
+    let module_source =
+        fs::read_to_string(dir.path().join("module-out/selected/selected.rs")).unwrap();
+    assert!(module_source.contains("SelectedType"));
+    assert!(!module_source.contains("UnusedType"));
+}
+
+#[test]
+fn test_root_selection_keeps_imported_module_types() {
+    let dir = tempdir().unwrap();
+    let fixtures =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/shared_modules");
+    for name in ["common.xsd", "auth.xsd", "billing.xsd"] {
+        fs::copy(fixtures.join(name), dir.path().join(name)).unwrap();
+    }
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"[workspace]
+output_base_dir = "out"
+
+[modules.common]
+schemas = ["common.xsd"]
+
+[modules.auth]
+schemas = ["auth.xsd"]
+depends_on = ["common"]
+root_elements = ["auth"]
+
+[modules.billing]
+schemas = ["billing.xsd"]
+depends_on = ["common"]
+
+[[generate]]
+target = "rust"
+output = "rs"
+"#,
+    )
+    .unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let common = fs::read_to_string(dir.path().join("out/rs/common/common.rs")).unwrap();
+    let auth = fs::read_to_string(dir.path().join("out/rs/auth/auth.rs")).unwrap();
+    let billing = fs::read_to_string(dir.path().join("out/rs/billing/billing.rs")).unwrap();
+    assert!(common.contains("pub struct Person"));
+    assert!(auth.contains("pub struct AuthMessage"));
+    assert!(auth.contains("use super::super::common::{Person"));
+    assert!(!billing.contains("pub struct BillingMessage"));
 }
 
 #[test]

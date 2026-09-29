@@ -51,6 +51,8 @@ pub struct ModuleConfig {
     #[serde(default)]
     pub schemas: Vec<String>,
     #[serde(default)]
+    pub root_elements: Vec<String>,
+    #[serde(default)]
     pub depends_on: Vec<String>,
 }
 
@@ -59,6 +61,8 @@ pub struct WorkspaceSection {
     pub name: Option<String>,
     #[serde(default)]
     pub schemas: Vec<String>,
+    #[serde(default)]
+    pub root_elements: Vec<String>,
     pub include_dirs: Option<Vec<String>>,
     pub output_base_dir: Option<String>,
     pub custom_header: Option<String>,

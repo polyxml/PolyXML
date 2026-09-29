@@ -11,7 +11,7 @@ _polyxml() {
         --backend|-b) kind=backend ;;
         --style) kind=style ;;
         --feature) kind=feature ;;
-        --out|--out-dir|-o|--config|-c|--schema|-s) return ;;
+        --out|--out-dir|-o|--config|-c|--schema|-s|--root-element) return ;;
     esac
     case "$cur" in
         --lang=*|--backend=*|--style=*|--feature=*)

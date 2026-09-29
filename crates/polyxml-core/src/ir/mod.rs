@@ -1,7 +1,7 @@
 pub mod tarjan;
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
 
 /// Fully qualified XML Name (Namespace URI + Local Name).
@@ -467,6 +467,161 @@ pub struct SchemaIR {
 }
 
 impl SchemaIR {
+    /// Keep the selected global elements and all types that can occur beneath them.
+    /// The schema is parsed in full before this operation, so references can be
+    /// followed across imports and includes.
+    pub fn select_root_elements(&self, roots: &[String]) -> Result<Self, String> {
+        if roots.is_empty() {
+            return Ok(self.clone());
+        }
+
+        let mut selected_elements = BTreeSet::new();
+        for name in roots {
+            let matches: Vec<_> = if let Some(qualified) = name.strip_prefix('{') {
+                let (namespace, local) = qualified.split_once('}').ok_or_else(|| {
+                    format!("Invalid root element '{name}': expected {{namespace}}local-name")
+                })?;
+                if local.is_empty() {
+                    return Err(format!("Invalid root element '{name}': missing local name"));
+                }
+                self.elements
+                    .keys()
+                    .filter(|q| {
+                        q.namespace.as_deref().unwrap_or("") == namespace && q.local == local
+                    })
+                    .cloned()
+                    .collect()
+            } else {
+                self.elements
+                    .keys()
+                    .filter(|q| q.local == *name)
+                    .cloned()
+                    .collect()
+            };
+            match matches.as_slice() {
+                [] => return Err(format!("Root element '{name}' was not found in the schema")),
+                [qname] => {
+                    selected_elements.insert(qname.clone());
+                }
+                _ => {
+                    return Err(format!(
+                        "Root element '{name}' is ambiguous; use {{namespace}}local-name"
+                    ))
+                }
+            }
+        }
+
+        let mut descendants: HashMap<QName, Vec<QName>> = HashMap::new();
+        for (qname, def) in &self.types {
+            let base = match def {
+                TypeDef::Struct(s) => s.base_type.as_ref(),
+                TypeDef::Simple(s) => named_ref(&s.base_type),
+                TypeDef::Enum(e) => named_ref(&e.base_type),
+                TypeDef::Union(_) => None,
+            };
+            if let Some(base) = base {
+                descendants
+                    .entry(base.clone())
+                    .or_default()
+                    .push(qname.clone());
+            }
+        }
+
+        let mut selected_types = BTreeSet::new();
+        let mut pending_elements: Vec<_> = selected_elements.iter().cloned().collect();
+        let mut pending_types: Vec<(QName, bool)> = Vec::new();
+        let mut expanded_polymorphic = BTreeSet::new();
+        while !pending_elements.is_empty() || !pending_types.is_empty() {
+            while let Some(qname) = pending_elements.pop() {
+                if let Some(element) = self.elements.get(&qname) {
+                    push_named_ref(&element.type_ref, true, &mut pending_types);
+                    if let Some(head) = &element.substitution_group {
+                        if selected_elements.insert(head.clone()) {
+                            pending_elements.push(head.clone());
+                        }
+                    }
+                }
+                if let Some(members) = self.substitution_groups.get(&qname) {
+                    for member in members {
+                        if selected_elements.insert(member.clone()) {
+                            pending_elements.push(member.clone());
+                        }
+                    }
+                }
+            }
+            if let Some((qname, polymorphic)) = pending_types.pop() {
+                if polymorphic && expanded_polymorphic.insert(qname.clone()) {
+                    if let Some(children) = descendants.get(&qname) {
+                        pending_types.extend(children.iter().cloned().map(|child| (child, true)));
+                    }
+                }
+                if !selected_types.insert(qname.clone()) {
+                    continue;
+                }
+                if let Some(def) = self.types.get(&qname) {
+                    match def {
+                        TypeDef::Struct(s) => {
+                            if let Some(base) = &s.base_type {
+                                pending_types.push((base.clone(), false));
+                            }
+                            for field in &s.fields {
+                                push_named_ref(&field.type_ref, true, &mut pending_types);
+                                if field.kind == FieldKind::Element {
+                                    let element = referenced_element_name(
+                                        field.namespace.as_deref(),
+                                        &field.xml_name,
+                                    );
+                                    if self.substitution_groups.contains_key(&element)
+                                        && selected_elements.insert(element.clone())
+                                    {
+                                        pending_elements.push(element);
+                                    }
+                                }
+                            }
+                        }
+                        TypeDef::Simple(s) => {
+                            push_named_ref(&s.base_type, false, &mut pending_types)
+                        }
+                        TypeDef::Enum(e) => push_named_ref(&e.base_type, false, &mut pending_types),
+                        TypeDef::Union(u) => {
+                            for branch in &u.branches {
+                                push_named_ref(&branch.type_ref, true, &mut pending_types);
+                                let element = referenced_element_name(
+                                    branch.namespace.as_deref(),
+                                    &branch.xml_name,
+                                );
+                                if self.substitution_groups.contains_key(&element)
+                                    && selected_elements.insert(element.clone())
+                                {
+                                    pending_elements.push(element);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut result = self.clone();
+        result
+            .types
+            .retain(|qname, _| selected_types.contains(qname));
+        result
+            .elements
+            .retain(|qname, _| selected_elements.contains(qname));
+        result
+            .external_types
+            .retain(|qname, _| selected_types.contains(qname));
+        result.substitution_groups.retain(|head, members| {
+            if !selected_elements.contains(head) {
+                return false;
+            }
+            members.retain(|member| selected_elements.contains(member));
+            !members.is_empty()
+        });
+        Ok(result)
+    }
+
     pub fn is_external_type(&self, qname: &QName) -> bool {
         if qname
             .namespace
@@ -518,5 +673,167 @@ impl SchemaIR {
     /// boxing minimal cut-point fields.
     pub fn resolve_cycles(&mut self) {
         tarjan::resolve_cycles(self);
+    }
+}
+
+fn named_ref(type_ref: &TypeRef) -> Option<&QName> {
+    match type_ref {
+        TypeRef::Named(qname) => Some(qname),
+        TypeRef::Boxed(inner) | TypeRef::List(inner) => named_ref(inner),
+        TypeRef::Primitive(_) => None,
+    }
+}
+
+fn push_named_ref(type_ref: &TypeRef, polymorphic: bool, pending: &mut Vec<(QName, bool)>) {
+    if let Some(qname) = named_ref(type_ref) {
+        pending.push((qname.clone(), polymorphic));
+    }
+}
+
+fn referenced_element_name(namespace: Option<&str>, xml_name: &str) -> QName {
+    let local = xml_name.rsplit(':').next().unwrap_or(xml_name);
+    QName::new(namespace, local)
+}
+
+#[cfg(test)]
+mod root_selection_tests {
+    use super::*;
+
+    fn structure(name: &str, base: Option<&str>, fields: Vec<FieldDef>) -> TypeDef {
+        TypeDef::Struct(StructDef {
+            qname: QName::new(Some("urn:test"), name),
+            base_type: base.map(|name| QName::new(Some("urn:test"), name)),
+            is_abstract: false,
+            is_mixed: false,
+            fields,
+            documentation: None,
+        })
+    }
+
+    fn element(name: &str, ty: &str) -> ElementDef {
+        ElementDef {
+            qname: QName::new(Some("urn:test"), name),
+            type_ref: TypeRef::named(QName::new(Some("urn:test"), ty)),
+            substitution_group: None,
+            nillable: false,
+            documentation: None,
+        }
+    }
+
+    #[test]
+    fn keeps_references_descendants_and_substitutions() {
+        let mut ir = SchemaIR::new();
+        let mut field = FieldDef::new(
+            "item",
+            "Item",
+            FieldKind::Element,
+            TypeRef::List(Box::new(TypeRef::named(QName::new(
+                Some("urn:test"),
+                "Choice",
+            )))),
+        );
+        field.namespace = Some("urn:test".to_string());
+        ir.add_type(structure("RootType", None, vec![field]));
+        ir.add_type(structure("Base", None, vec![]));
+        ir.add_type(structure("Derived", Some("Base"), vec![]));
+        ir.add_type(TypeDef::Union(UnionDef {
+            qname: QName::new(Some("urn:test"), "Choice"),
+            branches: vec![UnionBranch {
+                variant_name: "Base".into(),
+                xml_name: "Base".into(),
+                namespace: Some("urn:test".into()),
+                type_ref: TypeRef::named(QName::new(Some("urn:test"), "Base")),
+                documentation: None,
+            }],
+            documentation: None,
+        }));
+        ir.add_type(structure("Unrelated", None, vec![]));
+        ir.add_element(element("Root", "RootType"));
+        ir.add_element(element("UnrelatedRoot", "Unrelated"));
+        let mut member = element("Member", "Derived");
+        member.substitution_group = Some(QName::new(Some("urn:test"), "Root"));
+        ir.add_element(member);
+
+        let selected = ir.select_root_elements(&["Root".into()]).unwrap();
+        assert_eq!(selected.elements.len(), 2);
+        assert_eq!(selected.types.len(), 4);
+        assert!(selected
+            .types
+            .contains_key(&QName::new(Some("urn:test"), "Derived")));
+        assert!(!selected
+            .types
+            .contains_key(&QName::new(Some("urn:test"), "Unrelated")));
+        let combined = ir
+            .select_root_elements(&["Root".into(), "UnrelatedRoot".into()])
+            .unwrap();
+        assert_eq!(combined.elements.len(), 3);
+        assert!(combined
+            .types
+            .contains_key(&QName::new(Some("urn:test"), "Unrelated")));
+    }
+
+    #[test]
+    fn rejects_missing_and_ambiguous_roots() {
+        let mut ir = SchemaIR::new();
+        ir.add_element(element("Root", "RootType"));
+        let mut second = element("Root", "RootType");
+        second.qname.namespace = Some("urn:other".into());
+        ir.add_element(second);
+        assert!(ir
+            .select_root_elements(&["Root".into()])
+            .unwrap_err()
+            .contains("ambiguous"));
+        assert_eq!(
+            ir.select_root_elements(&["{urn:test}Root".into()])
+                .unwrap()
+                .elements
+                .len(),
+            1
+        );
+        assert!(ir
+            .select_root_elements(&["Missing".into()])
+            .unwrap_err()
+            .contains("not found"));
+    }
+
+    #[test]
+    fn inherited_base_does_not_select_sibling_types() {
+        let mut ir = SchemaIR::new();
+        ir.add_type(structure("CommonBase", None, vec![]));
+        ir.add_type(structure("SelectedType", Some("CommonBase"), vec![]));
+        ir.add_type(structure("SiblingType", Some("CommonBase"), vec![]));
+        ir.add_element(element("Selected", "SelectedType"));
+        let selected = ir.select_root_elements(&["Selected".into()]).unwrap();
+        assert!(selected
+            .types
+            .contains_key(&QName::new(Some("urn:test"), "CommonBase")));
+        assert!(selected
+            .types
+            .contains_key(&QName::new(Some("urn:test"), "SelectedType")));
+        assert!(!selected
+            .types
+            .contains_key(&QName::new(Some("urn:test"), "SiblingType")));
+    }
+
+    #[test]
+    fn field_reference_keeps_substitution_group_members() {
+        let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            xmlns:t="urn:test" targetNamespace="urn:test" elementFormDefault="qualified">
+            <xs:element name="Head" type="xs:string" abstract="true"/>
+            <xs:element name="Member" type="xs:string" substitutionGroup="t:Head"/>
+            <xs:complexType name="ContainerType"><xs:sequence>
+                <xs:element ref="t:Head"/>
+            </xs:sequence></xs:complexType>
+            <xs:element name="Container" type="t:ContainerType"/>
+        </xs:schema>"#;
+        let mut parser = crate::schema_parser::XsdParser::new();
+        let ir = parser.parse_str(xsd).unwrap();
+        let selected = ir.select_root_elements(&["Container".into()]).unwrap();
+        assert!(selected
+            .elements
+            .contains_key(&QName::new(Some("urn:test"), "Head")));
+        assert!(selected
+            .elements
+            .contains_key(&QName::new(Some("urn:test"), "Member")));
     }
 }
