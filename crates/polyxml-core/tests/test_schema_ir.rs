@@ -6,6 +6,30 @@ use polyxml::ir::{
     TypeDef, TypeRef,
 };
 use polyxml::schema_parser::XsdParser;
+use tempfile::tempdir;
+
+#[test]
+fn missing_included_schema_is_an_error() {
+    let dir = tempdir().unwrap();
+    for (name, include) in [
+        ("empty.xsd", r#"<xs:include schemaLocation="missing.xsd"/>"#),
+        (
+            "start.xsd",
+            r#"<xs:include schemaLocation="missing.xsd"></xs:include>"#,
+        ),
+    ] {
+        let path = dir.path().join(name);
+        std::fs::write(
+            &path,
+            format!(
+                r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">{include}</xs:schema>"#
+            ),
+        )
+        .unwrap();
+        let error = XsdParser::new().parse_file(&path).unwrap_err();
+        assert!(error.to_string().contains("missing.xsd"), "{error}");
+    }
+}
 
 #[test]
 fn consumed_child_subtrees_do_not_swallow_following_types() {

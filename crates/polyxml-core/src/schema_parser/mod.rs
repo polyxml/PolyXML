@@ -255,6 +255,11 @@ impl XsdParser {
                                             }
                                         }
                                         merge_ir(&mut ir, sub_ir);
+                                    } else {
+                                        return Err(SchemaError::Resolution(format!(
+                                            "included schema not found: {}",
+                                            inc_path.display()
+                                        )));
                                     }
                                 }
                             }
@@ -366,6 +371,11 @@ impl XsdParser {
                                             }
                                         }
                                         merge_ir(&mut ir, sub_ir);
+                                    } else {
+                                        return Err(SchemaError::Resolution(format!(
+                                            "included schema not found: {}",
+                                            inc_path.display()
+                                        )));
                                     }
                                 }
                             }

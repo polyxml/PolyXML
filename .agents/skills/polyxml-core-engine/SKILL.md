@@ -84,7 +84,10 @@ Key mechanisms (regression-locked in `crates/polyxml-core/tests/test_schema_audi
 6. **File cache & chameleon includes**: the cache stores the raw post-passed
    IR keyed by canonical path (`file_cache`), replays group state
    (`file_groups`) on hit, and re-keys chameleon (namespace-less) includes
-   per-includer via `rekey_to_namespace`/`rekey_new_state`.
+   per-includer via `rekey_to_namespace`/`rekey_new_state`. A missing local
+   `<xs:include>` or `<xs:redefine>` must return a resolution error; silently
+   skipping it leaves unresolved type references that generators may mistake
+   for valid model types. Explicit imports retain their existing behavior.
 7. Parser reuse across `parse_file` calls is supported; groups partially
    replay from `file_groups` on cache hit.
 8. **Mixed content**: compile `mixed="true"` structs after group expansion into
