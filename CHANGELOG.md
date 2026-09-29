@@ -1,3 +1,10 @@
+# [0.31.0](https://github.com/polyxml/PolyXML/compare/v0.30.7...v0.31.0) (2026-09-29)
+
+
+### Features
+
+* **codegen:** generate selected root element graphs ([7d56606](https://github.com/polyxml/PolyXML/commit/7d5660610c3d5e1457ce04e7bc2efe51fb4f7f77))
+
 ## [0.30.7](https://github.com/polyxml/PolyXML/compare/v0.30.6...v0.30.7) (2026-09-29)
 
 
