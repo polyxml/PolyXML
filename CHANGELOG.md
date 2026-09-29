@@ -1,3 +1,10 @@
+## [0.30.7](https://github.com/polyxml/PolyXML/compare/v0.30.6...v0.30.7) (2026-09-29)
+
+
+### Bug Fixes
+
+* resolve implicit xml attributes and derived choices ([5a38f44](https://github.com/polyxml/PolyXML/commit/5a38f44abb3704c7c43f1ac843a4e31a351c2fb6))
+
 ## [0.30.6](https://github.com/polyxml/PolyXML/compare/v0.30.5...v0.30.6) (2026-09-29)
 
 
