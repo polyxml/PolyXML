@@ -91,6 +91,10 @@ polyxml generate schemas/pain.001.001.09.xsd --lang java \
   --backend jackson --style pojo --feature builder --feature direct-codec \
   --package com.enterprise.banking --out ./generated/java
 
+# Filter massive schemas to selected root elements and reachable types
+polyxml generate schemas/uci.xsd --lang rust \
+  --root-element Entity --root-element PositionReport --out ./generated/uci
+
 # 2. Or build an entire enterprise project declaratively
 polyxml build --config polyxml.toml
 ```

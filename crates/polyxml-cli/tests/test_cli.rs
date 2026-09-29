@@ -172,6 +172,78 @@ output = "module-out"
 }
 
 #[test]
+fn test_cli_multiple_root_element_selection() {
+    let dir = tempdir().unwrap();
+    let schema = dir.path().join("multi_roots.xsd");
+    fs::write(
+        &schema,
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:multi">
+      <xs:complexType name="EntityType"><xs:sequence><xs:element name="Id" type="xs:string"/></xs:sequence></xs:complexType>
+      <xs:complexType name="PositionReportType"><xs:sequence><xs:element name="Lat" type="xs:double"/></xs:sequence></xs:complexType>
+      <xs:complexType name="SensorReportType"><xs:sequence><xs:element name="Value" type="xs:string"/></xs:sequence></xs:complexType>
+      <xs:element name="Entity" type="EntityType"/>
+      <xs:element name="PositionReport" type="PositionReportType"/>
+      <xs:element name="SensorReport" type="SensorReportType"/>
+    </xs:schema>"#,
+    )
+    .unwrap();
+
+    let output_dir = dir.path().join("out");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema.to_str().unwrap(),
+            "--lang",
+            "rust",
+            "--root-element",
+            "Entity",
+            "--root-element",
+            "PositionReport",
+            "--out",
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let generated = fs::read_to_string(output_dir.join("multi_roots.rs")).unwrap();
+    assert!(generated.contains("EntityType"));
+    assert!(generated.contains("PositionReportType"));
+    assert!(!generated.contains("SensorReportType"));
+
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"[workspace]
+schemas = ["multi_roots.xsd"]
+root_elements = ["Entity", "PositionReport"]
+
+[[generate]]
+target = "rust"
+output = "manifest-out"
+"#,
+    )
+    .unwrap();
+    let manifest_result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        manifest_result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&manifest_result.stderr)
+    );
+    let manifest_source =
+        fs::read_to_string(dir.path().join("manifest-out/multi_roots.rs")).unwrap();
+    assert!(manifest_source.contains("EntityType"));
+    assert!(manifest_source.contains("PositionReportType"));
+    assert!(!manifest_source.contains("SensorReportType"));
+}
+
+#[test]
 fn test_root_selection_keeps_imported_module_types() {
     let dir = tempdir().unwrap();
     let fixtures =

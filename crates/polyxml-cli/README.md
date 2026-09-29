@@ -115,6 +115,9 @@ polyxml generate \
   --out ./generated \
   schemas/pain.001.001.09.xsd
 
+# Generate selected root elements and their reachable types from a large schema
+polyxml generate --lang rust --root-element Entity --root-element PositionReport --out ./generated/uci schemas/uci.xsd
+
 # Dry-run inspection without writing files to disk
 polyxml generate --lang rust --dry-run schemas/order.xsd
 ```
@@ -143,6 +146,7 @@ polyxml validate schemas/*.xsd
 [workspace]
 name = "enterprise-data-pipeline"
 schemas = ["schemas/iso20022/*.xsd"]
+root_elements = ["CustomerCreditTransferInitiation", "PaymentReturn"] # Optional: restrict to specific roots
 include_dirs = ["schemas/common/"]
 output_base_dir = "./generated"
 

@@ -68,8 +68,13 @@ polyxml generate --lang python --backend aot --package my_models --out ./generat
 # Generate zero-copy Rust models with inherent streaming codecs
 polyxml generate --lang rust --feature zero-copy --codecs --out ./generated/rust schema.xsd
 
-# Generate one global message and its reachable types from a large schema
-polyxml generate --lang rust --root-element Entity --out ./generated/entity uci.xsd
+# Generate selected root messages and their reachable types from a large schema
+polyxml generate \
+  --lang rust \
+  --root-element Entity \
+  --root-element PositionReport \
+  --out ./generated/uci \
+  uci.xsd
 
 # Generate all 7 languages simultaneously
 polyxml generate \
@@ -103,10 +108,11 @@ polyxml generate \
 
 Root selection parses the full schema, then emits the requested element(s),
 their referenced types, substitution group members, and possible derived
-types. It reduces generated output and downstream compile work; it does not
+types. Multiple root elements can be specified by repeating `--root-element`
+on the CLI. It reduces generated output and downstream compile work; it does not
 reduce schema parsing work or add `xsi:type` support to codecs that currently
-reject it. For a manifest build, set `root_elements = ["Entity"]` under
-`[workspace]` for ordinary builds or under `[modules.defense_uci]` for a
+reject it. For a manifest build, set `root_elements = ["Entity", "PositionReport"]`
+under `[workspace]` for ordinary builds or under `[modules.defense_uci]` for a
 module build. A missing or ambiguous root is an error even with `--dry-run`.
 
 ---

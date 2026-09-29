@@ -262,6 +262,9 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
       --lang csharp --namespace Sensors \
       --out ./generated \
       schemas/sensor.xsd
+
+    # Or filter a large schema to specific root element(s) and their reachable dependencies
+    polyxml generate --lang rust --root-element Entity --root-element PositionReport --out ./generated/uci schemas/uci.xsd
     ```
 
     ### 2. Declarative Workspace Build
