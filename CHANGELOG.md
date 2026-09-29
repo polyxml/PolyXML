@@ -1,3 +1,10 @@
+## [0.30.3](https://github.com/polyxml/PolyXML/compare/v0.30.2...v0.30.3) (2026-09-29)
+
+
+### Bug Fixes
+
+* preserve UCI types and emit compilable generated models ([#93](https://github.com/polyxml/PolyXML/issues/93)) ([9329c1e](https://github.com/polyxml/PolyXML/commit/9329c1e23e9579d968400f00ee8b35463c01fc85))
+
 ## [0.30.2](https://github.com/polyxml/PolyXML/compare/v0.30.1...v0.30.2) (2026-09-28)
 
 
