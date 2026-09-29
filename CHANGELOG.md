@@ -1,3 +1,10 @@
+## [0.30.6](https://github.com/polyxml/PolyXML/compare/v0.30.5...v0.30.6) (2026-09-29)
+
+
+### Bug Fixes
+
+* report missing local XSD includes ([945778e](https://github.com/polyxml/PolyXML/commit/945778e29a09b2363d7024c03d6cd0c5db888716))
+
 ## [0.30.5](https://github.com/polyxml/PolyXML/compare/v0.30.4...v0.30.5) (2026-09-29)
 
 
