@@ -1,3 +1,10 @@
+## [0.30.4](https://github.com/polyxml/PolyXML/compare/v0.30.3...v0.30.4) (2026-09-29)
+
+
+### Bug Fixes
+
+* compile cross-module Java/Go and mixed-content TypeScript schemas ([#97](https://github.com/polyxml/PolyXML/issues/97) [#95](https://github.com/polyxml/PolyXML/issues/95)) ([36bdb08](https://github.com/polyxml/PolyXML/commit/36bdb08594292b3cafbb507c7fe064f8a0b8ccd9))
+
 ## [0.30.3](https://github.com/polyxml/PolyXML/compare/v0.30.2...v0.30.3) (2026-09-29)
 
 
