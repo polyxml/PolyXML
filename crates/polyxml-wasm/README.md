@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@polyxml/wasm"><img src="https://img.shields.io/npm/v/@polyxml/wasm.svg?logo=npm&color=CB3837&label=npm" alt="npm"></a>
   <a href="https://webassembly.org"><img src="https://img.shields.io/badge/WebAssembly-Wasm-654FF0.svg?logo=webassembly&logoColor=white" alt="WebAssembly"></a>
-  <a href="https://polyxml.github.io/PolyXML/guides/wasm/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg" alt="Documentation"></a>
+  <a href="https://polyxml.github.io/PolyXML/languages/wasm/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg" alt="Documentation"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 

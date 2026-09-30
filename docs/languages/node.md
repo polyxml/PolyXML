@@ -17,6 +17,9 @@ npm install @polyxml/node
 
 PolyXML ships pre-built binaries across Linux, macOS, and Windows via standard npm optional dependencies.
 
+> [!TIP]
+> For browser environments, Cloudflare Workers, V8 isolates, or serverless runtimes where native binary addons cannot run, see the [WebAssembly Runtime](wasm.md) guide.
+
 ---
 
 ## 1. Strongly-Typed TypeScript Schemas

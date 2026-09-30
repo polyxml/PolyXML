@@ -12,6 +12,7 @@ Choose the ecosystem you are using:
 - [C++20](cpp.md)
 - [Go](go.md)
 - [TypeScript and Node.js](node.md)
+- [WebAssembly](wasm.md)
 - [Java](java.md)
 - [C#](csharp.md)
 
@@ -23,11 +24,12 @@ All seven targets can generate models from XSD with `polyxml generate`. The defa
 
 | Target | Default generated models | Optional code generation |
 | --- | --- | --- |
-| [Rust](rust.md) | Native Rust types with streaming XML codecs | `phf` dispatch; owned strings with `--zero-copy=false` |
+| [Rust](rust.md) | Native Rust types with streaming XML codecs | `phf` dispatch; owned strings with `--zero-copy=false`; topological chunking with `--split-units` |
 | [Python](python.md) | Dataclasses with slots and keyword-only fields | Pydantic v2 backend; `slots` and `kw-only` for dataclasses |
 | [C++20](cpp.md) | Header-based types | C++ modules (`--mode modules`); Glaze metadata |
 | [Go](go.md) | Go structs with XML and JSON tags | EasyJSON annotations; Sonic tags (see the [current limitation](go.md)) |
 | [TypeScript / Node.js](node.md) | TypeScript interfaces | Zod, Valibot, or TypeBox schemas |
+| [WebAssembly](wasm.md) | Browser, Edge & Node runtime (`@polyxml/wasm`) | Streaming `parseStream`, schema validation, zero-dependency Wasm |
 | [Java](java.md) | Java records | POJOs, builders, direct XML codecs, Jackson backend |
 | [C#](csharp.md) | Record classes | Mutable classes, record structs, source generation |
 
