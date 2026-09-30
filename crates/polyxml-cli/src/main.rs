@@ -130,7 +130,7 @@ pub struct GenerateArgs {
     #[arg(long = "custom-header", value_name = "TEXT")]
     pub custom_header: Option<String>,
 
-    /// Split oversized modules into bounded topological chunks (default: auto if > 400 types)
+    /// Split oversized modules into bounded topological chunks (optional setting, default: false)
     #[arg(long = "split-units", default_missing_value = "true", num_args = 0..=1)]
     pub split_units: Option<bool>,
 

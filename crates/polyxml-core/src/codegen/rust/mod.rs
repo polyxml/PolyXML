@@ -42,7 +42,7 @@ pub struct RustOptions {
     pub pyo3_module_name: Option<String>,
     /// Custom header text to prepend to generated files (default: None).
     pub custom_header: Option<String>,
-    /// Split oversized modules into bounded topological chunks (default: None, auto-split if > 400 types).
+    /// Split oversized modules into bounded topological chunks (optional setting, default: false).
     #[serde(default)]
     pub split_units: Option<bool>,
     /// Target maximum types per compilation unit chunk (default: 250).
@@ -304,16 +304,14 @@ impl RustCodegen {
     }
 
     /// Generate a multi-file or single-file module representation.
-    /// When `split_units` is requested or the type count exceeds the threshold,
-    /// emits topologically sorted, bounded chunk modules (`chunk_00.rs`, `chunk_01.rs`, ...)
-    /// and a parent `mod.rs` that re-exports all chunks.
+    /// When `split_units` is requested, emits topologically sorted, bounded chunk modules
+    /// (`chunk_00.rs`, `chunk_01.rs`, ...) and a parent `mod.rs` that re-exports all chunks.
     pub fn generate_files(&self, ir: &SchemaIR, base_name: &str) -> Vec<(String, String)> {
         set_type_name_map(build_type_name_map(ir, |local| {
             AsPascalCase(local).to_string()
         }));
 
-        let emitted_count = ir.types.keys().filter(|q| !ir.is_external_type(q)).count();
-        let should_split = self.options.split_units.unwrap_or(emitted_count > 400);
+        let should_split = self.options.split_units.unwrap_or(false);
         let chunk_size = self.options.chunk_size.unwrap_or(250);
 
         if !should_split {

@@ -193,7 +193,7 @@ When compiling massive, highly constrained enterprise XML schemas—such as **US
 PolyXML solves this fundamentally at the compiler IR level through **Topological SCC Condensation**:
 * **Cycle Condensation**: Runs Tarjan's Strongly Connected Components algorithm across the type dependency graph, identifying all mutually recursive types and contracting them into indivisible super-nodes.
 * **Topological DAG Ordering**: Topologically sorts the condensation DAG, ensuring dependencies flow strictly in one direction ($A \leftarrow B \leftarrow C$).
-* **Bounded Chunking**: Groups types into modular submodules capped at a bounded threshold (~250 types / ~10,000 lines). Circular imports become **mathematically impossible** across submodules because chunks never reference subsequent chunks.
+* **Bounded Chunking**: Groups types into modular submodules capped at a bounded threshold (~250 types / ~10,000 lines). Circular imports become **mathematically impossible** across submodules because chunks never reference subsequent chunks. Available as an optional setting via `--split-units` or `split_units = true` in `polyxml.toml` (with configurable `--chunk-size`).
 * **Zero Breaking Changes**: Root module re-exports (`pub use chunk_*::*;` in Rust; `__init__.py` in Python; umbrella headers in C++) guarantee that downstream code retains a 100% stable, identical public API.
 
 ---
