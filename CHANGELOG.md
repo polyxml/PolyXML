@@ -1,3 +1,10 @@
+# [0.33.0](https://github.com/polyxml/PolyXML/compare/v0.32.0...v0.33.0) (2026-09-30)
+
+
+### Features
+
+* **codegen:** make compilation unit chunking an explicit opt-in setting ([dcf8deb](https://github.com/polyxml/PolyXML/commit/dcf8deb78da0263d9b1f2d56a1841fd68fe1d72a))
+
 # [0.32.0](https://github.com/polyxml/PolyXML/compare/v0.31.0...v0.32.0) (2026-09-30)
 
 

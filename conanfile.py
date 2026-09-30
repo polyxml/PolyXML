@@ -7,7 +7,7 @@ from conan.tools.files import copy
 
 class PolyxmlConan(ConanFile):
     name = "polyxml"
-    version = "0.32.0"
+    version = "0.33.0"
     description = "High-performance, polyglot native XML data-binding engine built in Rust"
     license = "MIT"
     url = "https://github.com/conan-io/conan-center-index"
