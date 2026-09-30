@@ -52,6 +52,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 5. **🛡️ Controlled XML Entity Handling**: The native streaming runtime resolves standard and numeric character references in memory and does not fetch external entities while parsing XML. Schema compilation separately reads local XSD includes and imports.
+6. **🧩 Scalable Enterprise Architecture**: Scales effortlessly to massive schemas (such as USAF UCI v2.5 with 5,558 types or HL7 FHIR) using Tarjan SCC cycle condensation, topological DAG chunking, and root-element graph selection—preventing downstream compiler OOMs, eliminating Python circular import deadlocks, and keeping toolchains responsive.
 
 ### Why PolyXML Across Ecosystems
 

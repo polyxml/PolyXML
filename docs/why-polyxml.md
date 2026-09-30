@@ -22,9 +22,9 @@ Yet, for over twenty years, the developer tooling landscape for XML has suffered
 | **C#** | **`XmlSchemaClassGenerator` / `xsd.exe`** | Reflection `System.Xml.Serialization` | 🟡 **Moderate**: Partial classes, nullability | Splits unbounded `xs:choice` into separate lists (destroying document order); unions degrade to strings; no source generator | ✅ **C# 12 / .NET 8+ Records**: Primary constructors, polymorphic choice unions preserving order, `System.Text.Json` source generator contexts, `IValidatableObject` validation |
 | **C++** | **CodeSynthesis XSD** | Hard dependency on **Apache Xerces-C++** | ❌ **Low**: Pre-C++11 raw pointers, `auto_ptr`, Boost wrappers | Massive binary footprint; expensive **UTF-8 ↔ UTF-16 (`XMLCh`) transcoding**; punitive **GPL v2 / commercial dual-license** | ✅ **Modern C++20/C++23**: `std::variant`, `std::optional`, `std::string_view`, concepts, zero Xerces dependency, **permissive MIT license** |
 | **C++** | **gSOAP (`soapcpp2`)** | Custom low-level C parser with macro tables | ❌ **Very Low**: Procedural C/C++ | Global state variables; namespace collisions; fragile memory ownership; GPL/commercial dual-license | ✅ **Thread-Safe Modern Value Types**: RAII memory management, CMake/Meson module export |
-| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | [10.0x slower to read and 23.5x slower to write](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md) on the 10,000-item catalog workload | ✅ **Rust PyO3 Engine**: Typed models, in-memory XML entity handling, and PEP 695 type aliases |
+| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | [10.0x slower to read and 23.5x slower to write](https://github.com/polyxml/PolyXML/blob/main/benchmarks/python/results.md); circular import deadlocks (`ImportError`) on recursive schemas; high memory footprint | ✅ **Rust PyO3 Engine & Topological Chunking**: Typed models, in-memory XML entity handling, PEP 695 type aliases, and automatic DAG chunking eliminating circular imports |
 | **Python** | **`generateDS`** | Monolithic Python script with string matching | ❌ **Very Low**: Legacy procedural classes | Monolithic un-typed files; fails on substitution groups and circular definitions | ✅ **Pydantic v2 & `@dataclass(slots=True)`**: Complete restriction facet validation and IDE autocomplete |
-| **Rust** | **`xsd-parser-rs`** | quick-xml / serde-xml-rs derive attributes | 🟡 **Moderate**: Rust structs with serde | **Panics on enterprise schemas** (ISO 20022); cross-namespace type name collisions; serde impedance mismatch on duplicate element sequences | ✅ **Pure-Rust Compiler & Zero-Copy Codecs**: Tarjan SCC cycle-cutting (`Box<T>`), streaming `Cow<'a, str>`, zero Serde mismatch |
+| **Rust** | **`xsd-parser-rs`** | quick-xml / serde-xml-rs derive attributes | 🟡 **Moderate**: Rust structs with serde | **Panics on enterprise schemas** (ISO 20022); cross-namespace collisions; monolithic files exhaust compiler RAM on large schemas | ✅ **Pure-Rust Compiler & Zero-Copy Codecs**: Tarjan SCC cycle-cutting (`Box<T>`), streaming `Cow<'a, str>`, and bounded compilation unit chunking |
 | **Go** | **`xuri/xgen` / `goxsd`** | Direct SAX mapping to `encoding/xml` | 🟡 **Moderate**: Standard Go structs | **Collapses `xs:choice` into optional pointers** (losing mutual exclusivity); drops structs on multi-file schemas; no facet validation | ✅ **Go 1.22+ Structs with Choice Validation**: Custom `UnmarshalXML` enforcing mutual exclusivity, pointer cycle cuts, canonical initialisms (`ID`, `URL`) |
 | **TypeScript** | **`cxsd`** | JSON-like intermediate mapping | ❌ **Low**: Ambient `.d.ts` classes | **Abandoned project**; no ES Module support; loses choice element ordering; no runtime facet validation | ✅ **TypeScript 5+ & Runtime Zod Schemas**: Discriminated unions, `as const` enums, circular reference handling via `z.lazy()` |
 
@@ -126,7 +126,7 @@ Historical C++ tools like **CodeSynthesis XSD** and **gSOAP** provide high execu
 
 ---
 
-## ⚡ The 6 Pillars of PolyXML
+## ⚡ The 7 Pillars of PolyXML
 
 ### 1. The `protoc` of XML: Unified Intermediate Representation (`SchemaIR`)
 Legacy XML tools treated code generation as a local script within each programming language. When an enterprise schema failed in Python, teams had to write bespoke monkey-patches; when it failed in C++, teams bought expensive commercial licenses.
@@ -182,6 +182,19 @@ URLs or local files while parsing XML. The schema compiler is a separate path
 that reads local XSD includes and imports. Generated codecs use their target
 language's XML libraries, so their entity behavior should be assessed in the
 consuming application.
+
+### 7. Massive Enterprise Schema Scalability: Topological SCC Chunking
+
+When compiling massive, highly constrained enterprise XML schemas—such as **USAF UCI v2.5 (5,558 types)**, **HL7 FHIR**, or complete **ISO 20022 catalogs**—traditional tools fail in one of two catastrophic ways:
+1. **Monolithic Exhaustion**: Emitting all types into a single file results in 200,000 to 800,000+ line compilation units. Downstream compilers like `rustc` and `g++` spike to 4–8+ GB of RAM and get OOM-killed; linters and formatters (`rustfmt`, `ruff`) crash allocating multi-gigabyte diff buffers; and IDEs freeze.
+2. **The Circular Import Trap**: Splitting naively per file or per schema causes severe runtime circular import deadlocks in dynamic environments like Python (`ImportError: cannot import name ... from partially initialized module ...`) or `#include` dependency loops in C++.
+
+#### The PolyXML Solution: Mathematical Graph Partitioning
+PolyXML solves this fundamentally at the compiler IR level through **Topological SCC Condensation**:
+* **Cycle Condensation**: Runs Tarjan's Strongly Connected Components algorithm across the type dependency graph, identifying all mutually recursive types and contracting them into indivisible super-nodes.
+* **Topological DAG Ordering**: Topologically sorts the condensation DAG, ensuring dependencies flow strictly in one direction ($A \leftarrow B \leftarrow C$).
+* **Bounded Chunking**: Groups types into modular submodules capped at a bounded threshold (~250 types / ~10,000 lines). Circular imports become **mathematically impossible** across submodules because chunks never reference subsequent chunks.
+* **Zero Breaking Changes**: Root module re-exports (`pub use chunk_*::*;` in Rust; `__init__.py` in Python; umbrella headers in C++) guarantee that downstream code retains a 100% stable, identical public API.
 
 ---
 
