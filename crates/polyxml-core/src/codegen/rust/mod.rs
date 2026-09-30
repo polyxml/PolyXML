@@ -354,7 +354,7 @@ impl RustCodegen {
         let mut files = Vec::new();
 
         // 1. Chunks
-        for chunk in &plan.chunks {
+        for (chunk_idx, chunk) in plan.chunks.iter().enumerate() {
             let mut out = String::new();
             if let Some(ref header) = self.options.custom_header {
                 let trimmed = header.trim();
@@ -371,7 +371,13 @@ impl RustCodegen {
             );
 
             self.emit_imports(&mut out, !types_with_lifetime.is_empty());
-            out.push_str("\nuse super::*;\n");
+            out.push('\n');
+            if self.options.emit_codecs {
+                out.push_str("use super::{read_element_text, skip_xml_element};\n");
+            }
+            for prev in &plan.chunks[..chunk_idx] {
+                let _ = writeln!(out, "use super::{}::*;", prev.name);
+            }
 
             for qname in &chunk.types {
                 if let Some(type_def) = ir.types.get(qname) {

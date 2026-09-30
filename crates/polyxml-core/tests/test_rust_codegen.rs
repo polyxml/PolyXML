@@ -1265,12 +1265,12 @@ fn test_rust_topological_scc_chunking() {
 
     // chunk_00 must contain Leaf
     assert!(files[0].1.contains("pub type Leaf"));
-    // chunk_01 must contain Mid and use super::*
+    // chunk_01 must contain Mid and import prior chunk_00
     assert!(files[1].1.contains("pub struct Mid"));
-    assert!(files[1].1.contains("use super::*;"));
-    // chunk_02 must contain Root
+    assert!(files[1].1.contains("use super::chunk_00::*;"));
+    // chunk_02 must contain Root and import prior chunks
     assert!(files[2].1.contains("pub struct Root"));
-    assert!(files[2].1.contains("use super::*;"));
+    assert!(files[2].1.contains("use super::chunk_01::*;"));
 
     // mod.rs must re-export all chunks
     let mod_rs = &files[3].1;
