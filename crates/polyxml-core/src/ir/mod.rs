@@ -1,4 +1,7 @@
+pub mod chunker;
 pub mod tarjan;
+
+pub use chunker::{partition_topological_chunks, ChunkPlan, TypeChunk};
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -638,6 +641,12 @@ impl SchemaIR {
             .values()
             .filter(|ty| !self.is_external_type(ty.qname()))
     }
+
+    /// Partition local emitted types into topologically sorted SCC chunks.
+    pub fn partition_topological_chunks(&self, budget: usize) -> ChunkPlan {
+        chunker::partition_topological_chunks(self, budget)
+    }
+
     pub fn new() -> Self {
         Self::default()
     }

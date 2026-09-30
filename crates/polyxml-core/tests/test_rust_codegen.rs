@@ -1204,3 +1204,80 @@ fn test_rust_simple_type_cycle_resilience() {
     let code = codegen.generate_module(&ir);
     assert!(code.contains("pub struct CyclicStruct"));
 }
+
+#[test]
+fn test_rust_topological_scc_chunking() {
+    let mut ir = SchemaIR::new();
+
+    // Leaf type in chunk 0
+    ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+        qname: QName::local("Leaf"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        facets: Default::default(),
+        documentation: None,
+    })));
+
+    // Mid type depending on Leaf
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Mid"),
+        base_type: None,
+        is_abstract: false,
+        is_mixed: false,
+        fields: vec![FieldDef::new(
+            "leaf",
+            "leaf",
+            FieldKind::Element,
+            TypeRef::Named(QName::local("Leaf")),
+        )],
+        documentation: None,
+    }));
+
+    // Root type depending on Mid
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Root"),
+        base_type: None,
+        is_abstract: false,
+        is_mixed: false,
+        fields: vec![FieldDef::new(
+            "mid",
+            "mid",
+            FieldKind::Element,
+            TypeRef::Named(QName::local("Mid")),
+        )],
+        documentation: None,
+    }));
+
+    let opts = RustOptions {
+        split_units: Some(true),
+        chunk_size: Some(1), // 1 type per chunk -> 3 chunks + mod.rs
+        ..Default::default()
+    };
+
+    let codegen = RustCodegen::new(opts);
+    let files = codegen.generate_files(&ir, "models");
+
+    assert_eq!(files.len(), 4, "Expected 3 chunks + mod.rs");
+    let filenames: Vec<_> = files.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(
+        filenames,
+        vec!["chunk_00.rs", "chunk_01.rs", "chunk_02.rs", "mod.rs"]
+    );
+
+    // chunk_00 must contain Leaf
+    assert!(files[0].1.contains("pub type Leaf"));
+    // chunk_01 must contain Mid and use super::*
+    assert!(files[1].1.contains("pub struct Mid"));
+    assert!(files[1].1.contains("use super::*;"));
+    // chunk_02 must contain Root
+    assert!(files[2].1.contains("pub struct Root"));
+    assert!(files[2].1.contains("use super::*;"));
+
+    // mod.rs must re-export all chunks
+    let mod_rs = &files[3].1;
+    assert!(mod_rs.contains("pub mod chunk_00;"));
+    assert!(mod_rs.contains("pub mod chunk_01;"));
+    assert!(mod_rs.contains("pub mod chunk_02;"));
+    assert!(mod_rs.contains("pub use chunk_00::*;"));
+    assert!(mod_rs.contains("pub use chunk_01::*;"));
+    assert!(mod_rs.contains("pub use chunk_02::*;"));
+}

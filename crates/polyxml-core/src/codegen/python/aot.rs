@@ -147,6 +147,8 @@ restored_json = {module_name}.<ModelName>.from_json(json_data)
             pyo3: true,
             pyo3_module_name: Some(module_name.clone()),
             custom_header: self.options.custom_header.clone(),
+            split_units: None,
+            chunk_size: None,
         };
         let rust_codegen = RustCodegen::new(rust_opts);
         let lib_rs = rust_codegen.generate_module(ir);

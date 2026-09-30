@@ -96,6 +96,8 @@ pub struct TargetConfig {
     pub serializer: Option<String>,
     pub style: Option<String>,
     pub custom_header: Option<String>,
+    pub split_units: Option<bool>,
+    pub chunk_size: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -121,6 +123,8 @@ pub struct CodegenTargetConfig {
     pub serializer: Option<String>,
     pub style: Option<String>,
     pub custom_header: Option<String>,
+    pub split_units: Option<bool>,
+    pub chunk_size: Option<usize>,
 }
 
 impl std::str::FromStr for WorkspaceManifest {
@@ -189,6 +193,8 @@ impl WorkspaceManifest {
                         serializer: cfg.serializer.clone(),
                         style: cfg.style.clone(),
                         custom_header: cfg.custom_header.clone().or_else(|| ws_header.clone()),
+                        split_units: cfg.split_units,
+                        chunk_size: cfg.chunk_size,
                     });
                 }
             }

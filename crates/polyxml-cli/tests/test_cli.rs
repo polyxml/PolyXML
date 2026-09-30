@@ -244,6 +244,162 @@ output = "manifest-out"
 }
 
 #[test]
+fn test_cli_rust_split_units_and_chunking() {
+    let dir = tempdir().unwrap();
+    let schema = dir.path().join("split_test.xsd");
+    fs::write(
+        &schema,
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:split">
+      <xs:simpleType name="StatusType">
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Active"/>
+          <xs:enumeration value="Inactive"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:complexType name="ItemType">
+        <xs:sequence>
+          <xs:element name="Id" type="xs:string"/>
+          <xs:element name="Status" type="StatusType"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="OrderType">
+        <xs:sequence>
+          <xs:element name="Item" type="ItemType"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:element name="Order" type="OrderType"/>
+    </xs:schema>"#,
+    )
+    .unwrap();
+
+    let output_dir = dir.path().join("cli-split-out");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema.to_str().unwrap(),
+            "--lang",
+            "rust",
+            "--split-units",
+            "--chunk-size",
+            "1",
+            "--out",
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Verify chunk files exist
+    assert!(output_dir.join("chunk_00.rs").exists());
+    assert!(output_dir.join("chunk_01.rs").exists());
+    assert!(output_dir.join("chunk_02.rs").exists());
+    assert!(output_dir.join("mod.rs").exists());
+
+    let mod_source = fs::read_to_string(output_dir.join("mod.rs")).unwrap();
+    assert!(mod_source.contains("pub mod chunk_00;"));
+    assert!(mod_source.contains("pub use chunk_00::*;"));
+    assert!(mod_source.contains("pub mod chunk_01;"));
+    assert!(mod_source.contains("pub use chunk_01::*;"));
+    assert!(mod_source.contains("pub mod chunk_02;"));
+    assert!(mod_source.contains("pub use chunk_02::*;"));
+
+    // Verify manifest build with split_units = true
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"[workspace]
+schemas = ["split_test.xsd"]
+
+[[generate]]
+target = "rust"
+output = "manifest-split-out"
+split_units = true
+chunk_size = 1
+"#,
+    )
+    .unwrap();
+    let manifest_result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        manifest_result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&manifest_result.stderr)
+    );
+
+    let manifest_out = dir.path().join("manifest-split-out");
+    assert!(manifest_out.join("chunk_00.rs").exists());
+    assert!(manifest_out.join("chunk_01.rs").exists());
+    assert!(manifest_out.join("chunk_02.rs").exists());
+    assert!(manifest_out.join("mod.rs").exists());
+
+    // Create a Cargo.toml in the temp dir to verify the generated chunks compile with rustc!
+    let crate_dir = dir.path().join("check_crate");
+    fs::create_dir_all(crate_dir.join("src")).unwrap();
+    fs::write(
+        crate_dir.join("Cargo.toml"),
+        format!(
+            r#"[package]
+name = "check_crate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+quick-xml = {{ version = "0.42", features = ["serialize"] }}
+serde = {{ version = "1.0", features = ["derive"] }}
+serde_json = "1.0"
+polyxml = {{ path = "{}" }}
+"#,
+            env!("CARGO_MANIFEST_DIR")
+                .trim_end_matches("/crates/polyxml-cli")
+                .to_string()
+                + "/crates/polyxml-core"
+        ),
+    )
+    .unwrap();
+
+    // Copy chunk files into crate src/models/
+    let models_dir = crate_dir.join("src/models");
+    fs::create_dir_all(&models_dir).unwrap();
+    for entry in fs::read_dir(&output_dir).unwrap() {
+        let entry = entry.unwrap();
+        fs::copy(entry.path(), models_dir.join(entry.file_name())).unwrap();
+    }
+    fs::write(
+        crate_dir.join("src/lib.rs"),
+        r#"pub mod models;
+pub use models::*;
+
+pub fn verify_usage() {
+    let _order = Order {
+        item: ItemType {
+            id: std::borrow::Cow::Borrowed("123"),
+            status: StatusType::Active,
+        },
+    };
+}
+"#,
+    )
+    .unwrap();
+
+    let check_result = Command::new("cargo")
+        .args(["check"])
+        .current_dir(&crate_dir)
+        .output()
+        .unwrap();
+    assert!(
+        check_result.status.success(),
+        "cargo check on chunked module failed:\n{}",
+        String::from_utf8_lossy(&check_result.stderr)
+    );
+}
+
+#[test]
 fn test_root_selection_keeps_imported_module_types() {
     let dir = tempdir().unwrap();
     let fixtures =

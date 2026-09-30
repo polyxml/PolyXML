@@ -129,6 +129,14 @@ pub struct GenerateArgs {
     /// Custom header text to prepend to generated files
     #[arg(long = "custom-header", value_name = "TEXT")]
     pub custom_header: Option<String>,
+
+    /// Split oversized modules into bounded topological chunks (default: auto if > 400 types)
+    #[arg(long = "split-units", default_missing_value = "true", num_args = 0..=1)]
+    pub split_units: Option<bool>,
+
+    /// Target maximum types per compilation unit chunk (default: 250)
+    #[arg(long = "chunk-size", value_name = "N")]
+    pub chunk_size: Option<usize>,
 }
 
 #[derive(Debug, Args)]
@@ -238,6 +246,8 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
             || args.custom_header.is_some()
             || args.strict_facets
             || !args.root_elements.is_empty()
+            || args.split_units.is_some()
+            || args.chunk_size.is_some()
         {
             return Err("Generation options require explicit schema paths. For manifest builds, set target options in polyxml.toml.".into());
         }
@@ -277,6 +287,8 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         phf: None,
         validation: None,
         custom_header: args.custom_header.as_deref(),
+        split_units: args.split_units,
+        chunk_size: args.chunk_size,
     };
     let resolved_options = languages
         .iter()
@@ -1236,6 +1248,8 @@ pub struct TargetEmitOptions<'a> {
     pub phf: Option<bool>,
     pub validation: Option<bool>,
     pub custom_header: Option<&'a str>,
+    pub split_units: Option<bool>,
+    pub chunk_size: Option<usize>,
 }
 
 fn emit_target_code(
@@ -1330,25 +1344,28 @@ fn emit_target_code(
                 pyo3: false,
                 pyo3_module_name: None,
                 custom_header: opts.custom_header.map(|s| s.to_string()),
+                split_units: opts.split_units,
+                chunk_size: opts.chunk_size,
             };
 
             let codegen = RustCodegen::new(options);
-            let code = codegen.generate_module(ir);
 
             let file_stem = schema_path
                 .file_stem()
                 .map(|s| s.to_string_lossy())
                 .unwrap_or_else(|| "models".into());
 
-            let file_path = out_dir.join(format!("{}.rs", file_stem));
-            fs::write(file_path, code)?;
-
-            let mod_path = out_dir.join("mod.rs");
-            if !mod_path.exists() {
-                let _ = fs::write(
-                    &mod_path,
-                    format!("pub mod {};\npub use {}::*;\n", file_stem, file_stem),
-                );
+            let files = codegen.generate_files(ir, &file_stem);
+            let is_chunked = files.iter().any(|(n, _)| n.starts_with("chunk_"));
+            if is_chunked {
+                let old_monolithic = out_dir.join(format!("{}.rs", file_stem));
+                if old_monolithic.exists() {
+                    let _ = fs::remove_file(old_monolithic);
+                }
+            }
+            for (filename, code) in files {
+                let file_path = out_dir.join(filename);
+                fs::write(file_path, code)?;
             }
             Ok(())
         }
