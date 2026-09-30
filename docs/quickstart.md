@@ -1,6 +1,6 @@
 ---
 title: Multi-Language Quickstart
-description: Get started with PolyXML in Rust, Python, C++, Go, Java, or TypeScript in under 5 minutes.
+description: Get started with PolyXML in Rust, Python, C++, Go, Java, TypeScript, WebAssembly, or C# in under 5 minutes.
 ---
 
 # Multi-Language Quickstart
@@ -57,7 +57,7 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ### Cargo Dependency
     ```toml
     [dependencies]
-    polyxml = "0.1"
+    polyxml = "0.33.0"
     ```
 
     ### Example
@@ -391,6 +391,37 @@ After compiling your schema with `polyxml generate`, each target ships ready-to-
     const json = JSON.stringify(customer, null, 2);
     ```
 
+=== "WebAssembly (Browser & Edge)"
+
+    ### Installation
+    ```bash
+    npm install @polyxml/wasm
+    ```
+
+    ### Example
+    ```typescript
+    import { createPolyXml } from '@polyxml/wasm';
+
+    // 1. Initialize the zero-dependency Wasm runtime
+    const polyxml = await createPolyXml();
+
+    const xml = `
+    <Customer id="1001">
+      <name>Acme Global</name>
+      <email>billing@acme.com</email>
+      <status>active</status>
+    </Customer>
+    `;
+
+    // 2. Transcode XML directly to a JavaScript object
+    const customer = polyxml.xmlToJson(xml);
+    console.log(`Customer: ${customer.name}, Status: ${customer.status}`);
+
+    // 3. Round-trip back to formatted XML
+    const xmlOutput = polyxml.jsonToXml(customer);
+    console.log(xmlOutput);
+    ```
+
 === "Java (Jackson)"
 
     ```java
@@ -431,10 +462,10 @@ After compiling your schema with `polyxml generate`, each target ships ready-to-
 
 ## 🌐 Real-World Polyglot Project Templates
 
-Looking for production-grade project repositories with complete build setups across all 7 languages? Explore our open-source reference implementations:
+Looking for production-grade project repositories with complete build setups across all 8 languages? Explore our open-source reference implementations:
 
 | Domain & Repository | Standards & Integration | Key PolyXML Features Highlighted |
 |---|---|---|
-| **Defense & Avionics**<br>[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) | • `backend = "aot"` Ahead-of-Time PyO3 C-extension in the [telemetry bridge](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)<br>• `features = ["rkyv"]` zero-copy binary serialization in Rust<br>• `xsd:extension` inheritance & base-field inlining<br>• Large schema validation on the [8.3 MB UCI schema](https://github.com/polyxml/polyxml-defense-examples#readme)<br>• Standard Library Java 22+ immutable records<br>• Edge C2 Wasm streaming via `@polyxml/wasm` |
+| **Defense & Avionics**<br>[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) | • **Topological SCC Chunking**: Partitioned Rust modules via `split_units = true` to prevent deep macro recursion and memory exhaustion<br>• `backend = "aot"` Ahead-of-Time PyO3 C-extension in the [telemetry bridge](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)<br>• `features = ["rkyv"]` zero-copy binary serialization in Rust<br>• `xsd:extension` inheritance & base-field inlining<br>• Large schema validation on the [8.3 MB UCI schema](https://github.com/polyxml/polyxml-defense-examples#readme)<br>• Standard Library Java 22+ immutable records<br>• Edge C2 Wasm streaming via `@polyxml/wasm` |
 | **Banking & FinTech**<br>[polyxml-finance-examples](https://github.com/polyxml/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) | • `backend = "jackson"` Java annotations for enterprise microservices<br>• `backend = "source-gen"` C# 12 / .NET 8 Native AOT source-gen<br>• Strict facets & attributes on simple content (`Ccy="USD"`)<br>• Batch payment streaming via `@polyxml/wasm` |
 | **Public Transit & Mobility**<br>[polyxml-transit-examples](https://github.com/polyxml/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) | • `backend = "sonic"` ByteDance JIT/AVX JSON engine for Go<br>• Deeply nested arrays & complex recursive collections<br>• C++20 `XmlModel` concept verification & `operator==` equality<br>• Passenger map live streaming via `@polyxml/wasm` |

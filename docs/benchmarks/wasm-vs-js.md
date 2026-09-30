@@ -51,3 +51,5 @@ reduction claim. This repeated-record workload does not establish performance
 for deeply nested XML, attributes-heavy documents, schemas, or tiny webhook
 payloads in production. Run the suite on representative inputs before
 choosing a parser solely for speed.
+
+For installation, schema compilation, and streaming usage examples, see the [WebAssembly Runtime guide](../languages/wasm.md).

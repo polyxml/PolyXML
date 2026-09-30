@@ -1,11 +1,11 @@
 ---
 title: XSD-to-Code Generator & CLI Toolchain
-description: Generate type-safe data models and codecs across 7 programming languages from W3C XML Schemas using polyxml.
+description: Generate type-safe data models and codecs across 8 programming languages from W3C XML Schemas using polyxml.
 ---
 
 # XSD-to-Code Generator & CLI Toolchain (`polyxml`)
 
-PolyXML includes a high-performance, polyglot XSD-to-code generator and CLI toolchain (`polyxml`) that parses W3C XSD 1.0 and 1.1 schemas, builds a language-agnostic Intermediate Representation (PolyXML-IR), resolves complex type cycles via Tarjan's Strongly Connected Components (SCC) algorithm, and emits idiomatic, production-ready data contracts and codecs across **7 modern programming languages**.
+PolyXML includes a high-performance, polyglot XSD-to-code generator and CLI toolchain (`polyxml`) that parses W3C XSD 1.0 and 1.1 schemas, builds a language-agnostic Intermediate Representation (PolyXML-IR), resolves complex type cycles via Tarjan's Strongly Connected Components (SCC) algorithm, and emits idiomatic, production-ready data contracts and codecs across **8 modern programming languages**.
 
 ---
 
@@ -101,6 +101,8 @@ polyxml generate \
 | **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic`/`aot` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
 | **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
+| **Split Units** | `--split-units` | Partition large schemas into topologically-sorted compilation units (`chunk_XX.rs`) for Rust to prevent deep macro recursion and memory exhaustion. | `false` |
+| **Chunk Size** | `--chunk-size SIZE` | Maximum number of type definitions or SCC cycle clusters per compilation unit file (used with `--split-units`). | `32` |
 | **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
 | **Custom Header** | `--custom-header` | Custom comment, license, or linter directive text to prepend to generated files. | `None` |
 | **Dry Run** | `--dry-run` | Validate options and parse schemas without writing to disk. | `false` |
@@ -204,6 +206,9 @@ target = "rust"
 output = "src/generated/rust"
 features = ["phf"]
 codecs = true
+# Optional: partition massive schemas into compilation units
+# split_units = true
+# chunk_size = 32
 
 [[generate]]
 target = "java"
@@ -259,6 +264,9 @@ Validates:
 
 Bidirectionally convert complete XML and JSON documents, with optional schema guidance. The command accepts stdin and stdout pipes, but reads the full input and buffers the full output before writing it:
 
+> [!TIP]
+> For in-depth tutorials, schema-directed vs schema-free rules, and Unix piping examples, see the dedicated [Transcoding & Streaming Guide](transcoding.md).
+
 ```bash
 # 1. Transcode XML to JSON with W3C XSD schema typing
 polyxml transcode --schema order.xsd --pretty order.xml --out order.json
@@ -296,6 +304,7 @@ polyxml transcode legacy.xml --out modern.json
 | **C++** | C++20 / C++23 | Header-Only Value Types | `std::variant` choices, `std::unique_ptr` cycle breaks, C++20 concepts, CMake/Meson export |
 | **Java** | Java 22+ | Modern Records & Sealed Interfaces | Exhaustive switch pattern matching, compact constructor facet validation |
 | **TypeScript** | TypeScript 5+ | Interfaces & Discriminated Unions | Runtime Zod schemas, circular references handled via `z.lazy()`, `as const` enums |
+| **WebAssembly** | Wasm Core (`@polyxml/wasm`) | Zero-Dependency Browser & Edge Runtime | High-throughput streaming `parseStream`, schema-directed XSD validation, zero native Node addons |
 | **Go** | Go 1.22+ | Structs with `encoding/xml` & `encoding/json` | Dual `xml:"..."` and `json:"..."` struct tags, `json:"-"` on `XMLName`, canonical initialisms (`ID`, `URL`), choice exclusivity |
 | **C#** | C# 12 / .NET 8+ | Records with Primary Constructors | Parameterless constructors, dual `XmlSerializer` and `System.Text.Json` attributes (`[JsonPropertyName]`, `[JsonConverter]`), `IValidatableObject` |
 

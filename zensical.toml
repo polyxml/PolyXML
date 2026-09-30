@@ -1,13 +1,44 @@
 [project]
 site_url = "https://polyxml.github.io/PolyXML/"
 site_name = "PolyXML"
-site_description = "Next-gen polyglot XML Schema (XSD) compiler and high-throughput streaming serialization engine for Rust, Python, Go, C++20, Java, TypeScript, and C#."
+site_description = "Next-gen polyglot XML Schema (XSD) compiler and high-throughput streaming serialization engine for Rust, Python, Go, C++20, Java, TypeScript, WebAssembly, and C#."
 repo_url = "https://github.com/polyxml/PolyXML"
 repo_name = "polyxml/PolyXML"
 edit_uri = "edit/main/docs/"
 extra_css = ["stylesheets/brand.css"]
 
-# Navigation follows the Markdown files and folders under docs/.
+nav = [
+    { "Overview" = "index.md" },
+    { "Quickstart" = "quickstart.md" },
+    { "Why PolyXML?" = "why-polyxml.md" },
+    { "Languages" = [
+        { "Overview" = "languages/index.md" },
+        { "Rust" = "languages/rust.md" },
+        { "Python" = "languages/python.md" },
+        { "TypeScript & Node.js" = "languages/node.md" },
+        { "WebAssembly" = "languages/wasm.md" },
+        { "Go" = "languages/go.md" },
+        { "C++20" = "languages/cpp.md" },
+        { "Java" = "languages/java.md" },
+        { "C#" = "languages/csharp.md" },
+    ]},
+    { "Guides" = [
+        { "Overview" = "guides/index.md" },
+        { "Schema Compiler & CLI" = "guides/compiler.md" },
+        { "Transcoding & Streaming" = "guides/transcoding.md" },
+        { "Polymorphism & Dynamic Dispatch" = "guides/polymorphism.md" },
+    ]},
+    { "Architecture" = "architecture.md" },
+    { "Benchmarks" = [
+        { "Overview & Map" = "benchmarks/index.md" },
+        { "Cross-Language Results" = "benchmarks/language-results-2026-09.md" },
+        { "Python AOT vs Dataclass" = "benchmarks/python-aot-vs-dataclass.md" },
+        { "Python JSON & Binary AOT" = "benchmarks/python-json-binary-aot-2026-09.md" },
+        { "Rust PHF Dispatch" = "benchmarks/rust-phf-dispatch.md" },
+        { "WebAssembly vs JavaScript" = "benchmarks/wasm-vs-js.md" },
+    ]},
+]
+
 [project.theme]
 language = "en"
 logo = "assets/brand/logo_polyxml_icon.png"

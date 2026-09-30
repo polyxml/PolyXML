@@ -5,7 +5,8 @@ description: Schema compiler, polymorphism, and WebAssembly runtime guides for P
 
 # Guides
 
-- [Schema compiler and CLI](compiler.md): generate models, build projects, validate schemas, and transcode documents.
+- [Schema compiler and CLI](compiler.md): generate models, build projects, and validate schemas.
+- [Transcoding & streaming](transcoding.md): convert XML ↔ JSON bidirectionally with or without XSD typing.
 - [Polymorphism](polymorphism.md): handle dynamic XML type hierarchies and `xsi:type` dispatch.
 - [WebAssembly runtime](../languages/wasm.md): use PolyXML in browsers, edge workers, and JavaScript runtimes without native addons.
 
