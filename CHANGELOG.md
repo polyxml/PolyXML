@@ -1,3 +1,10 @@
+# [0.32.0](https://github.com/polyxml/PolyXML/compare/v0.31.0...v0.32.0) (2026-09-30)
+
+
+### Features
+
+* **codegen:** automatic topological SCC chunking for oversized compilation units ([#92](https://github.com/polyxml/PolyXML/issues/92)) ([629917c](https://github.com/polyxml/PolyXML/commit/629917c5c3f9f05be1032f246c6134da8f2420bd))
+
 # [0.31.0](https://github.com/polyxml/PolyXML/compare/v0.30.7...v0.31.0) (2026-09-29)
 
 
