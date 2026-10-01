@@ -737,3 +737,34 @@ fn test_python_any_attribute_codegen() {
 
     assert!(code.contains("any_attribute: dict[str, str] = field(default_factory=dict, metadata={\"type\": \"Attributes\", \"name\": \"*\", \"json_name\": \"*\"})"));
 }
+
+#[test]
+fn test_python_any_element_codegen() {
+    let xsd = r###"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:audit:content" targetNamespace="urn:audit:content" elementFormDefault="qualified">
+      <xs:element name="Body">
+        <xs:complexType>
+          <xs:choice>
+            <xs:element name="Uri" type="xs:string"/>
+            <xs:any namespace="##other" processContents="lax"/>
+          </xs:choice>
+          <xs:attribute name="content" type="xs:string"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>"###;
+
+    let ir = XsdParser::new()
+        .parse_str(xsd)
+        .expect("schema parse failed");
+    let codegen = PythonCodegen::new(PythonOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(
+        code.contains("\"type\": \"Wildcard\""),
+        "Generated Python model must mark xs:any field with Wildcard metadata"
+    );
+    assert!(
+        code.contains("any: object | None = field(default=None"),
+        "Generated Python model must define xs:any field as optional object"
+    );
+}

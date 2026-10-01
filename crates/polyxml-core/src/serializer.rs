@@ -633,6 +633,10 @@ impl XmlSerializer {
                             }
                         }
                     }
+                } else if field.kind == FieldKind::Any {
+                    if let Some(val) = get_field(idx, &field.name) {
+                        Self::write_any_wildcard_element(writer, val, ns_ctx)?;
+                    }
                 }
             }
         }
@@ -640,6 +644,107 @@ impl XmlSerializer {
         // Close element
         writer
             .write_event(Event::End(BytesEnd::new(qualified_tag.as_ref())))
+            .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    fn write_any_wildcard_element<W: std::io::Write>(
+        writer: &mut quick_xml::Writer<W>,
+        val: &PolyValue,
+        ns_ctx: Option<&NamespaceContext>,
+    ) -> Result<()> {
+        match val {
+            PolyValue::List(items) => {
+                for item in items {
+                    Self::write_single_wildcard_element(writer, item, ns_ctx)?;
+                }
+            }
+            PolyValue::Object(_) => {
+                Self::write_single_wildcard_element(writer, val, ns_ctx)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn write_single_wildcard_element<W: std::io::Write>(
+        writer: &mut quick_xml::Writer<W>,
+        val: &PolyValue,
+        ns_ctx: Option<&NamespaceContext>,
+    ) -> Result<()> {
+        let PolyValue::Object(map) = val else {
+            return Ok(());
+        };
+        let Some(PolyValue::String(qname)) = map.get("qname") else {
+            return Ok(());
+        };
+        let (ns_uri, local) = if qname.starts_with('{') {
+            if let Some(end) = qname.find('}') {
+                (Some(&qname[1..end]), &qname[end + 1..])
+            } else {
+                (None, qname.as_str())
+            }
+        } else {
+            (None, qname.as_str())
+        };
+
+        let (qualified, xmlns_attr) = if let Some(uri) = ns_uri {
+            if let Some(ctx) = ns_ctx {
+                if let Some(prefix) = ctx.uri_to_prefix.get(uri) {
+                    if !prefix.is_empty() {
+                        (Cow::Owned(format!("{}:{}", prefix, local)), None)
+                    } else {
+                        (Cow::Borrowed(local), None)
+                    }
+                } else {
+                    (Cow::Borrowed(local), Some(uri))
+                }
+            } else {
+                (Cow::Borrowed(local), Some(uri))
+            }
+        } else {
+            (Cow::Borrowed(local), None)
+        };
+
+        let mut start = BytesStart::new(qualified.as_ref());
+        if let Some(uri) = xmlns_attr {
+            start.push_attribute(("xmlns", uri));
+        }
+
+        if let Some(PolyValue::Object(attrs)) = map.get("attributes") {
+            let mut sorted_keys: Vec<_> = attrs.keys().collect();
+            sorted_keys.sort();
+            for k in sorted_keys {
+                if let Some(v) = attrs.get(k) {
+                    let mut buf = [0u8; lexical_core::BUFFER_SIZE];
+                    if let Some(s) = Self::format_scalar_to(v, &mut buf) {
+                        start.push_attribute((k.as_str(), s));
+                    }
+                }
+            }
+        }
+
+        writer
+            .write_event(Event::Start(start))
+            .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+
+        if let Some(PolyValue::String(text)) = map.get("text") {
+            if !text.is_empty() {
+                writer
+                    .write_event(Event::Text(BytesText::new(text)))
+                    .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+            }
+        }
+
+        if let Some(PolyValue::List(children)) = map.get("children") {
+            for child in children {
+                Self::write_single_wildcard_element(writer, child, ns_ctx)?;
+            }
+        }
+
+        writer
+            .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
             .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
 
         Ok(())

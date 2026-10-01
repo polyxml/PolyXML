@@ -28,7 +28,7 @@ import importlib
 import pathlib
 from collections import UserString
 from collections.abc import Iterator
-from dataclasses import is_dataclass
+from dataclasses import dataclass, field, is_dataclass
 from decimal import Decimal
 from enum import Enum
 from typing import IO
@@ -289,6 +289,16 @@ def json_to_xml(
     )
 
 
+@dataclass(slots=True)
+class AnyElement:
+    """Represents an unmapped wildcard XML element (xs:any)."""
+
+    qname: str | None = None
+    text: str | None = None
+    children: list[object] = field(default_factory=list)
+    attributes: dict[str, str] = field(default_factory=dict)
+
+
 class JsonSerializer:
     """Drop-in xsdata-compatible JSON serializer."""
 
@@ -527,6 +537,7 @@ def loads_binary[T](data: bytes, target_type: type[T] | None = None) -> T | obje
 
 
 __all__ = [
+    "AnyElement",
     "JsonParser",
     "JsonSerializer",
     "XmlParser",

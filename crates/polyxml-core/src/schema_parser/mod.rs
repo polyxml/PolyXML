@@ -631,7 +631,26 @@ impl XsdParser {
                             }
                         }
                         "any" => {
-                            fields.push(parse_any_field(e));
+                            let in_unbounded = compositor_stack.iter().any(|c| c.is_unbounded);
+                            let in_choice = compositor_stack
+                                .last()
+                                .map(|c| c.kind == CompositorKind::Choice)
+                                .unwrap_or(false);
+                            let field = parse_any_field(e, in_choice, in_unbounded);
+                            if in_choice {
+                                if let Some(frame) = compositor_stack.last_mut() {
+                                    if frame.kind == CompositorKind::Choice {
+                                        frame.choice_branches.push(UnionBranch {
+                                            variant_name: field.name.clone(),
+                                            xml_name: field.xml_name.clone(),
+                                            namespace: field.namespace.clone(),
+                                            type_ref: field.type_ref.clone(),
+                                            documentation: field.documentation.clone(),
+                                        });
+                                    }
+                                }
+                            }
+                            fields.push(field);
                         }
                         "anyAttribute"
                             if !fields.iter().any(|f| f.kind == FieldKind::AnyAttribute) =>
@@ -696,7 +715,26 @@ impl XsdParser {
                             }
                         }
                         "any" => {
-                            fields.push(parse_any_field(e));
+                            let in_unbounded = compositor_stack.iter().any(|c| c.is_unbounded);
+                            let in_choice = compositor_stack
+                                .last()
+                                .map(|c| c.kind == CompositorKind::Choice)
+                                .unwrap_or(false);
+                            let field = parse_any_field(e, in_choice, in_unbounded);
+                            if in_choice {
+                                if let Some(frame) = compositor_stack.last_mut() {
+                                    if frame.kind == CompositorKind::Choice {
+                                        frame.choice_branches.push(UnionBranch {
+                                            variant_name: field.name.clone(),
+                                            xml_name: field.xml_name.clone(),
+                                            namespace: field.namespace.clone(),
+                                            type_ref: field.type_ref.clone(),
+                                            documentation: field.documentation.clone(),
+                                        });
+                                    }
+                                }
+                            }
+                            fields.push(field);
                         }
                         "anyAttribute"
                             if !fields.iter().any(|f| f.kind == FieldKind::AnyAttribute) =>
@@ -956,7 +994,10 @@ impl XsdParser {
                             skip_subtree(reader)?;
                             depth -= 1;
                         }
-                        "any" => def.fields.push(parse_any_field(e)),
+                        "any" => {
+                            let in_unbounded = compositor_stack.iter().any(|&b| b);
+                            def.fields.push(parse_any_field(e, in_choice, in_unbounded));
+                        }
                         _ => {}
                     }
                 }
@@ -979,7 +1020,10 @@ impl XsdParser {
                                 ));
                             }
                         }
-                        "any" => def.fields.push(parse_any_field(e)),
+                        "any" => {
+                            let in_unbounded = compositor_stack.iter().any(|&b| b);
+                            def.fields.push(parse_any_field(e, in_choice, in_unbounded));
+                        }
                         _ => {}
                     }
                 }
@@ -1863,14 +1907,34 @@ fn parse_attribute_field(
     })
 }
 
-fn parse_any_field(_e: &BytesStart) -> FieldDef {
+fn parse_any_field(e: &BytesStart, in_choice: bool, in_unbounded_compositor: bool) -> FieldDef {
+    let min_occurs = if in_choice {
+        0
+    } else {
+        get_attr_value(e, "minOccurs")
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(1)
+    };
+    let max_occurs = if in_unbounded_compositor {
+        OccursLimit::Unbounded
+    } else {
+        match get_attr_value(e, "maxOccurs").as_deref() {
+            Some("unbounded") => OccursLimit::Unbounded,
+            Some(v) => OccursLimit::Count(v.parse::<usize>().unwrap_or(1)),
+            None => OccursLimit::Count(1),
+        }
+    };
+    let namespace = get_attr_value(e, "namespace");
     FieldDef {
         name: "any".to_string(),
         xml_name: "*".to_string(),
-        namespace: None,
+        namespace,
         kind: FieldKind::Any,
         type_ref: TypeRef::Primitive(PrimitiveType::AnyType),
-        cardinality: Cardinality::unbounded(0),
+        cardinality: Cardinality {
+            min_occurs,
+            max_occurs,
+        },
         nillable: false,
         default_value: None,
         fixed_value: None,

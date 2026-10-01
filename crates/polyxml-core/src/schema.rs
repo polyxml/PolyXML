@@ -7,6 +7,7 @@ pub enum FieldKind {
     Element,
     Text,
     AnyAttribute,
+    Any,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,6 +109,7 @@ pub struct ModelSchema {
     pub attribute_map: HashMap<Vec<u8>, usize>,
     pub text_field: Option<usize>,
     pub any_attribute_field: Option<usize>,
+    pub any_element_field: Option<usize>,
     pub mixed_content: Option<MixedContentSchema>,
     /// Declared `abstract="true"` in the source schema.
     pub is_abstract: bool,
@@ -338,7 +340,7 @@ impl ModelSchema {
                 crate::ir::FieldKind::Element => FieldKind::Element,
                 crate::ir::FieldKind::Text => FieldKind::Text,
                 crate::ir::FieldKind::AnyAttribute => FieldKind::AnyAttribute,
-                _ => FieldKind::Element,
+                crate::ir::FieldKind::Any => FieldKind::Any,
             };
 
             let mut val_type = build_type(&f.type_ref, ir, visited);
@@ -569,6 +571,7 @@ impl ModelSchemaBuilder {
         let mut attribute_map = HashMap::new();
         let mut text_field = None;
         let mut any_attribute_field = None;
+        let mut any_element_field = None;
 
         for (idx, field) in self.fields.iter().enumerate() {
             match field.kind {
@@ -591,6 +594,9 @@ impl ModelSchemaBuilder {
                 FieldKind::AnyAttribute => {
                     any_attribute_field = Some(idx);
                 }
+                FieldKind::Any => {
+                    any_element_field = Some(idx);
+                }
             }
         }
 
@@ -607,6 +613,7 @@ impl ModelSchemaBuilder {
             attribute_map,
             text_field,
             any_attribute_field,
+            any_element_field,
             mixed_content: None,
             is_abstract: self.is_abstract,
             variants: Arc::new(RwLock::new(Vec::new())),

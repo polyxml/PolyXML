@@ -447,6 +447,14 @@ impl GoCodegen {
                 self.emit_struct(out, s, ir);
             }
         }
+
+        let has_any_element = ir.emitted_types().any(|t| match t {
+            TypeDef::Struct(s) => s.fields.iter().any(|f| f.kind == FieldKind::Any),
+            _ => false,
+        });
+        if has_any_element {
+            out.push_str("// AnyElement represents an unmapped wildcard XML element (xs:any).\ntype AnyElement struct {\n    XMLName xml.Name\n    Attrs   []xml.Attr `xml:\",any,attr\" json:\"attrs,omitempty\"`\n    Content string     `xml:\",innerxml\" json:\"content,omitempty\"`\n}\n\n");
+        }
     }
 
     fn emit_simple_type(&self, out: &mut String, simple: &SimpleTypeDef, ir: &SchemaIR) {
@@ -1104,6 +1112,15 @@ impl GoCodegen {
         if f.kind == FieldKind::AnyAttribute {
             return "[]xml.Attr".to_string();
         }
+        if f.kind == FieldKind::Any {
+            if f.cardinality.is_list() {
+                return "[]AnyElement".to_string();
+            } else if f.is_cycle_cut || f.cardinality.is_optional() || f.nillable {
+                return "*AnyElement".to_string();
+            } else {
+                return "AnyElement".to_string();
+            }
+        }
         let base_type = self.context.map_type_ref(&f.type_ref);
 
         if f.cardinality.is_list() {
@@ -1155,6 +1172,15 @@ impl GoCodegen {
                 }
                 if self.options.backend == GoBackend::Sonic {
                     parts.push("sonic:\"-\"".to_string());
+                }
+            } else if f.kind == FieldKind::Any {
+                let is_opt = f.cardinality.is_optional() || f.nillable;
+                let tag = if is_opt { "any,omitempty" } else { "any" };
+                if self.options.emit_json_tags {
+                    parts.push(format!("json:\"{}\"", tag));
+                }
+                if self.options.backend == GoBackend::Sonic {
+                    parts.push(format!("sonic:\"{}\"", tag));
                 }
             } else {
                 let is_opt = f.cardinality.is_optional() || f.nillable;

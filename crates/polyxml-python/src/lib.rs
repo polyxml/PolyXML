@@ -366,12 +366,17 @@ fn extract_schema_from_class<'py>(
                     let t_str: String = t.extract().unwrap_or_default();
                     match t_str.as_str() {
                         "Attribute" => kind = FieldKind::Attribute,
+                        "Attributes" => kind = FieldKind::AnyAttribute,
                         "Text" => kind = FieldKind::Text,
                         "Wildcard" => {
                             if let Ok(m_mixed) = m.get_item("mixed") {
                                 if m_mixed.extract::<bool>().unwrap_or(false) {
                                     kind = FieldKind::Text;
+                                } else {
+                                    kind = FieldKind::Any;
                                 }
+                            } else {
+                                kind = FieldKind::Any;
                             }
                         }
                         _ => kind = FieldKind::Element,
@@ -428,12 +433,17 @@ fn extract_schema_from_class<'py>(
                     let t_str: String = t.extract().unwrap_or_default();
                     match t_str.as_str() {
                         "Attribute" => kind = FieldKind::Attribute,
+                        "Attributes" => kind = FieldKind::AnyAttribute,
                         "Text" => kind = FieldKind::Text,
                         "Wildcard" => {
                             if let Ok(m_mixed) = meta.get_item("mixed") {
                                 if m_mixed.extract::<bool>().unwrap_or(false) {
                                     kind = FieldKind::Text;
+                                } else {
+                                    kind = FieldKind::Any;
                                 }
+                            } else {
+                                kind = FieldKind::Any;
                             }
                         }
                         _ => kind = FieldKind::Element,
@@ -935,6 +945,47 @@ fn poly_value_to_py<'py>(
             }
         }
         PolyValue::Object(map) => {
+            if map.contains_key("qname") && !matches!(val_type, ValueType::Nested(_)) {
+                if let Ok(polyxml_mod) = py.import("polyxml") {
+                    if let Ok(any_cls) = polyxml_mod.getattr("AnyElement") {
+                        let kwargs = PyDict::new(py);
+                        if let Some(PolyValue::String(qname)) = map.get("qname") {
+                            kwargs.set_item("qname", qname)?;
+                        }
+                        if let Some(PolyValue::String(text)) = map.get("text") {
+                            if !text.is_empty() {
+                                kwargs.set_item("text", text)?;
+                            }
+                        }
+                        if let Some(PolyValue::Object(attrs)) = map.get("attributes") {
+                            let py_attrs = PyDict::new(py);
+                            for (k, v) in attrs {
+                                if let PolyValue::String(s) = v {
+                                    py_attrs.set_item(k, s)?;
+                                }
+                            }
+                            kwargs.set_item("attributes", py_attrs)?;
+                        }
+                        if let Some(PolyValue::List(children)) = map.get("children") {
+                            let py_children = PyList::empty(py);
+                            for child in children {
+                                let py_child = poly_value_to_py(
+                                    py,
+                                    child,
+                                    &ValueType::Scalar(ScalarType::Any),
+                                    None,
+                                    None,
+                                )?;
+                                py_children.append(py_child)?;
+                            }
+                            kwargs.set_item("children", py_children)?;
+                        }
+                        let instance = any_cls.call((), Some(&kwargs))?;
+                        return Ok(instance.unbind());
+                    }
+                }
+            }
+
             let meta_opt = if let ValueType::Nested(ref s) = val_type {
                 lookup_cached_meta(&s.name)
             } else {
@@ -1062,6 +1113,75 @@ fn poly_value_to_py<'py>(
     }
 }
 
+fn py_any_element_to_poly_value<'py>(
+    py: Python<'py>,
+    item: &Bound<'py, PyAny>,
+) -> PyResult<PolyValue> {
+    if let Ok(qname_obj) = item.getattr("qname") {
+        if !qname_obj.is_none() {
+            let qname: String = qname_obj.extract()?;
+            let mut map = HashMap::new();
+            map.insert("qname".to_string(), PolyValue::String(qname));
+            if let Ok(text_obj) = item.getattr("text") {
+                if !text_obj.is_none() {
+                    let text: String = text_obj.extract()?;
+                    map.insert("text".to_string(), PolyValue::String(text));
+                }
+            }
+            if let Ok(attrs_obj) = item.getattr("attributes") {
+                if let Ok(dict) = attrs_obj.cast::<PyDict>() {
+                    let mut attr_map = HashMap::new();
+                    for (k, v) in dict.iter() {
+                        let k_str: String = k.extract()?;
+                        let v_str: String = v.extract()?;
+                        attr_map.insert(k_str, PolyValue::String(v_str));
+                    }
+                    map.insert("attributes".to_string(), PolyValue::Object(attr_map));
+                }
+            }
+            if let Ok(children_obj) = item.getattr("children") {
+                if let Ok(list) = children_obj.cast::<PyList>() {
+                    let mut child_vec = Vec::new();
+                    for child in list.iter() {
+                        child_vec.push(py_any_element_to_poly_value(py, &child)?);
+                    }
+                    map.insert("children".to_string(), PolyValue::List(child_vec));
+                }
+            }
+            return Ok(PolyValue::Object(map));
+        }
+    }
+    if let Ok(tag_obj) = item.getattr("tag") {
+        if !tag_obj.is_none() {
+            let tag: String = tag_obj.extract()?;
+            let mut map = HashMap::new();
+            map.insert("qname".to_string(), PolyValue::String(tag));
+            if let Ok(text_obj) = item.getattr("text") {
+                if !text_obj.is_none() {
+                    let text: String = text_obj.extract()?;
+                    map.insert("text".to_string(), PolyValue::String(text));
+                }
+            }
+            if let Ok(attrib_obj) = item.getattr("attrib") {
+                if let Ok(dict) = attrib_obj.cast::<PyDict>() {
+                    let mut attr_map = HashMap::new();
+                    for (k, v) in dict.iter() {
+                        let k_str: String = k.extract()?;
+                        let v_str: String = v.extract()?;
+                        attr_map.insert(k_str, PolyValue::String(v_str));
+                    }
+                    map.insert("attributes".to_string(), PolyValue::Object(attr_map));
+                }
+            }
+            return Ok(PolyValue::Object(map));
+        }
+    }
+    if let Ok(s) = item.extract::<String>() {
+        return Ok(PolyValue::String(s));
+    }
+    Ok(PolyValue::Null)
+}
+
 fn py_to_poly_value<'py>(
     py: Python<'py>,
     obj: &Bound<'py, PyAny>,
@@ -1127,12 +1247,16 @@ fn py_to_poly_value<'py>(
                             values[i] = Some(PolyValue::Bool(b));
                         }
                         _ => {
-                            let s: String = if let Ok(enum_val) = val.getattr("value") {
-                                enum_val.str()?.extract()?
+                            if field.kind == FieldKind::Any {
+                                values[i] = Some(py_any_element_to_poly_value(py, &val)?);
                             } else {
-                                val.str()?.extract()?
-                            };
-                            values[i] = Some(PolyValue::String(s));
+                                let s: String = if let Ok(enum_val) = val.getattr("value") {
+                                    enum_val.str()?.extract()?
+                                } else {
+                                    val.str()?.extract()?
+                                };
+                                values[i] = Some(PolyValue::String(s));
+                            }
                         }
                     },
                     ValueType::List(inner) => {
@@ -1151,6 +1275,8 @@ fn py_to_poly_value<'py>(
                                         sub_schema,
                                         child_meta.as_deref(),
                                     )?);
+                                } else if field.kind == FieldKind::Any {
+                                    poly_items.push(py_any_element_to_poly_value(py, &item)?);
                                 } else {
                                     let s: String = if let Ok(enum_val) = item.getattr("value") {
                                         enum_val.str()?.extract()?
@@ -1211,12 +1337,16 @@ fn py_to_poly_value<'py>(
                         map.insert(field.name.clone(), PolyValue::Bool(b));
                     }
                     _ => {
-                        let s: String = if let Ok(enum_val) = val.getattr("value") {
-                            enum_val.str()?.extract()?
+                        if field.kind == FieldKind::Any {
+                            map.insert(field.name.clone(), py_any_element_to_poly_value(py, &val)?);
                         } else {
-                            val.str()?.extract()?
-                        };
-                        map.insert(field.name.clone(), PolyValue::String(s));
+                            let s: String = if let Ok(enum_val) = val.getattr("value") {
+                                enum_val.str()?.extract()?
+                            } else {
+                                val.str()?.extract()?
+                            };
+                            map.insert(field.name.clone(), PolyValue::String(s));
+                        }
                     }
                 },
                 ValueType::List(inner) => {
@@ -1235,6 +1365,8 @@ fn py_to_poly_value<'py>(
                                     sub_schema,
                                     child_meta.as_deref(),
                                 )?);
+                            } else if field.kind == FieldKind::Any {
+                                poly_items.push(py_any_element_to_poly_value(py, &item)?);
                             } else {
                                 let s: String = if let Ok(enum_val) = item.getattr("value") {
                                     enum_val.str()?.extract()?

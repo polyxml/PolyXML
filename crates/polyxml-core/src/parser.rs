@@ -256,6 +256,40 @@ fn append_general_ref(
     Ok(())
 }
 
+#[derive(Debug)]
+struct AnyElementFrame {
+    qname: String,
+    attributes: HashMap<String, PolyValue>,
+    text: String,
+    children: Vec<PolyValue>,
+}
+
+fn resolve_element_qname(
+    e: &BytesStart,
+    scope: &HashMap<String, String>,
+) -> (Option<String>, String) {
+    let raw = e.name().into_inner();
+    let (prefix, local) = match raw.split_once(':') {
+        Some((p, l)) => (p, l),
+        None => ("", raw),
+    };
+    let ns = scope.get(prefix).cloned();
+    (ns, local.to_string())
+}
+
+fn parse_any_element_attrs(e: &BytesStart) -> Result<HashMap<String, PolyValue>> {
+    let mut attributes = HashMap::new();
+    for attr in e.attributes().flatten() {
+        let key = attr.key.as_ref();
+        if key == "xmlns" || key.starts_with("xmlns:") {
+            continue;
+        }
+        let unescaped = quick_xml::escape::unescape(attr.value.as_ref())?;
+        attributes.insert(key.to_string(), PolyValue::String(unescaped.to_string()));
+    }
+    Ok(attributes)
+}
+
 pub const DEFAULT_MAX_DEPTH: usize = 256;
 
 impl XmlDeserializer {
@@ -324,6 +358,7 @@ impl XmlDeserializer {
         let mut active_scalar_field: Option<(usize, ScalarType, bool)> = None;
         let mut active_mixed_scalar: Option<(String, ScalarType)> = None;
         let mut unknown_depth: usize = 0;
+        let mut any_stack: Vec<AnyElementFrame> = Vec::new();
         let mut text_buf: Vec<u8> = Vec::new();
         let mut buf = Vec::new();
 
@@ -337,6 +372,23 @@ impl XmlDeserializer {
                     }
                     if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
                         unknown_depth = 1;
+                        continue;
+                    }
+                    if !any_stack.is_empty() {
+                        let scope = namespace_stack.last().unwrap();
+                        let (ns, local) = resolve_element_qname(e, scope);
+                        let qname = if let Some(uri) = ns {
+                            format!("{{{}}}{}", uri, local)
+                        } else {
+                            local
+                        };
+                        let attributes = parse_any_element_attrs(e)?;
+                        any_stack.push(AnyElementFrame {
+                            qname,
+                            attributes,
+                            text: String::new(),
+                            children: Vec::new(),
+                        });
                         continue;
                     }
                     if stack.len() >= max_depth {
@@ -445,6 +497,44 @@ impl XmlDeserializer {
                         } else {
                             unknown_depth = 1;
                         }
+                    } else if let Some(any_idx) = current_schema.any_element_field {
+                        let scope = namespace_stack.last().unwrap();
+                        let (ns, local) = resolve_element_qname(e, scope);
+                        let any_field = &current_schema.fields[any_idx];
+                        let allowed = match any_field.namespace.as_deref() {
+                            Some("##other") => {
+                                match (ns.as_deref(), current_schema.namespace.as_deref()) {
+                                    (Some(elem_ns), Some(target_ns)) => elem_ns != target_ns,
+                                    (None, Some(_)) => true,
+                                    (Some(_), None) => true,
+                                    (None, None) => false,
+                                }
+                            }
+                            Some("##targetNamespace") => {
+                                ns.as_deref() == current_schema.namespace.as_deref()
+                            }
+                            Some("##local") => ns.is_none(),
+                            Some(allowed_ns) if allowed_ns != "##any" => {
+                                ns.as_deref() == Some(allowed_ns)
+                            }
+                            _ => true,
+                        };
+                        if allowed {
+                            let qname = if let Some(uri) = ns {
+                                format!("{{{}}}{}", uri, local)
+                            } else {
+                                local
+                            };
+                            let attributes = parse_any_element_attrs(e)?;
+                            any_stack.push(AnyElementFrame {
+                                qname,
+                                attributes,
+                                text: String::new(),
+                                children: Vec::new(),
+                            });
+                        } else {
+                            unknown_depth = 1;
+                        }
                     } else {
                         unknown_depth = 1;
                     }
@@ -454,6 +544,27 @@ impl XmlDeserializer {
                         || active_scalar_field.is_some()
                         || active_mixed_scalar.is_some()
                     {
+                        continue;
+                    }
+                    if !any_stack.is_empty() {
+                        let scope = namespace_scope(namespace_stack.last().unwrap(), e);
+                        let (ns, local) = resolve_element_qname(e, &scope);
+                        let qname = if let Some(uri) = ns {
+                            format!("{{{}}}{}", uri, local)
+                        } else {
+                            local
+                        };
+                        let attributes = parse_any_element_attrs(e)?;
+                        let mut obj = HashMap::new();
+                        obj.insert("qname".to_string(), PolyValue::String(qname));
+                        obj.insert("attributes".to_string(), PolyValue::Object(attributes));
+                        obj.insert("text".to_string(), PolyValue::String(String::new()));
+                        obj.insert("children".to_string(), PolyValue::List(Vec::new()));
+                        any_stack
+                            .last_mut()
+                            .unwrap()
+                            .children
+                            .push(PolyValue::Object(obj));
                         continue;
                     }
                     let local_name = e.local_name();
@@ -543,10 +654,63 @@ impl XmlDeserializer {
                                 .unwrap()
                                 .push_mixed_item(&branch.variant_name, value);
                         }
+                    } else if let Some(any_idx) = current_schema.any_element_field {
+                        let (ns, local) = resolve_element_qname(e, &scope);
+                        let any_field = &current_schema.fields[any_idx];
+                        let allowed = match any_field.namespace.as_deref() {
+                            Some("##other") => {
+                                match (ns.as_deref(), current_schema.namespace.as_deref()) {
+                                    (Some(elem_ns), Some(target_ns)) => elem_ns != target_ns,
+                                    (None, Some(_)) => true,
+                                    (Some(_), None) => true,
+                                    (None, None) => false,
+                                }
+                            }
+                            Some("##targetNamespace") => {
+                                ns.as_deref() == current_schema.namespace.as_deref()
+                            }
+                            Some("##local") => ns.is_none(),
+                            Some(allowed_ns) if allowed_ns != "##any" => {
+                                ns.as_deref() == Some(allowed_ns)
+                            }
+                            _ => true,
+                        };
+                        if allowed {
+                            let qname = if let Some(uri) = ns {
+                                format!("{{{}}}{}", uri, local)
+                            } else {
+                                local
+                            };
+                            let attributes = parse_any_element_attrs(e)?;
+                            let mut obj = HashMap::new();
+                            obj.insert("qname".to_string(), PolyValue::String(qname));
+                            obj.insert("attributes".to_string(), PolyValue::Object(attributes));
+                            obj.insert("text".to_string(), PolyValue::String(String::new()));
+                            obj.insert("children".to_string(), PolyValue::List(Vec::new()));
+                            let poly_obj = PolyValue::Object(obj);
+                            let parent_frame = stack.last_mut().unwrap();
+                            if matches!(any_field.val_type, ValueType::List(_)) {
+                                parent_frame.push_list_item(any_idx, poly_obj);
+                            } else {
+                                parent_frame.values[any_idx] = Some(poly_obj);
+                            }
+                        }
                     }
                 }
                 Ok(Event::Text(ref e)) => {
                     if unknown_depth > 0 {
+                        continue;
+                    }
+                    if !any_stack.is_empty() {
+                        let raw = e.as_ref();
+                        let raw_bytes = raw.as_bytes();
+                        if memchr::memchr(b'&', raw_bytes).is_none() {
+                            if let Ok(s) = std::str::from_utf8(raw_bytes) {
+                                any_stack.last_mut().unwrap().text.push_str(s);
+                            }
+                        } else if let Ok(unescaped) = quick_xml::escape::unescape(raw) {
+                            any_stack.last_mut().unwrap().text.push_str(&unescaped);
+                        }
                         continue;
                     }
                     let raw = e.as_ref();
@@ -578,6 +742,12 @@ impl XmlDeserializer {
                     if unknown_depth > 0 {
                         continue;
                     }
+                    if !any_stack.is_empty() {
+                        if let Ok(s) = std::str::from_utf8(e.as_ref().as_bytes()) {
+                            any_stack.last_mut().unwrap().text.push_str(s);
+                        }
+                        continue;
+                    }
                     if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
                         text_buf.extend_from_slice(e.as_ref().as_bytes());
                     } else if let Some(frame) = stack.last_mut() {
@@ -590,6 +760,14 @@ impl XmlDeserializer {
                 }
                 Ok(Event::GeneralRef(ref e)) => {
                     if unknown_depth > 0 {
+                        continue;
+                    }
+                    if !any_stack.is_empty() {
+                        let mut resolved = Vec::new();
+                        append_general_ref(e, true, &mut resolved, None)?;
+                        if let Ok(s) = std::str::from_utf8(&resolved) {
+                            any_stack.last_mut().unwrap().text.push_str(s);
+                        }
                         continue;
                     }
                     let frame_tb = stack.last_mut().and_then(|f| f.frame_text_buf.as_mut());
@@ -615,6 +793,33 @@ impl XmlDeserializer {
                     namespace_stack.pop();
                     if unknown_depth > 0 {
                         unknown_depth -= 1;
+                        continue;
+                    }
+                    if !any_stack.is_empty() {
+                        let frame = any_stack.pop().unwrap();
+                        let mut obj = HashMap::new();
+                        obj.insert("qname".to_string(), PolyValue::String(frame.qname));
+                        obj.insert(
+                            "attributes".to_string(),
+                            PolyValue::Object(frame.attributes),
+                        );
+                        obj.insert("text".to_string(), PolyValue::String(frame.text));
+                        obj.insert("children".to_string(), PolyValue::List(frame.children));
+                        let poly_obj = PolyValue::Object(obj);
+
+                        if let Some(parent) = any_stack.last_mut() {
+                            parent.children.push(poly_obj);
+                        } else {
+                            let parent_frame = stack.last_mut().unwrap();
+                            if let Some(any_idx) = parent_frame.schema.any_element_field {
+                                let field = &parent_frame.schema.fields[any_idx];
+                                if matches!(field.val_type, ValueType::List(_)) {
+                                    parent_frame.push_list_item(any_idx, poly_obj);
+                                } else {
+                                    parent_frame.values[any_idx] = Some(poly_obj);
+                                }
+                            }
+                        }
                         continue;
                     }
                     if let Some((kind, scalar_type)) = active_mixed_scalar.take() {
