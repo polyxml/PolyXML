@@ -1083,3 +1083,29 @@ fn test_csharp_any_attribute_codegen() {
     assert!(class_code
         .contains("public System.Xml.XmlAttribute[]? AnyAttribute { get; set; } = default!;"));
 }
+
+#[test]
+fn test_csharp_sequence_nested_inside_choice_codegen() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="Root"><xs:complexType><xs:choice>
+        <xs:sequence>
+          <xs:element name="First" type="xs:string"/>
+          <xs:element name="Second" type="xs:string"/>
+        </xs:sequence>
+        <xs:element name="Alternative" type="xs:string"/>
+      </xs:choice></xs:complexType></xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new()
+        .parse_str(xsd)
+        .expect("schema parse failed");
+    let codegen = CSharpCodegen::new(CSharpOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("public abstract record RootType"));
+    assert!(code.contains("public sealed record FirstSequence([property: XmlElement(\"First\"), JsonPropertyName(\"First\")] RootTypeSequence Value) : RootType"));
+    assert!(code.contains("public sealed record Alternative([property: XmlElement(\"Alternative\"), JsonPropertyName(\"Alternative\")] string Value) : RootType"));
+    assert!(code.contains("public record RootTypeSequence"));
+}

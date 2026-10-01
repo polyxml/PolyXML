@@ -501,6 +501,8 @@ impl XsdParser {
 
         let mut is_top_level_choice = false;
         let mut top_level_choice_branches: Vec<UnionBranch> = Vec::new();
+        let mut top_level_choice_fields_start = 0;
+        let mut top_level_choice_fields_count = 0;
         let mut compositor_stack: Vec<CompositorFrame> = Vec::new();
         let mut depth = 1;
         while depth > 0 {
@@ -599,9 +601,16 @@ impl XsdParser {
                                 .last()
                                 .map(|c| c.kind == CompositorKind::Choice)
                                 .unwrap_or(false);
-                            if let Some(mut field) =
-                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
-                            {
+                            let in_any_choice = compositor_stack
+                                .iter()
+                                .any(|c| c.kind == CompositorKind::Choice);
+                            if let Some(mut field) = parse_element_field(
+                                e,
+                                target_ns,
+                                prefixes,
+                                in_any_choice,
+                                in_unbounded,
+                            ) {
                                 // Consume inline type definitions so nested
                                 // fields cannot leak into the parent struct;
                                 // extracted types are registered in `ir`.
@@ -690,9 +699,16 @@ impl XsdParser {
                                 .last()
                                 .map(|c| c.kind == CompositorKind::Choice)
                                 .unwrap_or(false);
-                            if let Some(field) =
-                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
-                            {
+                            let in_any_choice = compositor_stack
+                                .iter()
+                                .any(|c| c.kind == CompositorKind::Choice);
+                            if let Some(field) = parse_element_field(
+                                e,
+                                target_ns,
+                                prefixes,
+                                in_any_choice,
+                                in_unbounded,
+                            ) {
                                 if in_choice {
                                     if let Some(frame) = compositor_stack.last_mut() {
                                         if frame.kind == CompositorKind::Choice {
@@ -748,10 +764,58 @@ impl XsdParser {
                     let local = strip_prefix(e.name().into_inner());
                     if local == "sequence" || local == "choice" || local == "all" {
                         if let Some(frame) = compositor_stack.pop() {
-                            if frame.kind == CompositorKind::Choice {
+                            if frame.kind == CompositorKind::Sequence {
+                                if let Some(parent) = compositor_stack.last_mut() {
+                                    if parent.kind == CompositorKind::Choice {
+                                        let seq_fields = fields[frame.fields_start..].to_vec();
+                                        if !seq_fields.is_empty() {
+                                            let seq_name = unique_type_name(
+                                                ir,
+                                                target_ns,
+                                                &format!("{}Sequence", name),
+                                            );
+                                            let seq_qname = QName::new(target_ns, seq_name);
+                                            ir.add_type(TypeDef::Struct(StructDef {
+                                                qname: seq_qname.clone(),
+                                                base_type: None,
+                                                is_abstract: false,
+                                                is_mixed: false,
+                                                fields: seq_fields,
+                                                documentation: None,
+                                            }));
+                                            let branch_variant = if let Some(first_field) =
+                                                fields.get(frame.fields_start)
+                                            {
+                                                format!(
+                                                    "{}Sequence",
+                                                    sanitize_field_name(&first_field.name)
+                                                )
+                                            } else {
+                                                "Sequence".to_string()
+                                            };
+                                            let branch_xml = if let Some(first_field) =
+                                                fields.get(frame.fields_start)
+                                            {
+                                                first_field.xml_name.clone()
+                                            } else {
+                                                String::new()
+                                            };
+                                            parent.choice_branches.push(UnionBranch {
+                                                variant_name: branch_variant,
+                                                xml_name: branch_xml,
+                                                namespace: target_ns.map(Into::into),
+                                                type_ref: TypeRef::Named(seq_qname),
+                                                documentation: None,
+                                            });
+                                        }
+                                    }
+                                }
+                            } else if frame.kind == CompositorKind::Choice {
                                 let choice_is_unbounded = frame.is_unbounded
                                     || compositor_stack.iter().any(|c| c.is_unbounded);
+                                let is_nested_choice = !compositor_stack.is_empty();
                                 if (choice_is_unbounded
+                                    || is_nested_choice
                                     || (compositor_stack.is_empty() && base_type.is_some()))
                                     && !frame.choice_branches.is_empty()
                                 {
@@ -799,6 +863,9 @@ impl XsdParser {
                                     });
                                 } else if !choice_is_unbounded && compositor_stack.is_empty() {
                                     top_level_choice_branches = frame.choice_branches;
+                                    top_level_choice_fields_start = frame.fields_start;
+                                    top_level_choice_fields_count =
+                                        fields.len() - frame.fields_start;
                                     is_top_level_choice = true;
                                 }
                             }
@@ -818,7 +885,8 @@ impl XsdParser {
             && is_top_level_choice
             && !top_level_choice_branches.is_empty()
             && group_refs.is_empty()
-            && fields.len() == top_level_choice_branches.len();
+            && top_level_choice_fields_start == 0
+            && fields.len() == top_level_choice_fields_count;
 
         // Record group refs for post-parse expansion.
         if !is_union {

@@ -768,3 +768,27 @@ fn test_python_any_element_codegen() {
         "Generated Python model must define xs:any field as optional object"
     );
 }
+
+#[test]
+fn test_python_sequence_nested_inside_choice_codegen() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="Root"><xs:complexType><xs:choice>
+        <xs:sequence>
+          <xs:element name="First" type="xs:string"/>
+          <xs:element name="Second" type="xs:string"/>
+        </xs:sequence>
+        <xs:element name="Alternative" type="xs:string"/>
+      </xs:choice></xs:complexType></xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new()
+        .parse_str(xsd)
+        .expect("schema parse failed");
+    let codegen = PythonCodegen::new(PythonOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("type RootType = RootTypeSequence | str"));
+    assert!(code.contains("class RootTypeSequence:"));
+    assert!(code.contains("first: str | None = field("));
+    assert!(code.contains("second: str | None = field("));
+}

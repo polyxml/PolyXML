@@ -602,3 +602,52 @@ fn test_language_context_adapter() {
     let list_ref = TypeRef::List(Box::new(TypeRef::Primitive(PrimitiveType::Int)));
     assert_eq!(ctx.map_type_ref(&list_ref), "Vec<i32>");
 }
+
+#[test]
+fn test_sequence_nested_inside_choice_preserved_in_ir() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="Root"><xs:complexType><xs:choice>
+        <xs:sequence>
+          <xs:element name="First" type="xs:string"/>
+          <xs:element name="Second" type="xs:string"/>
+        </xs:sequence>
+        <xs:element name="Alternative" type="xs:string"/>
+      </xs:choice></xs:complexType></xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let root_type_qname = QName::local("RootType");
+    let TypeDef::Union(root_choice) = ir
+        .types
+        .get(&root_type_qname)
+        .expect("RootType must be UnionDef")
+    else {
+        panic!("RootType must be a UnionDef");
+    };
+
+    assert_eq!(root_choice.branches.len(), 2);
+    // Sequence branch
+    let seq_branch = &root_choice.branches[0];
+    assert!(seq_branch.variant_name.contains("Sequence"));
+    let TypeRef::Named(seq_qname) = &seq_branch.type_ref else {
+        panic!("Sequence branch must reference a synthetic struct type");
+    };
+    let TypeDef::Struct(seq_struct) = ir
+        .types
+        .get(seq_qname)
+        .expect("Synthetic sequence struct must exist")
+    else {
+        panic!("Sequence branch must be a StructDef");
+    };
+    assert_eq!(seq_struct.fields.len(), 2);
+    assert_eq!(seq_struct.fields[0].xml_name, "First");
+    assert_eq!(seq_struct.fields[1].xml_name, "Second");
+
+    // Alternative branch
+    let alt_branch = &root_choice.branches[1];
+    assert_eq!(alt_branch.xml_name, "Alternative");
+    assert_eq!(
+        alt_branch.type_ref,
+        TypeRef::Primitive(PrimitiveType::String)
+    );
+}

@@ -1162,7 +1162,9 @@ impl GoCodegen {
             let xml_val = match f.kind {
                 FieldKind::Attribute => {
                     let attr_name = match &f.namespace {
-                        Some(ns) if !ns.is_empty() => format!("{} {}", ns, f.xml_name),
+                        Some(ns) if !ns.is_empty() && is_namespaced_ref(f, s, ir) => {
+                            format!("{} {}", ns, f.xml_name)
+                        }
                         _ => f.xml_name.clone(),
                     };
                     if is_opt {
@@ -1175,10 +1177,11 @@ impl GoCodegen {
                 FieldKind::Any => ",any".to_string(),
                 FieldKind::AnyAttribute => ",any,attr".to_string(),
                 FieldKind::Element => {
-                    let elem_name = if is_namespaced_ref(f, s, ir) {
-                        format!("{} {}", f.namespace.as_ref().unwrap(), f.xml_name)
-                    } else {
-                        f.xml_name.clone()
+                    let elem_name = match &f.namespace {
+                        Some(ns) if !ns.is_empty() && is_namespaced_ref(f, s, ir) => {
+                            format!("{} {}", ns, f.xml_name)
+                        }
+                        _ => f.xml_name.clone(),
                     };
                     if f.xml_name.is_empty() {
                         ",any".to_string()
