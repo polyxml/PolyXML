@@ -1,3 +1,11 @@
+## [0.33.1](https://github.com/polyxml/PolyXML/compare/v0.33.0...v0.33.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **codegen:** preserve xs:anyAttribute wildcards in models and codecs ([#128](https://github.com/polyxml/PolyXML/issues/128)) ([65065c4](https://github.com/polyxml/PolyXML/commit/65065c48e83c34a78ff1709ee5e09228ef27c46a))
+* **codegen:** resolve Category 1 hard compiler and type breakages ([#129](https://github.com/polyxml/PolyXML/issues/129), [#121](https://github.com/polyxml/PolyXML/issues/121), [#120](https://github.com/polyxml/PolyXML/issues/120), [#130](https://github.com/polyxml/PolyXML/issues/130), [#118](https://github.com/polyxml/PolyXML/issues/118), [#112](https://github.com/polyxml/PolyXML/issues/112)) ([5eb93a4](https://github.com/polyxml/PolyXML/commit/5eb93a4275104a039a7cefdf7cb2bb47fbc53059))
+
 # [0.33.0](https://github.com/polyxml/PolyXML/compare/v0.32.0...v0.33.0) (2026-09-30)
 
 
