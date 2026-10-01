@@ -945,3 +945,106 @@ class Program { static void Main() {
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn test_csharp_date_or_datetime_lexical_union() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="DateOrDateTime"><xs:union memberTypes="xs:date xs:dateTime"/></xs:simpleType>
+      <xs:element name="Root"><xs:complexType><xs:sequence>
+        <xs:element name="When" type="DateOrDateTime"/>
+      </xs:sequence></xs:complexType></xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+    let codegen = CSharpCodegen::new(CSharpOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("System.Xml.XmlConvert.ToString(item.Value)"));
+    assert!(code.contains(
+        "item.Value.ToString(\"yyyy-MM-dd\", System.Globalization.CultureInfo.InvariantCulture)"
+    ));
+}
+
+#[test]
+fn test_csharp_simple_content_class_validator_and_unsealed_records() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="PartyType">
+        <xs:restriction base="xs:string">
+          <xs:maxLength value="50"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:element name="Party" type="PartyType"/>
+
+      <xs:complexType name="CodeType">
+        <xs:simpleContent>
+          <xs:extension base="xs:string">
+            <xs:attribute name="listID" type="xs:string"/>
+          </xs:extension>
+        </xs:simpleContent>
+      </xs:complexType>
+
+      <xs:element name="Root">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Code" type="CodeType"/>
+            <xs:element ref="Party"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+
+    // Test mutable class mode with validation enabled
+    let class_codegen = CSharpCodegen::new(CSharpOptions {
+        use_records: false,
+        emit_validation: true,
+        emit_root_records: true,
+        namespace: "UblSample".into(),
+        ..Default::default()
+    });
+    let class_code = class_codegen.generate_module(&ir);
+
+    assert!(class_code.contains("public class CodeType : IValidatableObject"));
+    assert!(class_code.contains("public virtual IEnumerable<ValidationResult> Validate("));
+    assert!(!class_code.contains("base.Validate("));
+    assert!(class_code.contains("public class PartyType"));
+
+    // Also test record mode to ensure Party derives from PartyType without sealed error
+    let record_codegen = CSharpCodegen::new(CSharpOptions {
+        use_records: true,
+        emit_validation: true,
+        emit_root_records: true,
+        namespace: "UblSampleRecords".into(),
+        ..Default::default()
+    });
+    let record_code = record_codegen.generate_module(&ir);
+    assert!(record_code.contains("public record PartyType([property: XmlText] string Value)"));
+    assert!(record_code.contains("public sealed record Party : PartyType"));
+
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("UblClass.cs"), class_code).unwrap();
+    fs::write(dir.path().join("Test.csproj"), r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><OutputType>Library</OutputType><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup></Project>"#).unwrap();
+
+    let _dotnet_lock = DOTNET_LOCK.lock().unwrap();
+    if Command::new("dotnet").arg("--version").output().is_err() {
+        return;
+    }
+    let result = Command::new("dotnet")
+        .current_dir(dir.path())
+        .args(["build", "Test.csproj"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

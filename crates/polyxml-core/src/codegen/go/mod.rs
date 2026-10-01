@@ -273,14 +273,12 @@ impl GoCodegen {
                 }));
         let mut has_fmt = has_patterns;
         let mut has_io = false;
-        let mut has_xml = self.options.emit_xml_tags;
 
         // Check types for time.Time
         for type_def in ir.emitted_types() {
             match type_def {
                 TypeDef::Struct(s) => {
                     if s.is_mixed && self.options.emit_xml_tags {
-                        has_xml = true;
                         has_fmt = true;
                         has_io = true;
                     }
@@ -310,11 +308,9 @@ impl GoCodegen {
                     if self.options.validate_choice_exclusivity && !u.is_lexical() {
                         has_fmt = true;
                         has_io = true;
-                        has_xml = true;
                     }
                     if u.is_lexical() {
                         has_fmt = true;
-                        has_xml = true;
                     }
                 }
                 TypeDef::Simple(st) => {
@@ -354,7 +350,7 @@ impl GoCodegen {
         writeln!(out, "package {}\n", pkg).unwrap();
 
         let mut imports = Vec::new();
-        if has_xml {
+        if body.contains("xml.") {
             imports.push("\"encoding/xml\"");
         }
         if self.options.emit_xml_tags
@@ -813,6 +809,12 @@ impl GoCodegen {
             };
             if matches!(base, TypeRef::Primitive(PrimitiveType::Date)) {
                 let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+            } else if matches!(base, TypeRef::Primitive(PrimitiveType::DateTime)) {
+                let _ = writeln!(out, "    if parsed, err := time.Parse(time.RFC3339, value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02T15:04:05\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+            } else if matches!(base, TypeRef::Primitive(PrimitiveType::Time)) {
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"15:04:05Z07:00\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"15:04:05\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
             } else if let Some(kind) = numeric {
                 let parse = match kind {
                     "signed" => "strconv.ParseInt(value, 10, 64)",
@@ -880,6 +882,16 @@ impl GoCodegen {
                 TypeRef::Primitive(PrimitiveType::Date)
             ) {
                 format!("c.{}.Format(\"2006-01-02\")", field)
+            } else if matches!(
+                super::primitive_base(&branch.type_ref, ir),
+                TypeRef::Primitive(PrimitiveType::DateTime)
+            ) {
+                format!("c.{}.Format(time.RFC3339)", field)
+            } else if matches!(
+                super::primitive_base(&branch.type_ref, ir),
+                TypeRef::Primitive(PrimitiveType::Time)
+            ) {
+                format!("c.{}.Format(\"15:04:05Z07:00\")", field)
             } else {
                 format!("fmt.Sprint(*c.{})", field)
             };

@@ -772,7 +772,14 @@ fn run_module_build(
                 run_language_formatter(&language, &module_dir);
             }
             if language == "rust" || language == "rs" {
-                rust_root.push_str(&format!("pub mod {name};\n"));
+                let safe_mod = polyxml::codegen::rust::sanitize_rust_module_name(name);
+                if safe_mod == name.as_str() {
+                    rust_root.push_str(&format!("pub mod {name};\n"));
+                } else {
+                    rust_root.push_str(&format!(
+                        "#[path = \"{name}/mod.rs\"]\npub mod {safe_mod};\n"
+                    ));
+                }
             }
         }
         if !rust_root.is_empty() {

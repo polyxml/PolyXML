@@ -1281,3 +1281,32 @@ fn test_rust_topological_scc_chunking() {
     assert!(mod_rs.contains("pub use chunk_01::*;"));
     assert!(mod_rs.contains("pub use chunk_02::*;"));
 }
+
+#[test]
+fn test_rust_digit_prefixed_module_sanitization() {
+    use polyxml::codegen::rust::sanitize_rust_module_name;
+
+    assert_eq!(sanitize_rust_module_name("17_report"), "_17_report");
+    assert_eq!(sanitize_rust_module_name("3gpp_spec"), "_3gpp_spec");
+    assert_eq!(sanitize_rust_module_name("type"), "r#type");
+    assert_eq!(sanitize_rust_module_name("normal_name"), "normal_name");
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+        <xs:element name="Item" type="xs:string"/>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new()
+        .parse_str(xsd)
+        .expect("schema parse failed");
+    let codegen = RustCodegen::new(RustOptions::default());
+    let files = codegen.generate_files(&ir, "17_report");
+
+    let mod_file = files
+        .iter()
+        .find(|(name, _)| name == "mod.rs")
+        .expect("mod.rs missing");
+    assert!(mod_file.1.contains("#[path = \"17_report.rs\"]"));
+    assert!(mod_file.1.contains("pub mod _17_report;"));
+    assert!(mod_file.1.contains("pub use _17_report::*;"));
+}

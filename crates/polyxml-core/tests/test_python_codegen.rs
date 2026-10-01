@@ -656,3 +656,59 @@ fn test_python_aot_codegen() {
         .pyi_stub
         .contains("def from_xml(xml: str) -> FlightPlan: ..."));
 }
+
+#[test]
+fn test_python_derived_meta_inheritance() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="BaseType"><xs:sequence>
+        <xs:element name="BaseField" type="xs:string"/>
+      </xs:sequence></xs:complexType>
+      <xs:complexType name="DerivedType"><xs:complexContent><xs:extension base="BaseType">
+        <xs:sequence><xs:element name="ExtraField" type="xs:string"/></xs:sequence>
+      </xs:extension></xs:complexContent></xs:complexType>
+      <xs:element name="Root" type="DerivedType"/>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+    let codegen = PythonCodegen::new(PythonOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("class BaseType:"));
+    assert!(code.contains("    class Meta:"));
+    assert!(code.contains("class DerivedType(BaseType):"));
+    assert!(code.contains("    class Meta(BaseType.Meta):"));
+}
+
+#[test]
+fn test_python_simplecontent_default_factory() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="BooleanWithAttr">
+        <xs:simpleContent>
+          <xs:extension base="xs:boolean">
+            <xs:attribute name="source" type="xs:string"/>
+          </xs:extension>
+        </xs:simpleContent>
+      </xs:complexType>
+      <xs:element name="Root">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="flag" type="BooleanWithAttr" default="true"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+    let codegen = PythonCodegen::new(PythonOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains(
+        "flag: BooleanWithAttr = field(default_factory=lambda: BooleanWithAttr(value=True)"
+    ));
+}

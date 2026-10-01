@@ -638,7 +638,11 @@ impl PythonCodegen {
             if has_body {
                 out.push('\n');
             }
-            out.push_str("    class Meta:\n");
+            if let Some(ref base_name) = struct_base {
+                let _ = writeln!(out, "    class Meta({}.Meta):", base_name);
+            } else {
+                out.push_str("    class Meta:\n");
+            }
             let _ = writeln!(out, "        name = \"{}\"", s.qname.local);
             if let Some(ref ns) = s.qname.namespace {
                 let _ = writeln!(out, "        namespace = \"{}\"", ns);
@@ -692,7 +696,7 @@ impl PythonCodegen {
             let mut seen_fields = HashSet::new();
             for field in &s.fields {
                 let py_field_name = self.unique_field_name(&field.name, &mut seen_fields);
-                self.emit_field(out, field, &py_field_name);
+                self.emit_field(out, field, &py_field_name, ir);
             }
             has_body = true;
         }
@@ -754,7 +758,7 @@ impl PythonCodegen {
         candidate
     }
 
-    fn emit_field(&self, out: &mut String, field: &FieldDef, py_name: &str) {
+    fn emit_field(&self, out: &mut String, field: &FieldDef, py_name: &str, ir: &SchemaIR) {
         let is_list = field.cardinality.is_list() || field.type_ref.is_list();
         let unwrapped_ref = match &field.type_ref {
             TypeRef::List(inner) => inner.as_ref(),
@@ -765,10 +769,10 @@ impl PythonCodegen {
 
         let (field_type, field_call) = match self.options.backend {
             PythonBackend::Dataclass | PythonBackend::Aot => {
-                self.format_dataclass_field(field, is_list, &inner_type, &meta_dict)
+                self.format_dataclass_field(field, is_list, &inner_type, &meta_dict, ir)
             }
             PythonBackend::Pydantic => {
-                self.format_pydantic_field(field, py_name, is_list, &inner_type, &meta_dict)
+                self.format_pydantic_field(field, py_name, is_list, &inner_type, &meta_dict, ir)
             }
         };
 
@@ -785,7 +789,20 @@ impl PythonCodegen {
         is_list: bool,
         base_type: &str,
         meta_dict: &str,
+        ir: &SchemaIR,
     ) -> (String, String) {
+        let simple_content = match &field.type_ref {
+            TypeRef::Named(qname) => match ir.find_type(qname) {
+                Some(TypeDef::Struct(s)) => s
+                    .fields
+                    .iter()
+                    .find(|f| f.kind == FieldKind::Text)
+                    .map(|tf| (tf.name.clone(), tf.type_ref.clone())),
+                _ => None,
+            },
+            _ => None,
+        };
+
         if is_list {
             (
                 format!("list[{}]", base_type),
@@ -793,7 +810,7 @@ impl PythonCodegen {
             )
         } else if field.cardinality.is_optional() || field.nillable {
             if let Some(ref def) = field.default_value {
-                let py_val = self.format_default_value(def, &field.type_ref);
+                let py_val = self.format_default_value(def, &field.type_ref, ir);
                 (
                     format!("{} | None", base_type),
                     format!("field(default={}, metadata={})", py_val, meta_dict),
@@ -805,11 +822,22 @@ impl PythonCodegen {
                 )
             }
         } else if let Some(ref def) = field.default_value {
-            let py_val = self.format_default_value(def, &field.type_ref);
-            (
-                base_type.to_string(),
-                format!("field(default={}, metadata={})", py_val, meta_dict),
-            )
+            if let Some((text_name, text_type)) = simple_content {
+                let py_val = self.format_default_value(def, &text_type, ir);
+                (
+                    base_type.to_string(),
+                    format!(
+                        "field(default_factory=lambda: {}({}={}), metadata={})",
+                        base_type, text_name, py_val, meta_dict
+                    ),
+                )
+            } else {
+                let py_val = self.format_default_value(def, &field.type_ref, ir);
+                (
+                    base_type.to_string(),
+                    format!("field(default={}, metadata={})", py_val, meta_dict),
+                )
+            }
         } else {
             (
                 base_type.to_string(),
@@ -825,6 +853,7 @@ impl PythonCodegen {
         is_list: bool,
         base_type: &str,
         meta_dict: &str,
+        ir: &SchemaIR,
     ) -> (String, String) {
         let facet_args = field
             .facets
@@ -843,6 +872,18 @@ impl PythonCodegen {
         }
         let extra_clause = clauses.join(", ");
 
+        let simple_content = match &field.type_ref {
+            TypeRef::Named(qname) => match ir.find_type(qname) {
+                Some(TypeDef::Struct(s)) => s
+                    .fields
+                    .iter()
+                    .find(|f| f.kind == FieldKind::Text)
+                    .map(|tf| (tf.name.clone(), tf.type_ref.clone())),
+                _ => None,
+            },
+            _ => None,
+        };
+
         if is_list {
             (
                 format!("list[{}]", base_type),
@@ -850,7 +891,7 @@ impl PythonCodegen {
             )
         } else if field.cardinality.is_optional() || field.nillable {
             if let Some(ref def) = field.default_value {
-                let py_val = self.format_default_value(def, &field.type_ref);
+                let py_val = self.format_default_value(def, &field.type_ref, ir);
                 (
                     format!("{} | None", base_type),
                     format!("Field(default={}, {})", py_val, extra_clause),
@@ -862,11 +903,22 @@ impl PythonCodegen {
                 )
             }
         } else if let Some(ref def) = field.default_value {
-            let py_val = self.format_default_value(def, &field.type_ref);
-            (
-                base_type.to_string(),
-                format!("Field(default={}, {})", py_val, extra_clause),
-            )
+            if let Some((text_name, text_type)) = simple_content {
+                let py_val = self.format_default_value(def, &text_type, ir);
+                (
+                    base_type.to_string(),
+                    format!(
+                        "Field(default_factory=lambda: {}({}={}), {})",
+                        base_type, text_name, py_val, extra_clause
+                    ),
+                )
+            } else {
+                let py_val = self.format_default_value(def, &field.type_ref, ir);
+                (
+                    base_type.to_string(),
+                    format!("Field(default={}, {})", py_val, extra_clause),
+                )
+            }
         } else {
             (
                 base_type.to_string(),
@@ -901,8 +953,9 @@ impl PythonCodegen {
         format!("{{{}}}", parts.join(", "))
     }
 
-    fn format_default_value(&self, val: &str, type_ref: &TypeRef) -> String {
-        match type_ref {
+    fn format_default_value(&self, val: &str, type_ref: &TypeRef, ir: &SchemaIR) -> String {
+        let base = super::primitive_base(type_ref, ir);
+        match base {
             TypeRef::Primitive(PrimitiveType::Boolean) => match val.trim() {
                 "true" | "1" => "True".to_string(),
                 "false" | "0" => "False".to_string(),

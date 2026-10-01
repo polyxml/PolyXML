@@ -767,3 +767,50 @@ fn test_go_sonic_backend() {
     );
     assert!(code.contains("Notes *string `xml:\"notes,omitempty\" json:\"notes,omitempty\" sonic:\"notes,omitempty\"`"));
 }
+
+#[test]
+fn test_go_enum_only_schema_omits_unused_xml_import() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="YesNo"><xs:restriction base="xs:string">
+        <xs:enumeration value="YES"/><xs:enumeration value="yes"/>
+        <xs:enumeration value="NO"/><xs:enumeration value="no"/>
+      </xs:restriction></xs:simpleType>
+      <xs:element name="Root" type="YesNo"/>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+    let codegen = GoCodegen::new(GoOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(
+        !code.contains("encoding/xml"),
+        "Enum-only schema must not import unused encoding/xml"
+    );
+    assert!(code.contains("type YesNo string"));
+    assert!(code.contains("YesNoYes YesNo = \"YES\""));
+}
+
+#[test]
+fn test_go_date_or_datetime_lexical_union() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="DateOrDateTime"><xs:union memberTypes="xs:date xs:dateTime"/></xs:simpleType>
+      <xs:element name="Root"><xs:complexType><xs:sequence>
+        <xs:element name="When" type="DateOrDateTime"/>
+      </xs:sequence></xs:complexType></xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+    let codegen = GoCodegen::new(GoOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("time.Parse(time.RFC3339, value)"));
+    assert!(code.contains("time.Parse(\"2006-01-02\", value)"));
+    assert!(code.contains("c.DateTimeValue.Format(time.RFC3339)"));
+    assert!(code.contains("c.DateValue.Format(\"2006-01-02\")"));
+}

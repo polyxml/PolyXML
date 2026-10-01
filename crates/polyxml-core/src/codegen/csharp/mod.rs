@@ -582,7 +582,7 @@ impl CSharpCodegen {
             }
             writeln!(
                 out,
-                "{}public sealed record {}([property: XmlText] {} Value) : IValidatableObject",
+                "{}public record {}([property: XmlText] {} Value) : IValidatableObject",
                 indent, type_name, base_type
             )
             .unwrap();
@@ -819,6 +819,16 @@ impl CSharpCodegen {
                 TypeRef::Primitive(PrimitiveType::Date)
             ) {
                 "item.Value.ToString(\"yyyy-MM-dd\", System.Globalization.CultureInfo.InvariantCulture)".to_string()
+            } else if matches!(
+                super::primitive_base(&branch.type_ref, ir),
+                TypeRef::Primitive(PrimitiveType::DateTime)
+            ) {
+                "System.Xml.XmlConvert.ToString(item.Value)".to_string()
+            } else if matches!(
+                super::primitive_base(&branch.type_ref, ir),
+                TypeRef::Primitive(PrimitiveType::Time)
+            ) {
+                "item.Value.ToString(\"HH:mm:ssK\", System.Globalization.CultureInfo.InvariantCulture)".to_string()
             } else {
                 match &branch.type_ref {
                 TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Enum(_))) => "item.Value.ToXmlValue()".to_string(),
@@ -1039,7 +1049,7 @@ impl CSharpCodegen {
                 );
             }
             if self.options.emit_validation {
-                self.emit_struct_validator(out, s, &prop_names, indent);
+                self.emit_struct_validator(out, s, ir, &prop_names, indent);
             }
             writeln!(out, "{}}}\n", indent).unwrap();
             return;
@@ -1093,7 +1103,7 @@ impl CSharpCodegen {
                 .unwrap();
             }
             if self.options.emit_validation {
-                self.emit_struct_validator(out, s, &prop_names, indent);
+                self.emit_struct_validator(out, s, ir, &prop_names, indent);
             }
             writeln!(out, "{}}}\n", indent).unwrap();
             return;
@@ -1109,7 +1119,7 @@ impl CSharpCodegen {
                 )
                 .unwrap();
                 writeln!(out, "{}{{", indent).unwrap();
-                self.emit_struct_validator(out, s, &prop_names, indent);
+                self.emit_struct_validator(out, s, ir, &prop_names, indent);
                 writeln!(out, "{}}}", indent).unwrap();
             } else {
                 writeln!(
@@ -1182,7 +1192,7 @@ impl CSharpCodegen {
 
         // IValidatableObject implementation
         if self.options.emit_validation {
-            self.emit_struct_validator(out, s, &prop_names, indent);
+            self.emit_struct_validator(out, s, ir, &prop_names, indent);
         }
 
         writeln!(out, "{}}}\n", indent).unwrap();
@@ -1221,17 +1231,23 @@ impl CSharpCodegen {
         &self,
         out: &mut String,
         s: &StructDef,
+        ir: &SchemaIR,
         prop_names: &[String],
         indent: &str,
     ) {
         let _struct_name = type_ident(&s.qname);
+        let has_struct_base = s
+            .base_type
+            .as_ref()
+            .map(|b| matches!(ir.types.get(b), Some(TypeDef::Struct(_))))
+            .unwrap_or(false);
         let new_kw = if !self.options.use_records {
-            if s.base_type.is_some() {
+            if has_struct_base {
                 "override "
             } else {
                 "virtual "
             }
-        } else if s.base_type.is_some() {
+        } else if has_struct_base {
             "new "
         } else {
             ""
@@ -1244,7 +1260,7 @@ impl CSharpCodegen {
         .unwrap();
         writeln!(out, "{}    {{", indent).unwrap();
 
-        if !self.options.use_records && s.base_type.is_some() {
+        if !self.options.use_records && has_struct_base {
             writeln!(out, "{}        foreach (var result in base.Validate(validationContext)) yield return result;", indent).unwrap();
         }
         let mut has_checks = false;

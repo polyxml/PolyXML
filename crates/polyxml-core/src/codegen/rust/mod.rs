@@ -211,6 +211,28 @@ pub fn to_rust_field_identifier(name: &str) -> String {
     sanitize_keyword(&safe_name, "rust")
 }
 
+/// Sanitizes a Rust module identifier (derived from a schema file stem or module name).
+pub fn sanitize_rust_module_name(name: &str) -> String {
+    let mut safe = String::new();
+    let mut chars = name.chars().peekable();
+    if let Some(&first) = chars.peek() {
+        if first.is_ascii_digit() {
+            safe.push('_');
+        }
+    }
+    for c in chars {
+        if c.is_alphanumeric() || c == '_' {
+            safe.push(c);
+        } else {
+            safe.push('_');
+        }
+    }
+    if safe.is_empty() {
+        safe = "_module".to_string();
+    }
+    sanitize_keyword(&safe, "rust")
+}
+
 /// Pure-Rust code generator emitting zero-copy / low-allocation Rust 2021/2024 data structures.
 pub struct RustCodegen {
     options: RustOptions,
@@ -314,6 +336,13 @@ impl RustCodegen {
         let should_split = self.options.split_units.unwrap_or(false);
         let chunk_size = self.options.chunk_size.unwrap_or(250);
 
+        let safe_mod = sanitize_rust_module_name(base_name);
+        let mod_export = if safe_mod == base_name {
+            format!("pub mod {base_name};\npub use {base_name}::*;\n")
+        } else {
+            format!("#[path = \"{base_name}.rs\"]\npub mod {safe_mod};\npub use {safe_mod}::*;\n")
+        };
+
         if !should_split {
             let code = self.generate_module(ir);
             if base_name == "mod" {
@@ -321,10 +350,7 @@ impl RustCodegen {
             }
             return vec![
                 (format!("{}.rs", base_name), code),
-                (
-                    "mod.rs".to_string(),
-                    format!("pub mod {base_name};\npub use {base_name}::*;\n"),
-                ),
+                ("mod.rs".to_string(), mod_export),
             ];
         }
 
@@ -336,10 +362,7 @@ impl RustCodegen {
             }
             return vec![
                 (format!("{}.rs", base_name), code),
-                (
-                    "mod.rs".to_string(),
-                    format!("pub mod {base_name};\npub use {base_name}::*;\n"),
-                ),
+                ("mod.rs".to_string(), mod_export),
             ];
         }
 
