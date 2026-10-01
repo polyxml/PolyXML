@@ -837,3 +837,132 @@ fn test_go_any_attribute_codegen() {
 
     assert!(code.contains("AnyAttribute []xml.Attr `xml:\",any,attr\" json:\"-\"`"));
 }
+
+#[test]
+fn test_go_abstract_xsi_type_dispatch() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:audit:abstract" xmlns:t="urn:audit:abstract" elementFormDefault="qualified">
+      <xs:complexType name="AbstractDocument" abstract="true">
+        <xs:sequence>
+          <xs:element name="Id" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="InvoiceDocument">
+        <xs:complexContent>
+          <xs:extension base="t:AbstractDocument">
+            <xs:sequence>
+              <xs:element name="Amount" type="xs:decimal"/>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="ReceiptDocument">
+        <xs:complexContent>
+          <xs:extension base="t:AbstractDocument">
+            <xs:sequence>
+              <xs:element name="Store" type="xs:string"/>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:element name="Document" type="t:AbstractDocument"/>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+    let codegen = GoCodegen::new(GoOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("type AbstractDocumentBase struct"));
+    assert!(code.contains("type AbstractDocument struct"));
+    assert!(code.contains("InvoiceDocument *InvoiceDocument"));
+    assert!(code.contains("ReceiptDocument *ReceiptDocument"));
+    assert!(code.contains("func (s AbstractDocument) Selected() string"));
+    assert!(code.contains("func (s AbstractDocument) Value() any"));
+    assert!(code.contains("func (s *AbstractDocument) UnmarshalXML"));
+    assert!(code.contains("func (s AbstractDocument) MarshalXML"));
+
+    if Command::new("go").arg("version").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("go.mod"),
+        "module abstract_test\n\ngo 1.22\n",
+    )
+    .unwrap();
+    fs::write(dir.path().join("models.go"), &code).unwrap();
+    fs::write(
+        dir.path().join("models_test.go"),
+        r#"package models
+
+import (
+	"encoding/xml"
+	"strings"
+	"testing"
+)
+
+func TestAbstractDocumentRoundTrip(t *testing.T) {
+	inputXml := `<Document xmlns="urn:audit:abstract" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="InvoiceDocument"><Id>INV-001</Id><Amount>199.99</Amount></Document>`
+	var doc Document
+	if err := xml.Unmarshal([]byte(inputXml), &doc); err != nil {
+		t.Fatalf("Unmarshal failed: %v", err)
+	}
+
+	if doc.Selected() != "InvoiceDocument" {
+		t.Fatalf("expected Selected() to be InvoiceDocument, got %q", doc.Selected())
+	}
+	if doc.InvoiceDocument == nil {
+		t.Fatalf("InvoiceDocument is nil")
+	}
+	if doc.InvoiceDocument.ID != "INV-001" {
+		t.Fatalf("expected ID 'INV-001', got %q", doc.InvoiceDocument.ID)
+	}
+	if doc.InvoiceDocument.Amount != 199.99 {
+		t.Fatalf("expected Amount 199.99, got %v", doc.InvoiceDocument.Amount)
+	}
+
+	marshaled, err := xml.Marshal(&doc)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+	marshaledStr := string(marshaled)
+	if !strings.Contains(marshaledStr, `xsi:type="InvoiceDocument"`) {
+		t.Fatalf("marshaled XML missing xsi:type: %s", marshaledStr)
+	}
+	if !strings.Contains(marshaledStr, `Amount`) {
+		t.Fatalf("marshaled XML missing Amount element: %s", marshaledStr)
+	}
+
+	// Missing xsi:type should fail
+	var missingDoc Document
+	if err := xml.Unmarshal([]byte(`<Document xmlns="urn:audit:abstract"><Id>INV-001</Id></Document>`), &missingDoc); err == nil {
+		t.Fatalf("expected error unmarshaling abstract type without xsi:type, got nil")
+	}
+
+	// Unknown xsi:type should fail
+	var unknownDoc Document
+	if err := xml.Unmarshal([]byte(`<Document xmlns="urn:audit:abstract" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="UnknownDoc"><Id>INV-001</Id></Document>`), &unknownDoc); err == nil {
+		t.Fatalf("expected error unmarshaling unknown xsi:type, got nil")
+	}
+}
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new("go")
+        .args(["test", "-v", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .expect("go test failed to execute");
+
+    assert!(
+        output.status.success(),
+        "go test failed: stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

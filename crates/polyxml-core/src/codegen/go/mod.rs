@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fmt::Write as FmtWrite;
 
-use heck::{AsPascalCase, AsSnakeCase};
+use heck::{AsLowerCamelCase, AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
@@ -361,7 +361,7 @@ impl GoCodegen {
         {
             imports.push("\"bytes\"");
         }
-        if has_fmt {
+        if has_fmt || body.contains("fmt.") {
             imports.push("\"fmt\"");
         }
         if has_io {
@@ -374,13 +374,12 @@ impl GoCodegen {
             .types
             .values()
             .any(|def| matches!(def, TypeDef::Union(u) if u.is_lexical()))
+            && body.contains("strconv.")
         {
-            if body.contains("strconv.") {
-                imports.push("\"strconv\"");
-            }
-            if body.contains("strings.") {
-                imports.push("\"strings\"");
-            }
+            imports.push("\"strconv\"");
+        }
+        if body.contains("strings.") {
+            imports.push("\"strings\"");
         }
         if has_time {
             imports.push("\"time\"");
@@ -913,6 +912,11 @@ impl GoCodegen {
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
+        if s.is_abstract {
+            self.emit_abstract_struct(out, s, ir);
+            return;
+        }
+
         let struct_name = type_ident(&s.qname);
         if let Some(ref doc) = s.documentation {
             for line in doc.lines() {
@@ -945,9 +949,13 @@ impl GoCodegen {
         // Struct composition / inheritance if base struct exists
         let mut simple_content_base: Option<String> = None;
         if let Some(ref base_qname) = s.base_type {
-            if matches!(ir.types.get(base_qname), Some(TypeDef::Struct(_))) {
+            if let Some(TypeDef::Struct(base_s)) = ir.types.get(base_qname) {
                 let base_name = type_ident(base_qname);
-                writeln!(out, "    {}", base_name).unwrap();
+                if base_s.is_abstract {
+                    writeln!(out, "    {}Base", base_name).unwrap();
+                } else {
+                    writeln!(out, "    {}", base_name).unwrap();
+                }
             } else if let Some(prim) = PrimitiveType::from_xsd_name(&base_qname.local) {
                 simple_content_base = Some(self.context.map_primitive(prim).to_string());
             } else if let Some(TypeDef::Simple(st)) = ir.types.get(base_qname) {
@@ -1270,6 +1278,264 @@ impl GoCodegen {
         writeln!(out, "}}\n").unwrap();
     }
 
+    fn emit_abstract_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
+        let struct_name = type_ident(&s.qname);
+        let base_struct_name = format!("{}Base", struct_name);
+
+        if let Some(ref doc) = s.documentation {
+            for line in doc.lines() {
+                writeln!(out, "// {}", line).unwrap();
+            }
+        }
+
+        // 1. Base struct definition holding declared fields of the abstract type
+        writeln!(out, "type {} struct {{", base_struct_name).unwrap();
+        if let Some(ref base_qname) = s.base_type {
+            if let Some(TypeDef::Struct(base_s)) = ir.types.get(base_qname) {
+                let base_name = type_ident(base_qname);
+                if base_s.is_abstract {
+                    writeln!(out, "    {}Base", base_name).unwrap();
+                } else {
+                    writeln!(out, "    {}", base_name).unwrap();
+                }
+            }
+        }
+
+        let mut seen_fields = HashSet::new();
+        let field_names: Vec<String> = s
+            .fields
+            .iter()
+            .map(|f| self.unique_field_name(&f.name, &mut seen_fields))
+            .collect();
+
+        let mut seen_json = HashSet::new();
+        for (f, field_name) in s.fields.iter().zip(&field_names) {
+            let field_type = self.resolve_field_type(f);
+            let tag = self.build_field_struct_tags(f, &mut seen_json);
+            writeln!(out, "    {} {}{}", field_name, field_type, tag).unwrap();
+        }
+        writeln!(out, "}}\n").unwrap();
+
+        writeln!(
+            out,
+            "func (s {}) Validate() error {{\n    return nil\n}}\n",
+            base_struct_name
+        )
+        .unwrap();
+
+        // 2. Discover concrete derivations
+        let derivations = concrete_derivations(s, ir);
+
+        // 3. Dispatch wrapper struct
+        writeln!(out, "type {} struct {{", struct_name).unwrap();
+        if self.options.emit_xml_tags {
+            let mut xml_tags = Vec::new();
+            if self.options.emit_json_tags {
+                xml_tags.push("json:\"-\"");
+            }
+            if self.options.backend == GoBackend::Sonic {
+                xml_tags.push("sonic:\"-\"");
+            }
+            if xml_tags.is_empty() {
+                writeln!(out, "    XMLName xml.Name").unwrap();
+            } else {
+                writeln!(out, "    XMLName xml.Name `{}`", xml_tags.join(" ")).unwrap();
+            }
+        }
+        writeln!(out, "    {}", base_struct_name).unwrap();
+
+        let mut seen_derives = HashSet::new();
+        let derive_fields: Vec<(String, String, String)> = derivations
+            .iter()
+            .map(|d| {
+                let type_name = type_ident(&d.qname);
+                let field_name = self.unique_field_name(&type_name, &mut seen_derives);
+                (d.qname.local.clone(), field_name, type_name)
+            })
+            .collect();
+
+        for (_local, field_name, type_name) in &derive_fields {
+            let json_name = AsLowerCamelCase(field_name).to_string();
+            writeln!(
+                out,
+                "    {} *{} `xml:\"-\" json:\"{},omitempty\"`",
+                field_name, type_name, json_name
+            )
+            .unwrap();
+        }
+        writeln!(out, "}}\n").unwrap();
+
+        // 4. Methods on dispatch wrapper
+        writeln!(out, "func (s {}) Selected() string {{", struct_name).unwrap();
+        for (local, field_name, _) in &derive_fields {
+            writeln!(
+                out,
+                "    if s.{} != nil {{ return {:?} }}",
+                field_name, local
+            )
+            .unwrap();
+        }
+        writeln!(out, "    return \"\"\n}}\n").unwrap();
+
+        writeln!(out, "func (s {}) Value() any {{", struct_name).unwrap();
+        for (_, field_name, _) in &derive_fields {
+            writeln!(
+                out,
+                "    if s.{} != nil {{ return s.{} }}",
+                field_name, field_name
+            )
+            .unwrap();
+        }
+        writeln!(out, "    return nil\n}}\n").unwrap();
+
+        // UnmarshalXML
+        writeln!(
+            out,
+            "func (s *{}) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {{",
+            struct_name
+        )
+        .unwrap();
+        writeln!(out, "    s.XMLName = start.Name").unwrap();
+        writeln!(out, "    var typeAttr *xml.Attr").unwrap();
+        writeln!(out, "    for _, attr := range start.Attr {{").unwrap();
+        writeln!(out, "        if (attr.Name.Local == \"type\" && (attr.Name.Space == \"http://www.w3.org/2001/XMLSchema-instance\" || attr.Name.Space == \"xsi\")) || attr.Name.Local == \"xsi:type\" {{").unwrap();
+        writeln!(out, "            typeAttr = &attr").unwrap();
+        writeln!(out, "            break").unwrap();
+        writeln!(out, "        }}").unwrap();
+        writeln!(out, "    }}").unwrap();
+        writeln!(out, "    if typeAttr == nil {{").unwrap();
+        writeln!(
+            out,
+            "        return fmt.Errorf(\"abstract type '{}' requires xsi:type naming a concrete derivation\")",
+            struct_name
+        )
+        .unwrap();
+        writeln!(out, "    }}").unwrap();
+
+        if derive_fields.is_empty() {
+            writeln!(
+                out,
+                "    return fmt.Errorf(\"abstract type '{}' has no registered derivations; deserialize the concrete type directly (escape hatch)\")",
+                struct_name
+            )
+            .unwrap();
+        } else {
+            writeln!(out, "    localType := typeAttr.Value").unwrap();
+            writeln!(
+                out,
+                "    if idx := strings.Index(localType, \":\"); idx != -1 {{"
+            )
+            .unwrap();
+            writeln!(out, "        localType = localType[idx+1:]").unwrap();
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "    switch localType {{").unwrap();
+            for (local, field_name, type_name) in &derive_fields {
+                writeln!(out, "    case {:?}:", local).unwrap();
+                writeln!(out, "        var concrete {}", type_name).unwrap();
+                writeln!(
+                    out,
+                    "        if err := d.DecodeElement(&concrete, &start); err != nil {{ return err }}"
+                )
+                .unwrap();
+                writeln!(out, "        s.{} = &concrete", field_name).unwrap();
+                writeln!(
+                    out,
+                    "        s.{} = concrete.{}",
+                    base_struct_name, base_struct_name
+                )
+                .unwrap();
+                writeln!(out, "        return nil").unwrap();
+            }
+            let known = derive_fields
+                .iter()
+                .map(|(local, _, _)| local.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            writeln!(out, "    default:").unwrap();
+            writeln!(
+                    out,
+                    "        return fmt.Errorf(\"xsi:type=%q does not match any known derivation of '{}' (known: {})\", typeAttr.Value)",
+                    struct_name, known
+                )
+                .unwrap();
+            writeln!(out, "    }}").unwrap();
+        }
+        writeln!(out, "}}\n").unwrap();
+
+        // MarshalXML
+        writeln!(
+            out,
+            "func (s {}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{",
+            struct_name
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "    if s.XMLName.Local != \"\" {{ start.Name = s.XMLName }}"
+        )
+        .unwrap();
+        for (local, field_name, _) in &derive_fields {
+            writeln!(out, "    if s.{} != nil {{", field_name).unwrap();
+            writeln!(out, "        hasXsiNs := false\n        hasType := false").unwrap();
+            writeln!(out, "        for _, attr := range start.Attr {{").unwrap();
+            writeln!(out, "            if attr.Name.Local == \"xmlns:xsi\" || (attr.Name.Local == \"xsi\" && attr.Name.Space == \"xmlns\") {{ hasXsiNs = true }}").unwrap();
+            writeln!(out, "            if attr.Name.Local == \"xsi:type\" || (attr.Name.Local == \"type\" && attr.Name.Space == \"http://www.w3.org/2001/XMLSchema-instance\") {{ hasType = true }}").unwrap();
+            writeln!(out, "        }}").unwrap();
+            writeln!(out, "        if !hasXsiNs {{ start.Attr = append(start.Attr, xml.Attr{{Name: xml.Name{{Local: \"xmlns:xsi\"}}, Value: \"http://www.w3.org/2001/XMLSchema-instance\"}}) }}").unwrap();
+            writeln!(out, "        if !hasType {{ start.Attr = append(start.Attr, xml.Attr{{Name: xml.Name{{Local: \"xsi:type\"}}, Value: {:?}}}) }}", local).unwrap();
+            writeln!(
+                out,
+                "        return e.EncodeElement(s.{}, start)",
+                field_name
+            )
+            .unwrap();
+            writeln!(out, "    }}").unwrap();
+        }
+        if derive_fields.is_empty() {
+            writeln!(
+                out,
+                "    return fmt.Errorf(\"abstract type '{}' has no registered derivations\")",
+                struct_name
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                out,
+                "    return fmt.Errorf(\"cannot marshal abstract type '{}' without a concrete derivation\")",
+                struct_name
+            )
+            .unwrap();
+        }
+        writeln!(out, "}}\n").unwrap();
+
+        // Validate()
+        writeln!(out, "func (s {}) Validate() error {{", struct_name).unwrap();
+        for (_, field_name, _) in &derive_fields {
+            writeln!(
+                out,
+                "    if s.{} != nil {{ return s.{}.Validate() }}",
+                field_name, field_name
+            )
+            .unwrap();
+        }
+        if derive_fields.is_empty() {
+            writeln!(
+                out,
+                "    return fmt.Errorf(\"abstract type '{}' has no registered derivations\")",
+                struct_name
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                out,
+                "    return fmt.Errorf(\"abstract type '{}' requires a concrete derivation\")",
+                struct_name
+            )
+            .unwrap();
+        }
+        writeln!(out, "}}\n").unwrap();
+    }
+
     fn emit_facet_checks(
         &self,
         out: &mut String,
@@ -1349,4 +1615,35 @@ impl GoCodegen {
             }
         }
     }
+}
+
+fn derives_from(ir: &SchemaIR, d: &StructDef, base: &QName) -> bool {
+    let mut seen: HashSet<QName> = HashSet::new();
+    let mut cur = d.base_type.as_ref();
+    while let Some(q) = cur {
+        if q == base {
+            return true;
+        }
+        if !seen.insert(q.clone()) {
+            break;
+        }
+        cur = match ir.types.get(q) {
+            Some(TypeDef::Struct(b)) => b.base_type.as_ref(),
+            _ => None,
+        };
+    }
+    false
+}
+
+fn concrete_derivations<'a>(s: &'a StructDef, ir: &'a SchemaIR) -> Vec<&'a StructDef> {
+    let mut result = Vec::new();
+    for type_def in ir.types.values() {
+        if let TypeDef::Struct(d) = type_def {
+            if !d.is_abstract && d.qname != s.qname && derives_from(ir, d, &s.qname) {
+                result.push(d);
+            }
+        }
+    }
+    result.sort_by(|a, b| a.qname.local.cmp(&b.qname.local));
+    result
 }
