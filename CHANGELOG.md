@@ -1,3 +1,10 @@
+## [0.33.2](https://github.com/polyxml/PolyXML/compare/v0.33.1...v0.33.2) (2026-10-01)
+
+
+### Bug Fixes
+
+* **engine,codegen:** preserve xs:any wildcard elements in Python and Go ([#114](https://github.com/polyxml/PolyXML/issues/114)) ([c24af26](https://github.com/polyxml/PolyXML/commit/c24af2657a6c84353a787645dd8d61803007218e))
+
 ## [0.33.1](https://github.com/polyxml/PolyXML/compare/v0.33.0...v0.33.1) (2026-10-01)
 
 
