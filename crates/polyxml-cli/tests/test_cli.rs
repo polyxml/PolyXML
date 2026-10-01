@@ -661,7 +661,8 @@ fn test_cli_generate_python_backends() {
     assert!(dc_py.contains("total: Decimal = field("));
     assert!(dc_py.contains("note: str | None = field(default=None"));
     assert!(dc_py.contains("id: int = field("));
-    assert!(dc_py.contains("type InvoiceDoc = Invoice"));
+    assert!(dc_py.contains("class InvoiceDoc(Invoice):"));
+    assert!(dc_py.contains("strict_root = True"));
 
     // 2. Generate with pydantic backend
     let pydantic_out = dir.path().join("out_pydantic");

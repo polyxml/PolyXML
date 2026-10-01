@@ -305,7 +305,7 @@ impl PythonCodegen {
     }
 
     fn emit_imports(&self, out: &mut String, ir: &SchemaIR) {
-        let mut has_structs = false;
+        let mut has_structs = self.options.emit_root_aliases && !ir.elements.is_empty();
         let mut has_enums = false;
         let mut has_decimal = false;
         let mut has_annotated = false;
@@ -634,7 +634,7 @@ impl PythonCodegen {
             has_body = true;
         }
 
-        if self.options.emit_meta || s.is_mixed {
+        if self.options.emit_meta || ir.has_ordered_content(s) {
             if has_body {
                 out.push('\n');
             }
@@ -644,6 +644,7 @@ impl PythonCodegen {
                 out.push_str("    class Meta:\n");
             }
             let _ = writeln!(out, "        name = \"{}\"", s.qname.local);
+            out.push_str("        strict_root = False\n");
             if let Some(ref ns) = s.qname.namespace {
                 let _ = writeln!(out, "        namespace = \"{}\"", ns);
             }
@@ -652,8 +653,10 @@ impl PythonCodegen {
             // derivations.
             if s.is_abstract {
                 out.push_str("        abstract = True\n");
+            } else if struct_base.is_some() {
+                out.push_str("        abstract = False\n");
             }
-            if s.is_mixed {
+            if ir.has_ordered_content(s) {
                 if let Some(item_field) = s
                     .fields
                     .iter()
@@ -722,7 +725,28 @@ impl PythonCodegen {
             out.push_str("    ) -> bytes:\n");
             out.push_str("        \"\"\"Serialize this model instance into XML bytes.\"\"\"\n");
             out.push_str("        import polyxml\n");
-            out.push_str("        return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)\n\n");
+            let mut ancestors = BTreeSet::new();
+            let mut base = s.base_type.as_ref();
+            while let Some(q) = base {
+                if !ancestors.insert(q.clone()) {
+                    break;
+                }
+                base = match ir.types.get(q) {
+                    Some(TypeDef::Struct(parent)) => parent.base_type.as_ref(),
+                    _ => None,
+                };
+            }
+            let roots = ir.elements.values().filter(|element| matches!(&element.type_ref, TypeRef::Named(q) if ancestors.contains(q) && matches!(ir.types.get(q), Some(TypeDef::Struct(parent)) if parent.is_abstract))).collect::<Vec<_>>();
+            if let [root] = roots.as_slice() {
+                let root_name = AsPascalCase(&root.qname.local).to_string();
+                if !ir.types.keys().any(|q| type_ident(q) == root_name) {
+                    let _ = writeln!(out, "        return polyxml.serialize(self, target_type={}, indent=indent, namespaces=namespaces, ns_map=ns_map)\n", root_name);
+                } else {
+                    out.push_str("        return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)\n\n");
+                }
+            } else {
+                out.push_str("        return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)\n\n");
+            }
             out.push_str("    @classmethod\n");
             out.push_str("    def from_json(cls, data: bytes | str) -> Self:\n");
             out.push_str("        \"\"\"Deserialize JSON bytes or string into this model.\"\"\"\n");
@@ -1077,11 +1101,124 @@ impl PythonCodegen {
         }
 
         for element in ir.elements.values() {
-            let el_name = AsPascalCase(&element.qname.local).to_string();
+            let mut el_name = AsPascalCase(&element.qname.local).to_string();
+            let root_count = ir
+                .elements
+                .values()
+                .filter(|other| AsPascalCase(&other.qname.local).to_string() == el_name)
+                .count();
+            if root_count == 1
+                && declared_names.contains(&el_name)
+                && self.options.emit_meta
+                && matches!(&element.type_ref, TypeRef::Named(q) if q == &element.qname && type_ident(q) == el_name && matches!(ir.types.get(q), Some(TypeDef::Struct(_))))
+            {
+                let _ = writeln!(
+                    out,
+                    "\n{}.Meta.strict_root = True\n{}.Meta.name = {:?}",
+                    el_name, el_name, element.qname.local
+                );
+                continue;
+            }
+            if declared_names.contains(&el_name) {
+                let base = format!("{}Element", el_name);
+                el_name = base.clone();
+                let mut suffix = 2;
+                while declared_names.contains(&el_name) {
+                    el_name = format!("{base}{suffix}");
+                    suffix += 1;
+                }
+            }
             if !declared_names.contains(&el_name) {
                 let target_type = self.context.map_type_ref(&element.type_ref);
                 if el_name != target_type {
-                    let _ = writeln!(out, "\ntype {} = {}", el_name, target_type);
+                    if matches!(&element.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_))))
+                    {
+                        if self.options.backend != PythonBackend::Pydantic {
+                            let _ = writeln!(
+                                out,
+                                "\n@dataclass(slots={}, kw_only={})",
+                                if self.options.slots { "True" } else { "False" },
+                                if self.options.kw_only {
+                                    "True"
+                                } else {
+                                    "False"
+                                }
+                            );
+                        }
+                        let meta_base = if self.options.emit_meta {
+                            format!("({}.Meta)", target_type)
+                        } else {
+                            String::new()
+                        };
+                        let _ = writeln!(out, "class {}({}):\n    class Meta{}:\n        name = {:?}\n        namespace = {:?}\n        strict_root = True", el_name, target_type, meta_base, element.qname.local, element.qname.namespace.as_deref().unwrap_or(""));
+                        let _ = writeln!(out, "        root_type = {}", target_type);
+                    } else {
+                        let fields = if let TypeRef::Named(q) = &element.type_ref {
+                            if let Some(TypeDef::Union(union)) = ir
+                                .types
+                                .get(q)
+                                .filter(|t| matches!(t, TypeDef::Union(u) if !u.is_lexical()))
+                            {
+                                union
+                                    .branches
+                                    .iter()
+                                    .map(|branch| {
+                                        let mut field = FieldDef::new(
+                                            &branch.variant_name,
+                                            &branch.xml_name,
+                                            FieldKind::Element,
+                                            branch.type_ref.clone(),
+                                        );
+                                        field.namespace = branch.namespace.clone();
+                                        field.cardinality = crate::ir::Cardinality::optional_one();
+                                        field
+                                    })
+                                    .collect()
+                            } else {
+                                vec![FieldDef::new(
+                                    "value",
+                                    "",
+                                    FieldKind::Text,
+                                    element.type_ref.clone(),
+                                )]
+                            }
+                        } else {
+                            let mut value = FieldDef::new(
+                                "value",
+                                "",
+                                FieldKind::Text,
+                                element.type_ref.clone(),
+                            );
+                            if matches!(
+                                element.type_ref,
+                                TypeRef::Primitive(
+                                    PrimitiveType::AnyType | PrimitiveType::AnySimpleType
+                                )
+                            ) {
+                                value.cardinality = crate::ir::Cardinality::optional_one();
+                            } else if matches!(
+                                element.type_ref,
+                                TypeRef::Primitive(PrimitiveType::String)
+                            ) {
+                                value.default_value = Some(String::new());
+                            }
+                            vec![value]
+                        };
+                        let wrapper = StructDef {
+                            qname: QName::new(element.qname.namespace.clone(), &el_name),
+                            base_type: None,
+                            is_abstract: false,
+                            is_mixed: false,
+                            fields,
+                            documentation: element.documentation.clone(),
+                        };
+                        self.emit_struct(out, &wrapper, ir);
+                        let _ = writeln!(
+                            out,
+                            "{}.Meta.strict_root = True\n{}.Meta.name = {:?}",
+                            el_name, el_name, element.qname.local
+                        );
+                    }
                     declared_names.insert(el_name);
                 }
             }

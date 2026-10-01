@@ -1,5 +1,10 @@
 # Competitor issue audit — 2026-09-30
 
+Implementation follow-up for the scoped category 1/2 bugs is recorded in
+[category-1-2-fixes-2026-10-01.md](category-1-2-fixes-2026-10-01.md), including
+runtime regression evidence and the limits of the fix claims. Findings below
+describe the audit snapshot rather than current implementation status.
+
 The [fifth pass](competitor-issue-audit-wave5-2026-09-30.md) investigates 21
 more public reports with saved fixtures and links six new PolyXML issues
 [#116–#121](competitor-issue-audit-wave5-2026-09-30.md#new-polyxml-issues-filed-during-this-pass).

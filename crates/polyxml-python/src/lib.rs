@@ -315,6 +315,9 @@ fn extract_schema_from_class<'py>(
     let mut builder = ModelSchema::builder(class_name);
 
     if let Ok(meta_cls) = cls.getattr("Meta") {
+        if let Ok(strict_root) = meta_cls.getattr("strict_root") {
+            builder = builder.strict_root(strict_root.extract::<bool>().unwrap_or(false));
+        }
         if let Ok(name_val) = meta_cls.getattr("name") {
             if let Ok(name_str) = name_val.extract::<String>() {
                 if !name_str.is_empty() {
@@ -612,7 +615,15 @@ fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Cach
 fn discover_variants(cls: &Bound<'_, PyType>) -> Vec<Arc<ModelSchema>> {
     let mut out = Vec::new();
     let mut seen: HashSet<usize> = HashSet::new();
-    collect_subclass_schemas(cls, &mut out, &mut seen);
+    let root_type = cls
+        .getattr("Meta")
+        .and_then(|meta| meta.getattr("root_type"))
+        .ok();
+    let dispatch_type = root_type
+        .as_ref()
+        .and_then(|value| value.cast::<PyType>().ok())
+        .unwrap_or(cls);
+    collect_subclass_schemas(dispatch_type, &mut out, &mut seen);
     out
 }
 
@@ -632,6 +643,15 @@ fn collect_subclass_schemas(
             continue;
         };
         if !seen.insert(sub.as_ptr() as usize) {
+            continue;
+        }
+        // Global element models bind a wire root; they are not xsi:type
+        // derivations of the schema type they wrap.
+        if sub
+            .getattr("Meta")
+            .and_then(|meta| meta.getattr("root_type"))
+            .is_ok()
+        {
             continue;
         }
         let usable = sub.hasattr("__dataclass_fields__").unwrap_or(false)

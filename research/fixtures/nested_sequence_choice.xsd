@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Root"><xs:complexType><xs:choice>
+    <xs:sequence><xs:element name="First" type="xs:string"/><xs:element name="Second" type="xs:string"/></xs:sequence>
+    <xs:element name="Alternative" type="xs:string"/>
+  </xs:choice></xs:complexType></xs:element>
+</xs:schema>

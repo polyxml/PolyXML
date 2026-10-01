@@ -60,6 +60,7 @@ struct CompositorFrame {
     min_occurs: usize,
     fields_start: usize,
     choice_branches: Vec<UnionBranch>,
+    has_sequence_branch: bool,
 }
 
 /// A pure-Rust XSD 1.0/1.1 Schema Parser.
@@ -172,6 +173,7 @@ impl XsdParser {
         self.expand_group_refs(&mut ir, self.frame_depth == 0);
         if self.frame_depth == 0 {
             resolve_global_field_refs(&mut ir);
+            expand_substitution_fields(&mut ir);
             compile_mixed_types(&mut ir);
         }
         ir.resolve_cycles();
@@ -575,6 +577,7 @@ impl XsdParser {
                                 min_occurs,
                                 fields_start: fields.len(),
                                 choice_branches: Vec::new(),
+                                has_sequence_branch: false,
                             });
                         }
                         "choice" => {
@@ -593,6 +596,7 @@ impl XsdParser {
                                 min_occurs,
                                 fields_start: fields.len(),
                                 choice_branches: Vec::new(),
+                                has_sequence_branch: false,
                             });
                         }
                         "element" => {
@@ -765,8 +769,18 @@ impl XsdParser {
                     if local == "sequence" || local == "choice" || local == "all" {
                         if let Some(frame) = compositor_stack.pop() {
                             if frame.kind == CompositorKind::Sequence {
+                                if frame.is_unbounded
+                                    && fields[frame.fields_start..]
+                                        .iter()
+                                        .filter(|f| f.kind == FieldKind::Element)
+                                        .count()
+                                        > 1
+                                {
+                                    ir.ordered_types.insert(qname.clone());
+                                }
                                 if let Some(parent) = compositor_stack.last_mut() {
                                     if parent.kind == CompositorKind::Choice {
+                                        parent.has_sequence_branch = true;
                                         let seq_fields = fields[frame.fields_start..].to_vec();
                                         if !seq_fields.is_empty() {
                                             let seq_name = unique_type_name(
@@ -814,10 +828,15 @@ impl XsdParser {
                                 let choice_is_unbounded = frame.is_unbounded
                                     || compositor_stack.iter().any(|c| c.is_unbounded);
                                 let is_nested_choice = !compositor_stack.is_empty();
+                                let needs_fields = fields[frame.fields_start..]
+                                    .iter()
+                                    .any(|f| f.cardinality.is_list())
+                                    || frame.has_sequence_branch;
                                 if (choice_is_unbounded
                                     || is_nested_choice
                                     || (compositor_stack.is_empty() && base_type.is_some()))
                                     && !frame.choice_branches.is_empty()
+                                    && (!needs_fields || choice_is_unbounded)
                                 {
                                     let choice_name =
                                         unique_type_name(ir, target_ns, &format!("{}Choice", name));
@@ -862,7 +881,11 @@ impl XsdParser {
                                         is_cycle_cut: false,
                                     });
                                 } else if !choice_is_unbounded && compositor_stack.is_empty() {
-                                    top_level_choice_branches = frame.choice_branches;
+                                    top_level_choice_branches = if needs_fields {
+                                        Vec::new()
+                                    } else {
+                                        frame.choice_branches
+                                    };
                                     top_level_choice_fields_start = frame.fields_start;
                                     top_level_choice_fields_count =
                                         fields.len() - frame.fields_start;
@@ -906,12 +929,33 @@ impl XsdParser {
                 documentation,
             })))
         } else {
+            // The same expanded element name may occur in exclusive sequence
+            // branches. A single optional field binds either occurrence.
+            let mut merged: Vec<FieldDef> = Vec::new();
+            for field in fields {
+                if let Some(existing) = merged.iter_mut().find(|f| {
+                    f.cardinality.is_optional()
+                        && field.cardinality.is_optional()
+                        && f.kind == FieldKind::Element
+                        && field.kind == FieldKind::Element
+                        && f.xml_name == field.xml_name
+                        && f.namespace == field.namespace
+                        && f.type_ref == field.type_ref
+                }) {
+                    existing.cardinality.min_occurs = existing
+                        .cardinality
+                        .min_occurs
+                        .min(field.cardinality.min_occurs);
+                } else {
+                    merged.push(field);
+                }
+            }
             Ok(Some(TypeDef::Struct(StructDef {
                 qname,
                 base_type,
                 is_abstract,
                 is_mixed,
-                fields,
+                fields: merged,
                 documentation,
             })))
         }
@@ -1560,12 +1604,60 @@ impl XsdParser {
 
 /// Replace a mixed complex type's child fields with one ordered item stream.
 /// The union branches retain the element names and types for all generators.
+fn expand_substitution_fields(ir: &mut SchemaIR) {
+    let types = ir.types.keys().cloned().collect::<Vec<_>>();
+    for qname in types {
+        let Some(TypeDef::Struct(snapshot)) = ir.types.get(&qname).cloned() else {
+            continue;
+        };
+        let mut fields = Vec::new();
+        let mut expanded = false;
+        for field in snapshot.fields {
+            let head = QName::new(field.namespace.clone(), strip_prefix(&field.xml_name));
+            fields.push(field.clone());
+            if field.kind != FieldKind::Element {
+                continue;
+            }
+            let mut pending = ir
+                .substitution_groups
+                .get(&head)
+                .cloned()
+                .unwrap_or_default();
+            let mut seen = HashSet::new();
+            while let Some(member) = pending.pop() {
+                if !seen.insert(member.clone()) {
+                    continue;
+                }
+                if let Some(children) = ir.substitution_groups.get(&member) {
+                    pending.extend(children.iter().cloned());
+                }
+                if let Some(element) = ir.elements.get(&member) {
+                    let mut replacement = field.clone();
+                    replacement.name = sanitize_field_name(&member.local);
+                    replacement.xml_name = member.local.clone();
+                    replacement.namespace = member.namespace.clone();
+                    replacement.type_ref = element.type_ref.clone();
+                    replacement.nillable = element.nillable;
+                    fields.push(replacement);
+                    expanded = true;
+                }
+            }
+        }
+        if expanded {
+            ir.ordered_types.insert(qname.clone());
+            if let Some(TypeDef::Struct(structure)) = ir.types.get_mut(&qname) {
+                structure.fields = fields;
+            }
+        }
+    }
+}
+
 fn compile_mixed_types(ir: &mut SchemaIR) {
     let mixed_types = ir
         .types
         .values()
         .filter_map(|def| match def {
-            TypeDef::Struct(s) if s.is_mixed => Some(s.qname.clone()),
+            TypeDef::Struct(s) if ir.has_ordered_content(s) => Some(s.qname.clone()),
             _ => None,
         })
         .collect::<Vec<_>>();
@@ -2163,6 +2255,15 @@ fn unique_type_name(ir: &SchemaIR, target_ns: Option<&str>, base: &str) -> Strin
 /// includes, whose components adopt the including schema's target namespace.
 fn rekey_to_namespace(ir: &mut SchemaIR, ns: &str) {
     ir.target_namespace = Some(ns.to_string());
+    ir.ordered_types = std::mem::take(&mut ir.ordered_types)
+        .into_iter()
+        .map(|mut q| {
+            if q.namespace.is_none() {
+                q.namespace = Some(ns.into());
+            }
+            q
+        })
+        .collect();
 
     let old_types = std::mem::take(&mut ir.types);
     let mut types = BTreeMap::new();
@@ -2353,6 +2454,7 @@ fn collect_chain_patterns(ir: &SchemaIR, q: &QName, visited: &mut HashSet<QName>
 }
 
 fn merge_ir(dest: &mut SchemaIR, src: SchemaIR) {
+    dest.ordered_types.extend(src.ordered_types);
     for (k, v) in src.types {
         dest.types.insert(k, v);
     }

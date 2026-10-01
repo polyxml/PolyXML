@@ -787,7 +787,8 @@ fn test_python_sequence_nested_inside_choice_codegen() {
     let codegen = PythonCodegen::new(PythonOptions::default());
     let code = codegen.generate_module(&ir);
 
-    assert!(code.contains("type RootType = RootTypeSequence | str"));
+    assert!(code.contains("class RootType:"));
+    assert!(code.contains("alternative: str | None = field("));
     assert!(code.contains("class RootTypeSequence:"));
     assert!(code.contains("first: str | None = field("));
     assert!(code.contains("second: str | None = field("));

@@ -1630,7 +1630,7 @@ impl RustCodegen {
             out.push_str("                },\n");
 
             out.push_str("                Event::End(e) if e.local_name().as_ref() == start.local_name().as_ref() => break,\n");
-            if s.is_mixed {
+            if ir.has_ordered_content(s) {
                 let item_union = field_metas.iter().find_map(|meta| {
                     self.resolve_union_def(&meta.field.type_ref, ir)
                         .filter(|u| u.is_mixed_content())

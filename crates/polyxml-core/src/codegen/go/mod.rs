@@ -119,7 +119,9 @@ impl LanguageContext for GoLanguageContext {
             | PrimitiveType::GMonthDay
             | PrimitiveType::GDay
             | PrimitiveType::Duration => "string",
-            PrimitiveType::Date | PrimitiveType::Time | PrimitiveType::DateTime => "time.Time",
+            PrimitiveType::Date => "PolyxmlDate",
+            PrimitiveType::Time => "PolyxmlTime",
+            PrimitiveType::DateTime => "PolyxmlDateTime",
             PrimitiveType::Base64Binary | PrimitiveType::HexBinary => "[]byte",
             PrimitiveType::AnyType | PrimitiveType::AnySimpleType => "any",
         }
@@ -243,6 +245,46 @@ fn type_ident(q: &QName) -> String {
 }
 
 impl GoCodegen {
+    fn emit_temporal_types(&self, out: &mut String) {
+        for (name, layouts, default_layout) in [
+            (
+                "PolyxmlDate",
+                &["2006-01-02Z07:00", "2006-01-02"][..],
+                "2006-01-02Z07:00",
+            ),
+            (
+                "PolyxmlTime",
+                &["15:04:05Z07:00", "15:04:05"][..],
+                "15:04:05.999999999Z07:00",
+            ),
+            (
+                "PolyxmlDateTime",
+                &["2006-01-02T15:04:05Z07:00", "2006-01-02T15:04:05"][..],
+                "2006-01-02T15:04:05.999999999Z07:00",
+            ),
+        ] {
+            writeln!(out, "// {name} retains the XSD lexical form, including an absent timezone.\ntype {name} struct {{ time.Time; lexical string }}").unwrap();
+            writeln!(out, "func (v *{name}) UnmarshalText(text []byte) error {{\n    value := strings.TrimSpace(string(text))").unwrap();
+            for layout in layouts {
+                writeln!(out, "    if parsed, err := time.Parse({layout:?}, value); err == nil {{ *v = {name}{{Time: parsed, lexical: value}}; return nil }}").unwrap();
+            }
+            writeln!(out, "    return fmt.Errorf(\"invalid {name}: %q\", value)\n}}\nfunc (v {name}) MarshalText() ([]byte, error) {{\n    layout := {default_layout:?}").unwrap();
+            for original_layout in layouts {
+                writeln!(out, "    if parsed, err := time.Parse({original_layout:?}, v.lexical); err == nil {{\n        _, offset := v.Time.Zone(); _, originalOffset := parsed.Zone()\n        if v.Time.Equal(parsed) && offset == originalOffset {{ return []byte(v.lexical), nil }}").unwrap();
+                if !original_layout.contains("Z07:00") {
+                    writeln!(
+                        out,
+                        "        layout = {:?}",
+                        default_layout.trim_end_matches("Z07:00")
+                    )
+                    .unwrap();
+                }
+                out.push_str("    }\n");
+            }
+            out.push_str("    return []byte(v.Time.Format(layout)), nil\n}\n\n");
+        }
+    }
+
     pub fn new(options: GoOptions) -> Self {
         Self {
             options,
@@ -278,7 +320,7 @@ impl GoCodegen {
         for type_def in ir.emitted_types() {
             match type_def {
                 TypeDef::Struct(s) => {
-                    if s.is_mixed && self.options.emit_xml_tags {
+                    if ir.has_ordered_content(s) && self.options.emit_xml_tags {
                         has_fmt = true;
                         has_io = true;
                     }
@@ -324,6 +366,9 @@ impl GoCodegen {
 
         // Generate types
         self.emit_types(&mut body, ir);
+        if has_time {
+            self.emit_temporal_types(&mut body);
+        }
         self.emit_root_aliases(&mut body, ir);
 
         // Assemble final output with package and imports
@@ -357,7 +402,7 @@ impl GoCodegen {
             && ir
                 .types
                 .values()
-                .any(|def| matches!(def, TypeDef::Struct(s) if s.is_mixed))
+                .any(|def| matches!(def, TypeDef::Struct(s) if ir.has_ordered_content(s)))
         {
             imports.push("\"bytes\"");
         }
@@ -466,6 +511,12 @@ impl GoCodegen {
         let type_name = type_ident(&simple.qname);
         let base_type = self.context.map_type_ref(&simple.base_type);
         writeln!(out, "type {} {}\n", type_name, base_type).unwrap();
+        if matches!(
+            super::primitive_base(&simple.base_type, ir),
+            TypeRef::Primitive(PrimitiveType::Date | PrimitiveType::Time | PrimitiveType::DateTime)
+        ) {
+            writeln!(out, "func (v *{type_name}) UnmarshalText(text []byte) error {{ return (*{base_type})(v).UnmarshalText(text) }}\nfunc (v {type_name}) MarshalText() ([]byte, error) {{ return {base_type}(v).MarshalText() }}\n").unwrap();
+        }
         if self.options.validate_facets && !simple.facets.patterns.is_empty() {
             writeln!(out, "func (s {}) Validate() error {{", type_name).unwrap();
             for pattern in &simple.facets.patterns {
@@ -771,7 +822,13 @@ impl GoCodegen {
             "func (c *{}) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {{",
             name
         );
-        out.push_str("    var raw string\n    if err := d.DecodeElement(&raw, &start); err != nil { return err }\n    value := strings.TrimSpace(raw)\n    *c = ");
+        out.push_str("    var raw string\n    if err := d.DecodeElement(&raw, &start); err != nil { return err }\n    return c.UnmarshalText([]byte(raw))\n}\n\n");
+        let _ = writeln!(
+            out,
+            "func (c *{}) UnmarshalText(text []byte) error {{",
+            name
+        );
+        out.push_str("    value := strings.TrimSpace(string(text))\n    *c = ");
         let _ = writeln!(out, "{}{{}}", name);
         for (branch, field) in u.branches.iter().zip(&fields) {
             let mapped = self.context.map_type_ref(&branch.type_ref);
@@ -819,13 +876,13 @@ impl GoCodegen {
                 _ => None,
             };
             if matches!(base, TypeRef::Primitive(PrimitiveType::Date)) {
-                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);
             } else if matches!(base, TypeRef::Primitive(PrimitiveType::DateTime)) {
-                let _ = writeln!(out, "    if parsed, err := time.Parse(time.RFC3339, value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
-                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02T15:04:05\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(time.RFC3339, value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02T15:04:05\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);
             } else if matches!(base, TypeRef::Primitive(PrimitiveType::Time)) {
-                let _ = writeln!(out, "    if parsed, err := time.Parse(\"15:04:05Z07:00\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
-                let _ = writeln!(out, "    if parsed, err := time.Parse(\"15:04:05\", value); err == nil {{ v := {}(parsed); c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"15:04:05Z07:00\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"15:04:05\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);
             } else if let Some(kind) = numeric {
                 let parse = match kind {
                     "signed" => "strconv.ParseInt(value, 10, 64)",
@@ -881,11 +938,22 @@ impl GoCodegen {
             "func (c {}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{",
             name
         );
+        out.push_str("    text, err := c.MarshalText()\n    if err != nil { return err }\n    return e.EncodeElement(string(text), start)\n}\n\n");
+        let _ = writeln!(out, "func (c {}) MarshalText() ([]byte, error) {{", name);
         out.push_str("    count := 0\n    var value string\n");
         for (branch, field) in u.branches.iter().zip(&fields) {
             if matches!(&branch.type_ref, TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Union(inner)) if inner.is_lexical()))
             {
-                let _ = writeln!(out, "    if c.{field} != nil {{ data, err := xml.Marshal(c.{field}); if err != nil {{ return err }}; if err := xml.Unmarshal(data, &value); err != nil {{ return err }}; count++ }}");
+                let _ = writeln!(out, "    if c.{field} != nil {{ data, err := xml.Marshal(c.{field}); if err != nil {{ return nil, err }}; if err := xml.Unmarshal(data, &value); err != nil {{ return nil, err }}; count++ }}");
+                continue;
+            }
+            if matches!(
+                super::primitive_base(&branch.type_ref, ir),
+                TypeRef::Primitive(
+                    PrimitiveType::Date | PrimitiveType::Time | PrimitiveType::DateTime
+                )
+            ) {
+                let _ = writeln!(out, "    if c.{field} != nil {{ text, err := c.{field}.MarshalText(); if err != nil {{ return nil, err }}; count++; value = string(text) }}");
                 continue;
             }
             let expr = if matches!(
@@ -912,7 +980,7 @@ impl GoCodegen {
                 field, expr
             );
         }
-        out.push_str("    if count != 1 { return fmt.Errorf(\"lexical union requires exactly one member\") }\n    return e.EncodeElement(value, start)\n}\n\n");
+        out.push_str("    if count != 1 { return nil, fmt.Errorf(\"lexical union requires exactly one member\") }\n    return []byte(value), nil\n}\n\n");
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
@@ -1036,7 +1104,7 @@ impl GoCodegen {
 
         writeln!(out, "}}\n").unwrap();
 
-        if s.is_mixed && self.options.emit_xml_tags {
+        if ir.has_ordered_content(s) && self.options.emit_xml_tags {
             self.emit_mixed_struct_xml(out, s, ir, &field_names);
         }
 
@@ -1633,7 +1701,24 @@ impl GoCodegen {
                         }
                     }
                 }
-                writeln!(out, "type {} = {}\n", elem_alias, target_type).unwrap();
+                if self.options.emit_xml_tags {
+                    let namespace = elem.qname.namespace.as_deref().unwrap_or("");
+                    writeln!(out, "type {} {}\n", elem_alias, target_type).unwrap();
+                    if matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(s)) if s.is_abstract))
+                    {
+                        writeln!(out, "func (r {elem_alias}) Selected() string {{ return {target_type}(r).Selected() }}\n").unwrap();
+                    }
+                    writeln!(out, "func (r *{elem_alias}) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {{\n    if start.Name.Local != {:?} || start.Name.Space != {:?} {{ return fmt.Errorf(\"unexpected root element: %v\", start.Name) }}\n    return d.DecodeElement((*{target_type})(r), &start)\n}}\n", elem.qname.local, namespace).unwrap();
+                    let bind_name = if matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_))))
+                    {
+                        "    value.XMLName = start.Name\n"
+                    } else {
+                        ""
+                    };
+                    writeln!(out, "func (r {elem_alias}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{\n    start.Name = xml.Name{{Local: {:?}, Space: {:?}}}\n    value := {target_type}(r)\n{bind_name}    return e.EncodeElement(value, start)\n}}\n", elem.qname.local, namespace).unwrap();
+                } else {
+                    writeln!(out, "type {} = {}\n", elem_alias, target_type).unwrap();
+                }
             }
         }
     }

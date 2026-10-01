@@ -113,6 +113,8 @@ pub struct ModelSchema {
     pub mixed_content: Option<MixedContentSchema>,
     /// Declared `abstract="true"` in the source schema.
     pub is_abstract: bool,
+    /// Require the document element to match this schema's expanded QName.
+    pub strict_root: bool,
     /// Concrete derivations eligible for `xsi:type` dispatch. Python may
     /// refresh this registry when subclasses are defined after first use.
     variants: Arc<RwLock<Vec<Arc<ModelSchema>>>>,
@@ -420,7 +422,7 @@ impl ModelSchema {
             }
 
             let mut schema = builder.build();
-            if s.is_mixed {
+            if ir.has_ordered_content(s) {
                 let item_field = s
                     .fields
                     .iter()
@@ -528,6 +530,7 @@ pub struct ModelSchemaBuilder {
     namespace: Option<String>,
     fields: Vec<FieldSchema>,
     is_abstract: bool,
+    strict_root: bool,
 }
 
 impl ModelSchemaBuilder {
@@ -538,6 +541,7 @@ impl ModelSchemaBuilder {
             namespace: None,
             fields: Vec::new(),
             is_abstract: false,
+            strict_root: false,
         }
     }
 
@@ -549,6 +553,11 @@ impl ModelSchemaBuilder {
 
     pub fn xml_name(mut self, xml_name: &[u8]) -> Self {
         self.xml_name = Some(xml_name.to_vec());
+        self
+    }
+
+    pub fn strict_root(mut self, strict_root: bool) -> Self {
+        self.strict_root = strict_root;
         self
     }
 
@@ -616,6 +625,7 @@ impl ModelSchemaBuilder {
             any_element_field,
             mixed_content: None,
             is_abstract: self.is_abstract,
+            strict_root: self.strict_root,
             variants: Arc::new(RwLock::new(Vec::new())),
         })
     }

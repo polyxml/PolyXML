@@ -298,7 +298,7 @@ impl JavaCodegen {
         if text_field.is_some() {
             out.push_str("                if (event == XMLStreamConstants.CHARACTERS || event == XMLStreamConstants.CDATA) text.append(reader.getText());\n");
         }
-        if s.is_mixed {
+        if ir.has_ordered_content(s) {
             if let Some((field, id, union)) = fields.iter().find_map(|(field, id)| {
                 self.resolve_union_def(&field.type_ref, ir)
                     .filter(|union| union.is_mixed_content())

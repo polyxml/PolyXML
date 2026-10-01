@@ -75,6 +75,24 @@ pytest --cov=polyxml --cov-branch --cov-fail-under=100
 
 ## 5. Reproducible Test Environment
 
+Generated global root classes expose `Meta.strict_root`; schema extraction
+maps it to `ModelSchemaBuilder::strict_root`. The streaming parser checks
+the document's expanded QName before `xsi:type` dispatch, for both start and
+self-closing document elements. The default remains false for hand-written
+models and nested records. Exercise generated dataclass and Pydantic roots,
+namespace mismatches, colliding imported root names, and scalar-root imports
+in `tests/test_generated_models.py` when changing this path.
+Element wrappers also expose `Meta.root_type` so polymorphic discovery uses
+the wrapped type's concrete derivations and excludes element wrappers from
+`xsi:type` registries. Concrete generated subclasses must override inherited
+`Meta.abstract` to false.
+
+After editing Rust extension sources, force a rebuild with
+`uv sync --extra dev --reinstall-package polyxml` before testing. An ordinary
+`uv run` can retain the previously built editable native extension even
+though the Rust source changed; imports passing against that binary do not
+verify the new Rust implementation.
+
 Run `uv sync --extra dev` and `uv run --extra dev pytest --cov=polyxml --cov-branch
 --cov-fail-under=100` from `crates/polyxml-python` when the checkout has multiple
 virtual environments. Selecting the root `.venv` first can omit `msgspec` and cause

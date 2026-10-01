@@ -293,6 +293,24 @@ fn parse_any_element_attrs(e: &BytesStart) -> Result<HashMap<String, PolyValue>>
 pub const DEFAULT_MAX_DEPTH: usize = 256;
 
 impl XmlDeserializer {
+    fn check_root(start: &BytesStart, schema: &ModelSchema) -> Result<()> {
+        if schema.strict_root {
+            let scope = namespace_scope(&Arc::new(HashMap::new()), start);
+            let (ns, local) = resolve_element_qname(start, &scope);
+            if local.as_bytes() != schema.xml_name
+                || ns.as_deref().filter(|s| !s.is_empty())
+                    != schema.namespace.as_deref().filter(|s| !s.is_empty())
+            {
+                return Err(PolyXmlError::SchemaError(format!(
+                    "Unexpected root element {{{}}}{}",
+                    ns.as_deref().unwrap_or(""),
+                    local
+                )));
+            }
+        }
+        Ok(())
+    }
+
     pub fn deserialize(xml_bytes: &[u8], root_schema: Arc<ModelSchema>) -> Result<PolyValue> {
         Self::deserialize_with_limit(xml_bytes, root_schema, DEFAULT_MAX_DEPTH)
     }
@@ -308,6 +326,7 @@ impl XmlDeserializer {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
+                    Self::check_root(e, &root_schema)?;
                     return Self::parse_sub_tree(
                         &mut reader,
                         root_schema,
@@ -317,6 +336,7 @@ impl XmlDeserializer {
                     );
                 }
                 Ok(Event::Empty(ref e)) => {
+                    Self::check_root(e, &root_schema)?;
                     let scope = namespace_scope(&Arc::new(HashMap::new()), e);
                     let schema = resolve_record_schema(&root_schema, e, &scope)?;
                     let mut frame = StackFrame::new(schema);

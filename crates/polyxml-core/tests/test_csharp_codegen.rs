@@ -76,6 +76,130 @@ fn choice_variants_avoid_record_member_names() {
 
 static DOTNET_LOCK: Mutex<()> = Mutex::new(());
 
+#[test]
+fn particle_wire_structure_round_trips() {
+    for (schema, root, documents) in [
+        (include_str!("../../../research/fixtures/nested_sequence_choice.xsd"), "Root", vec!["<Root><First>A</First><Second>B</Second></Root>", "<Root><Alternative>C</Alternative></Root>"]),
+        (include_str!("../../../research/fixtures/repeated_sequence.xsd"), "Root", vec!["<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>"]),
+        (include_str!("../../../research/fixtures/substitution_group.xsd"), "Portfolio", vec!["<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"]),
+        (include_str!("../../../research/fixtures/choice_branch_cardinality.xsd"), "Root", vec!["<Root><Timing>A1</Timing><Timing>A2</Timing></Root>"]),
+        (include_str!("../../../research/fixtures/wave6/duplicate_choice_branch_name.xsd"), "Person", vec!["<Person><MinAge>18</MinAge><MaxAge>25</MaxAge></Person>", "<Person><MaxAge>25</MaxAge></Person>"]),
+    ] {
+        let ir = polyxml::schema_parser::XsdParser::new().parse_str(schema).unwrap();
+        for use_records in [true, false] {
+            let temp = tempdir().unwrap();
+            let code = CSharpCodegen::new(CSharpOptions { namespace: "ParticleModels".into(), use_records, ..Default::default() }).generate_module(&ir);
+            fs::write(temp.path().join("Models.cs"), code).unwrap();
+            fs::write(temp.path().join("App.csproj"), r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>"#).unwrap();
+            let documents = documents.iter().map(|s| format!("{:?}", s)).collect::<Vec<_>>().join(",");
+            fs::write(temp.path().join("Program.cs"), format!(r#"
+using System.Xml.Serialization;
+using System.Xml.Linq;
+using ParticleModels;
+var serializer = new XmlSerializer(typeof({root}));
+string Structure(XElement e) => e.Name.ToString()+"["+(e.HasElements ? string.Concat(e.Elements().Select(Structure)) : e.Value)+"]";
+foreach (var document in new [] {{ {documents} }}) {{
+ var value = serializer.Deserialize(new StringReader(document))!;
+ var writer = new StringWriter(); serializer.Serialize(writer, value);
+ if (Structure(XElement.Parse(document)) != Structure(XElement.Parse(writer.ToString()))) throw new Exception("wire data lost: "+writer);
+}}
+"#)).unwrap();
+            let _lock = DOTNET_LOCK.lock().unwrap();
+            let result = dotnet_command().args(["run"]).current_dir(temp.path()).output().unwrap();
+            assert!(result.status.success(), "{root}, records={use_records}: {}\n{}", String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
+        }
+    }
+}
+
+#[test]
+fn lexical_union_attributes_round_trip() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/lexical_union_attribute.xsd"
+        ))
+        .unwrap();
+    for use_records in [true, false] {
+        let code = CSharpCodegen::new(CSharpOptions {
+            namespace: "AttrModels".into(),
+            use_records,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("App.csproj"), r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>"#).unwrap();
+        fs::write(temp.path().join("Models.cs"), code).unwrap();
+        fs::write(temp.path().join("Program.cs"), r#"
+using System.Xml.Serialization;
+using AttrModels;
+var serializer = new XmlSerializer(typeof(Root));
+foreach (var value in new [] { "42", "" }) {
+ var root = (Root)serializer.Deserialize(new StringReader("<Root count='"+value+"'/>"))!;
+ if (root.Count is null || root.Count.ToXmlString() != value) throw new Exception("attribute lost");
+ var writer = new StringWriter(); serializer.Serialize(writer, root);
+ if (!writer.ToString().Contains("count=\""+value+"\"") || writer.ToString().Contains("<count>")) throw new Exception("wrong wire kind");
+}
+try { serializer.Deserialize(new StringReader("<Root count='invalid'/>")); throw new Exception("invalid union accepted"); } catch (InvalidOperationException) {}
+"#).unwrap();
+        let _lock = DOTNET_LOCK.lock().unwrap();
+        let result = dotnet_command()
+            .args(["run"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}
+
+#[test]
+fn nillable_enum_collection_round_trips() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/nillable_enum_collection.xsd"
+        ))
+        .unwrap();
+    for use_records in [true, false] {
+        let code = CSharpCodegen::new(CSharpOptions {
+            namespace: "NilModels".into(),
+            use_records,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        assert!(code.contains("List<Code?>"));
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("App.csproj"), r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>"#).unwrap();
+        fs::write(temp.path().join("Models.cs"), code).unwrap();
+        fs::write(temp.path().join("Program.cs"), r#"
+using System.Xml.Serialization;
+using NilModels;
+var serializer = new XmlSerializer(typeof(Root));
+var xml = "<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Item>A</Item><Item xsi:nil='true'/><Item>B</Item></Root>";
+var root = (Root)serializer.Deserialize(new StringReader(xml))!;
+if (root.Item is not { Count: 3 } || root.Item[0] != Code.A || root.Item[1] != null || root.Item[2] != Code.B) throw new Exception("nil item lost");
+var writer = new StringWriter();
+serializer.Serialize(writer, root);
+var decoded = (Root)serializer.Deserialize(new StringReader(writer.ToString()))!;
+if (decoded.Item is not { Count: 3 } || decoded.Item[1] != null || decoded.Item[2] != Code.B) throw new Exception("nil round trip lost");
+"#).unwrap();
+        let _lock = DOTNET_LOCK.lock().unwrap();
+        let result = dotnet_command()
+            .args(["run", "--project", "App.csproj"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}
+
 fn dotnet_command() -> Command {
     let mut cmd = Command::new("dotnet");
     cmd.env("DOTNET_NOLOGO", "1");
@@ -1104,8 +1228,7 @@ fn test_csharp_sequence_nested_inside_choice_codegen() {
     let codegen = CSharpCodegen::new(CSharpOptions::default());
     let code = codegen.generate_module(&ir);
 
-    assert!(code.contains("public abstract record RootType"));
-    assert!(code.contains("public sealed record FirstSequence([property: XmlElement(\"First\"), JsonPropertyName(\"First\")] RootTypeSequence Value) : RootType"));
-    assert!(code.contains("public sealed record Alternative([property: XmlElement(\"Alternative\"), JsonPropertyName(\"Alternative\")] string Value) : RootType"));
+    assert!(code.contains("public record RootType("));
+    assert!(code.contains("string? Alternative = null"));
     assert!(code.contains("public record RootTypeSequence"));
 }

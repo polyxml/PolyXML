@@ -273,6 +273,28 @@ fn simple_value_target(base: &TypeRef, ir: &SchemaIR) -> String {
 }
 
 impl CSharpCodegen {
+    fn emit_optional_element_omission(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        names: &[String],
+        indent: &str,
+    ) {
+        if self.options.emit_xml_attributes {
+            for (field, name) in s.fields.iter().zip(names) {
+                if field.kind == FieldKind::Element
+                    && field.cardinality.min_occurs == 0
+                    && !field.nillable
+                {
+                    let _ = writeln!(
+                        out,
+                        "{indent}    public bool ShouldSerialize{name}() => {name} is not null;"
+                    );
+                }
+            }
+        }
+    }
+
     /// Creates a new C# code generator with the given configuration options.
     pub fn new(options: CSharpOptions) -> Self {
         Self {
@@ -1002,7 +1024,7 @@ impl CSharpCodegen {
             .map(|f| self.unique_property_name(&f.name, &mut seen_props, Some(&struct_name)))
             .collect();
 
-        if s.is_mixed && self.options.emit_xml_attributes {
+        if ir.has_ordered_content(s) && self.options.emit_xml_attributes {
             self.emit_mixed_struct(out, s, ir, indent, &struct_name, &prop_names);
             return;
         }
@@ -1032,7 +1054,12 @@ impl CSharpCodegen {
                             "{}    public {} {} {{ get; set; }} = default!;",
                             indent, ty, name
                         );
-                        let _ = writeln!(out, "{}    [XmlElement({:?})]", indent, f.xml_name);
+                        let xml_kind = if f.kind == FieldKind::Attribute {
+                            "XmlAttribute"
+                        } else {
+                            "XmlElement"
+                        };
+                        let _ = writeln!(out, "{}    [{}({:?})]", indent, xml_kind, f.xml_name);
                         if self.options.emit_json_attributes {
                             let _ = writeln!(out, "{}    [JsonIgnore]", indent);
                         }
@@ -1049,6 +1076,7 @@ impl CSharpCodegen {
                     indent, attrs, ty, name
                 );
             }
+            self.emit_optional_element_omission(out, s, &prop_names, indent);
             if self.options.emit_validation {
                 self.emit_struct_validator(out, s, ir, &prop_names, indent);
             }
@@ -1080,7 +1108,12 @@ impl CSharpCodegen {
                             "{}    public {} {} {{ get; set; }} = default!;",
                             indent, ty, name
                         );
-                        let _ = writeln!(out, "{}    [XmlElement({:?})]", indent, f.xml_name);
+                        let xml_kind = if f.kind == FieldKind::Attribute {
+                            "XmlAttribute"
+                        } else {
+                            "XmlElement"
+                        };
+                        let _ = writeln!(out, "{}    [{}({:?})]", indent, xml_kind, f.xml_name);
                         if self.options.emit_json_attributes {
                             let _ = writeln!(out, "{}    [JsonIgnore]", indent);
                         }
@@ -1103,6 +1136,7 @@ impl CSharpCodegen {
                 )
                 .unwrap();
             }
+            self.emit_optional_element_omission(out, s, &prop_names, indent);
             if self.options.emit_validation {
                 self.emit_struct_validator(out, s, ir, &prop_names, indent);
             }
@@ -1190,6 +1224,8 @@ impl CSharpCodegen {
             write!(out, "{}{}", default_arg, comma).unwrap();
         }
         writeln!(out, ") {{ }}\n").unwrap();
+
+        self.emit_optional_element_omission(out, s, &prop_names, indent);
 
         // IValidatableObject implementation
         if self.options.emit_validation {
@@ -1379,6 +1415,11 @@ impl CSharpCodegen {
         };
 
         if f.cardinality.is_list() {
+            let base_type = if f.nillable {
+                format!("{}?", base_type)
+            } else {
+                base_type
+            };
             if f.cardinality.min_occurs == 0 || f.nillable {
                 format!("List<{}>?", base_type)
             } else {
@@ -1422,7 +1463,14 @@ impl CSharpCodegen {
                     FieldKind::Text => parts.push("XmlText".to_string()),
                     FieldKind::Any => parts.push("XmlAnyElement".to_string()),
                     FieldKind::AnyAttribute => parts.push("XmlAnyAttribute".to_string()),
-                    FieldKind::Element => parts.push(format!("XmlElement(\"{}\")", f.xml_name)),
+                    FieldKind::Element => {
+                        let nullable = if f.nillable {
+                            ", IsNullable = true"
+                        } else {
+                            ""
+                        };
+                        parts.push(format!("XmlElement(\"{}\"{})", f.xml_name, nullable));
+                    }
                 }
             }
         }
@@ -1499,6 +1547,17 @@ impl CSharpCodegen {
                         .unwrap();
                         continue;
                     }
+                }
+                if self.options.use_records
+                    && !matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_) | TypeDef::Simple(_) | TypeDef::Union(_))))
+                {
+                    let xml_attr = if self.options.emit_xml_attributes {
+                        "[property: XmlText] "
+                    } else {
+                        ""
+                    };
+                    writeln!(out, "{}public sealed record {}({}{} Value)\n{}{{\n{}    public {}() : this(default({})!) {{ }}\n{}}}\n", indent, elem_name, xml_attr, target_type, indent, indent, elem_name, target_type, indent).unwrap();
+                    continue;
                 }
                 writeln!(
                     out,

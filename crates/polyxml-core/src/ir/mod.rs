@@ -463,6 +463,10 @@ pub struct SchemaIR {
     #[serde(default)]
     pub attributes: BTreeMap<QName, TypeRef>,
     pub substitution_groups: HashMap<QName, Vec<QName>>,
+    /// Element-only content which needs an ordered item stream to avoid losing
+    /// repeated particle or substitution-member order during serialization.
+    #[serde(default)]
+    pub ordered_types: std::collections::BTreeSet<QName>,
     /// Type owners outside the module currently being emitted. Definitions
     /// remain in `types` so generators can resolve their field semantics.
     #[serde(default)]
@@ -470,6 +474,9 @@ pub struct SchemaIR {
 }
 
 impl SchemaIR {
+    pub fn has_ordered_content(&self, structure: &StructDef) -> bool {
+        structure.is_mixed || self.ordered_types.contains(&structure.qname)
+    }
     /// Keep the selected global elements and all types that can occur beneath them.
     /// The schema is parsed in full before this operation, so references can be
     /// followed across imports and includes.

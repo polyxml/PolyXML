@@ -13,6 +13,121 @@ use polyxml::ir::{
 use polyxml::schema_parser::XsdParser;
 
 #[test]
+fn ordered_particles_and_choice_branches_round_trip() {
+    for (schema, root, documents) in [
+        (include_str!("../../../research/fixtures/repeated_sequence.xsd"), "Root", vec!["<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>", "<Root/>"]),
+        (include_str!("../../../research/fixtures/substitution_group.xsd"), "Portfolio", vec!["<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"]),
+        (include_str!("../../../research/fixtures/choice_branch_cardinality.xsd"), "Root", vec!["<Root><Timing>A1</Timing><Timing>A2</Timing></Root>", "<Root><Drive>B</Drive></Root>"]),
+        (include_str!("../../../research/fixtures/wave6/duplicate_choice_branch_name.xsd"), "Person", vec!["<Person><MinAge>18</MinAge><MaxAge>25</MaxAge></Person>", "<Person><MaxAge>25</MaxAge></Person>", "<Person/>"]),
+    ] {
+        let ir = XsdParser::new().parse_str(schema).unwrap();
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("go.mod"), "module particles\n\ngo 1.22\n").unwrap();
+        fs::write(dir.path().join("models.go"), GoCodegen::new(GoOptions::default()).generate_module(&ir)).unwrap();
+        let documents = documents.iter().map(|s| format!("{:?}", s)).collect::<Vec<_>>().join(",");
+        fs::write(dir.path().join("models_test.go"), format!(r#"package models
+import ("encoding/xml"; "testing"; "strings"; "io"; "fmt"; "reflect")
+func tokens(value string) []string {{
+ d := xml.NewDecoder(strings.NewReader(value)); var result []string
+ for {{ token, err := d.Token(); if err == io.EOF {{ return result }}; if err != nil {{ panic(err) }}
+ switch v := token.(type) {{ case xml.StartElement: result=append(result,fmt.Sprint("start:",v.Name)); case xml.EndElement: result=append(result,fmt.Sprint("end:",v.Name)); case xml.CharData: if strings.TrimSpace(string(v)) != "" {{ result=append(result,string(v)) }} }}
+ }}
+}}
+func TestParticles(t *testing.T) {{
+ for _, document := range []string{{{documents}}} {{
+ var root {root}; if err := xml.Unmarshal([]byte(document), &root); err != nil {{ t.Fatal(err) }}
+ data,err:=xml.Marshal(root);if err!=nil {{t.Fatal(err)}}
+ if !reflect.DeepEqual(tokens(document),tokens(string(data))) {{t.Fatalf("data lost: %s -> %s",document,data)}}
+ }}
+}}"#)).unwrap();
+        let result = Command::new("go").args(["test", "./..."]).current_dir(dir.path()).output().unwrap();
+        assert!(result.status.success(), "{root}: {}\n{}", String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
+    }
+}
+
+#[test]
+fn temporal_scalars_preserve_xsd_lexical_values() {
+    let ir = XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="Root"><xs:complexType><xs:sequence><xs:element name="date" type="xs:date"/><xs:element name="time" type="xs:time"/><xs:element name="dateTime" type="xs:dateTime"/></xs:sequence><xs:attribute name="date" type="xs:date"/></xs:complexType></xs:element></xs:schema>"#).unwrap();
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module temporal\n\ngo 1.22\n").unwrap();
+    fs::write(
+        dir.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(dir.path().join("models_test.go"), r#"package models
+import ("encoding/xml"; "testing"; "strings")
+func TestTemporal(t *testing.T) {
+ for _, zone := range []string{"", "Z", "+05:30", "-06:00"} {
+  date := "2026-10-01"+zone; clock := "12:34:56.123"+zone; stamp := "2026-10-01T12:34:56.123"+zone
+  xmlText := `<Root date="`+date+`"><date>`+date+`</date><time>`+clock+`</time><dateTime>`+stamp+`</dateTime></Root>`
+  var root Root
+  if err := xml.Unmarshal([]byte(xmlText), &root); err != nil { t.Fatal(err) }
+  data, err := xml.Marshal(root); if err != nil { t.Fatal(err) }
+  for _, want := range []string{`date="`+date+`"`, "<date>"+date+"</date>", "<time>"+clock+"</time>", "<dateTime>"+stamp+"</dateTime>"} { if !strings.Contains(string(data), want) { t.Fatalf("missing %s in %s", want, data) } }
+ }
+ var root Root
+ if err := xml.Unmarshal([]byte(`<Root><date>2026-10-01</date><time>12:34:56</time><dateTime>2026-10-01T12:34:56</dateTime></Root>`), &root); err != nil { t.Fatal(err) }
+ root.Date.Time = root.Date.AddDate(0, 0, 1)
+ updated, err := xml.Marshal(root); if err != nil { t.Fatal(err) }
+ if !strings.Contains(string(updated), "<date>2026-10-02</date>") { t.Fatalf("stale lexical date: %s", updated) }
+ if err := xml.Unmarshal([]byte(`<Root><date>2026-02-30</date></Root>`), &root); err == nil { t.Fatal("invalid calendar date accepted") }
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn roots_and_union_attributes_round_trip() {
+    let ir = XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/lexical_union_attribute.xsd"
+        ))
+        .unwrap();
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module rootcodec\n\ngo 1.22\n").unwrap();
+    fs::write(
+        dir.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(dir.path().join("models_test.go"), r#"package models
+import ("encoding/xml"; "testing"; "strings")
+func TestRootAndAttribute(t *testing.T) {
+ for _, value := range []string{"42", ""} {
+  var root Root
+  if err := xml.Unmarshal([]byte(`<Root count="`+value+`"/>`), &root); err != nil { t.Fatal(err) }
+  if root.Count == nil { t.Fatal("attribute lost") }
+  data, err := xml.Marshal(root); if err != nil { t.Fatal(err) }
+  if !strings.HasPrefix(string(data), "<Root ") || !strings.Contains(string(data), `count="`+value+`"`) { t.Fatalf("wrong XML: %s", data) }
+ }
+ var root Root
+ if err := xml.Unmarshal([]byte(`<Other count="42"/>`), &root); err == nil { t.Fatal("unrelated root accepted") }
+ if err := xml.Unmarshal([]byte(`<Root count="invalid"/>`), &root); err == nil { t.Fatal("invalid union accepted") }
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn referenced_element_uses_declared_type_after_includes() {
     let dir = tempdir().unwrap();
     fs::write(
@@ -101,7 +216,7 @@ fn root_alias_names_are_unique_after_go_normalization() {
     </xs:schema>"#;
     let ir = XsdParser::new().parse_str(schema).unwrap();
     let code = GoCodegen::new(GoOptions::default()).generate_module(&ir);
-    assert_eq!(code.matches("type Item = ").count(), 1);
+    assert_eq!(code.matches("type Item FirstType").count(), 1);
 }
 
 #[test]
@@ -782,7 +897,10 @@ fn test_go_enum_only_schema_omits_unused_xml_import() {
     </xs:schema>"#;
 
     let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
-    let codegen = GoCodegen::new(GoOptions::default());
+    let codegen = GoCodegen::new(GoOptions {
+        emit_root_aliases: false,
+        ..Default::default()
+    });
     let code = codegen.generate_module(&ir);
 
     assert!(
@@ -811,8 +929,8 @@ fn test_go_date_or_datetime_lexical_union() {
 
     assert!(code.contains("time.Parse(time.RFC3339, value)"));
     assert!(code.contains("time.Parse(\"2006-01-02\", value)"));
-    assert!(code.contains("c.DateTimeValue.Format(time.RFC3339)"));
-    assert!(code.contains("c.DateValue.Format(\"2006-01-02\")"));
+    assert!(code.contains("c.DateTimeValue.MarshalText()"));
+    assert!(code.contains("c.DateValue.MarshalText()"));
 }
 
 #[test]

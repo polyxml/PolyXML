@@ -107,6 +107,13 @@ Key mechanisms (regression-locked in `crates/polyxml-core/tests/test_schema_audi
 
 ## 5. `xsi:type` Polymorphic Dispatch
 
+`ModelSchema.strict_root` optionally checks the document element's expanded
+QName before polymorphic dispatch. It applies at the document entry point,
+not at nested frame creation, because a nested field's name can differ from
+its type's name. Check both `Event::Start` and `Event::Empty`. Ordered
+element-only sequences and substitution fields use `SchemaIR.ordered_types`
+to select the tagged item codec without changing `StructDef.is_mixed`.
+
 The runtime dispatches polymorphic elements through a **type registry on
 `ModelSchema`** — never through generated code. Documented for users in
 `docs/guides/polymorphism.md`; regression-locked in

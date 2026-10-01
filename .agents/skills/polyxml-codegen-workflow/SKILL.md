@@ -14,7 +14,9 @@ When triaging competitor reports, compile a minimal XSD, inspect the IR and
 generated code, then parse and serialize valid and invalid XML with the target
 runtime. Compare the result against an independent XSD validator. The
 2026-09-30 audit in `research/competitor-issue-audit-2026-09-30.md` found these
-current gaps:
+baseline gaps. Category 1/2 follow-up evidence and remaining limits are in
+`research/category-1-2-fixes-2026-10-01.md`; do not treat this historical list
+as the current fix status:
 
 - A sequence nested inside a bounded choice is flattened into independent
   fields; a valid alternative-only instance fails in generated Python, while
@@ -133,6 +135,37 @@ tool versions and use runtime XML plus an independent XSD validator before a
 migration claim.
 
 ## Large multi-schema regression caution
+
+### Category 1/2 codec regression checks
+
+- Compile and execute the saved repeated-sequence, substitution-group,
+  repeated-branch, and shared-element-name fixtures. Keep document order in
+  `SchemaIR.ordered_types` and the existing tagged item stream; do not change
+  the source schema's `StructDef.is_mixed` flag to request ordered codecs.
+  Preserve this set through imported-IR merges and chameleon namespace rekeys.
+- Python global elements need callable root models and expanded-QName checks,
+  rather than PEP 695 aliases. Scalar root wrappers also need imports even
+  when the original IR contains no structs. Roots colliding with a type or
+  another namespace's local name use `*Element` names with numeric suffixes;
+  match their `Meta.name` and `Meta.namespace` when selecting a root.
+- Go root wrappers delegate to the named type's codecs (including abstract
+  `xsi:type` dispatch), but must retain the declared root name on writes.
+  Preserve the abstract wrapper's `Selected()` helper.
+- Go lexical unions require `UnmarshalText`/`MarshalText` for attributes as
+  well as XML element methods. C# lexical proxies must use `XmlAttribute`
+  for attribute fields. Test empty union members and invalid lexical input.
+- Go temporal wrappers preserve absent timezones and fractional seconds.
+  Check updates to the embedded `time.Time` so cached input text cannot
+  override an edited value. Calendar ranges remain bounded by Go's parser.
+- C# nillable collections need nullable items and `IsNullable=true`, while
+  absent non-nillable optional elements need omission methods. Scalar root
+  records wrap their value instead of inheriting from primitive/enum types;
+  use `default(TargetType)!` to avoid ambiguous record copy constructors.
+- Compare W3C groups against the previous compiler with fresh Python
+  processes per group when investigating a change in results. The runner
+  imports many schemas with repeated class names in one interpreter, so a
+  whole-suite summary can mask individual failures. Keep existing schema
+  validator/constraint gaps outside a category 1/2 fix claim.
 
 Root-scoped generation (`--root-element`, or `root_elements` in a workspace or
 module manifest) parses the complete XSD before filtering `SchemaIR`. Preserve

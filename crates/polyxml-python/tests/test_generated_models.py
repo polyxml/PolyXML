@@ -4,11 +4,158 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from decimal import Decimal
 
 import pytest
 
 import polyxml
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_generated_abstract_root_preserves_derived_payload(tmp_path, backend):
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "research/fixtures/wave6/abstract_derived_xsi.xsd"
+    )
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(
+        f"abstract_root_{backend}", tmp_path / "abstract_derived_xsi.py"
+    )
+    xml = '<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ConcreteDocument"><info>payload</info></document>'
+    model = module.Document.from_xml(xml)
+    assert isinstance(model, module.ConcreteDocument)
+    assert model.info == "payload"
+    encoded = model.to_xml()
+    parsed = ET.fromstring(encoded)
+    assert parsed.tag == "document"
+    assert parsed.findtext("info") == "payload"
+    assert parsed.get("{http://www.w3.org/2001/XMLSchema-instance}type") == "ConcreteDocument"
+    assert module.Document.from_xml(encoded).info == "payload"
+    with pytest.raises(ValueError, match="Unexpected root"):
+        module.Document.from_xml(xml.replace("document", "wrong"))
+
+
+def test_roots_with_the_same_local_name_in_distinct_namespaces(tmp_path):
+    base = tmp_path / "base.xsd"
+    base.write_text(
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:base" xmlns:b="urn:base"><xs:complexType name="A"><xs:sequence><xs:element name="BaseValue" type="xs:string"/></xs:sequence></xs:complexType><xs:element name="a" type="b:A"/></xs:schema>'
+    )
+    main = tmp_path / "main.xsd"
+    main.write_text(
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:main" xmlns:m="urn:main"><xs:import namespace="urn:base" schemaLocation="base.xsd"/><xs:complexType name="A"><xs:sequence><xs:element name="MainValue" type="xs:string"/></xs:sequence></xs:complexType><xs:element name="a" type="m:A"/></xs:schema>'
+    )
+    out = tmp_path / "models"
+    subprocess.run(
+        [str(_get_polyxml_bin()), "generate", str(main), "--lang", "python", "--out", str(out)],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file("namespace_roots", out / "main.py")
+    root = module.AElement2.from_xml('<a xmlns="urn:main"><MainValue>main</MainValue></a>')
+    assert root.main_value == "main"
+    assert ET.fromstring(root.to_xml()).tag == "{urn:main}a"
+    with pytest.raises(ValueError, match="Unexpected root"):
+        module.AElement2.from_xml('<a xmlns="urn:base"><BaseValue>base</BaseValue></a>')
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+@pytest.mark.parametrize(
+    ("fixture", "root_name", "documents"),
+    [
+        (
+            "nested_sequence_choice.xsd",
+            "Root",
+            [
+                "<Root><First>A</First><Second>B</Second></Root>",
+                "<Root><Alternative>C</Alternative></Root>",
+            ],
+        ),
+        (
+            "repeated_sequence.xsd",
+            "Root",
+            [
+                "<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>",
+                "<Root/>",
+            ],
+        ),
+        (
+            "substitution_group.xsd",
+            "Portfolio",
+            [
+                "<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"
+            ],
+        ),
+        (
+            "choice_branch_cardinality.xsd",
+            "Root",
+            [
+                "<Root><Timing>A1</Timing><Timing>A2</Timing></Root>",
+                "<Root><Drive>B</Drive></Root>",
+            ],
+        ),
+        (
+            "wave6/duplicate_choice_branch_name.xsd",
+            "Person",
+            [
+                "<Person><MinAge>18</MinAge><MaxAge>25</MaxAge></Person>",
+                "<Person><MaxAge>25</MaxAge></Person>",
+                "<Person/>",
+            ],
+        ),
+    ],
+)
+def test_particle_codec_regressions(tmp_path, backend, fixture, root_name, documents):
+    schema = pathlib.Path(__file__).resolve().parents[3] / "research" / "fixtures" / fixture
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(
+        f"particles_{backend}_{schema.stem}", tmp_path / f"{schema.stem}.py"
+    )
+    root_type = getattr(module, root_name)
+
+    def structure(element):
+        return (
+            element.tag,
+            (element.text or "").strip(),
+            tuple(structure(child) for child in element),
+        )
+
+    for xml in documents:
+        decoded = root_type.from_xml(xml)
+        encoded = decoded.to_xml()
+        assert structure(ET.fromstring(encoded)) == structure(ET.fromstring(xml))
+        assert structure(ET.fromstring(root_type.from_xml(encoded).to_xml())) == structure(
+            ET.fromstring(xml)
+        )
+
 
 SAMPLE_XSD = """<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -226,6 +373,23 @@ def generated_models():
         mod_pyd = _load_module_from_file("gen_warehouse_pyd", pyd_file)
 
         yield {"dataclass": mod_dc, "pydantic": mod_pyd}
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_declared_root_models(generated_models, backend):
+    mod = generated_models[backend]
+    xml = SAMPLE_XML.replace(b"Inventory", b"WarehouseInventory")
+    root = mod.WarehouseInventory.from_xml(xml)
+    assert isinstance(root, mod.WarehouseInventory)
+    assert b"WarehouseInventory" in root.to_xml()
+    decoded = mod.WarehouseInventory.from_xml(root.to_xml())
+    assert decoded.warehouse_name == root.warehouse_name
+    with pytest.raises(ValueError, match="Unexpected root"):
+        mod.WarehouseInventory.from_xml(SAMPLE_XML)
+    with pytest.raises(ValueError, match="Unexpected root"):
+        mod.WarehouseInventory.from_xml(xml.replace(b"https://example.com/warehouse", b"urn:wrong"))
+    with pytest.raises(ValueError, match="Unexpected root"):
+        mod.WarehouseInventory.from_xml(b"<Other/>")
 
 
 def test_generated_dataclass_deserialization_and_serialization(generated_models):
