@@ -1,0 +1,9 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="AbstractDocument" abstract="true"/>
+  <xs:complexType name="ConcreteDocument"><xs:complexContent>
+    <xs:extension base="AbstractDocument"><xs:sequence>
+      <xs:element name="info" type="xs:string"/>
+    </xs:sequence></xs:extension>
+  </xs:complexContent></xs:complexType>
+  <xs:element name="document" type="AbstractDocument"/>
+</xs:schema>

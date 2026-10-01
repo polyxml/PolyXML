@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="DateOrDateTime"><xs:union memberTypes="xs:date xs:dateTime"/></xs:simpleType>
+  <xs:element name="Root"><xs:complexType><xs:sequence>
+    <xs:element name="When" type="DateOrDateTime"/>
+  </xs:sequence></xs:complexType></xs:element>
+</xs:schema>

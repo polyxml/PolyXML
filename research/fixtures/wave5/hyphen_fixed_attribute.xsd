@@ -1,0 +1,5 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Root"><xs:complexType>
+    <xs:attribute name="ID-CLASS" type="xs:NMTOKEN" fixed="NAME"/>
+  </xs:complexType></xs:element>
+</xs:schema>

@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:audit:substitution" targetNamespace="urn:audit:substitution" elementFormDefault="qualified">
+  <xs:element name="Instrument" type="xs:string" abstract="true"/>
+  <xs:element name="Bond" type="xs:string" substitutionGroup="t:Instrument"/>
+  <xs:element name="Equity" type="xs:string" substitutionGroup="t:Instrument"/>
+  <xs:element name="Portfolio"><xs:complexType><xs:sequence><xs:element ref="t:Instrument" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+</xs:schema>

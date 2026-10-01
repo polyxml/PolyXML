@@ -1,0 +1,7 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:audit:array" xmlns:a="urn:audit:array"
+           elementFormDefault="qualified">
+  <xs:complexType name="ArrayOfString"><xs:sequence>
+    <xs:element name="string" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+  </xs:sequence></xs:complexType>
+</xs:schema>

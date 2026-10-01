@@ -1,0 +1,7 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Symbol"><xs:restriction base="xs:string">
+    <xs:enumeration value="FOO.BAR"/><xs:enumeration value="2G"/>
+    <xs:enumeration value="urn:iso:std"/>
+  </xs:restriction></xs:simpleType>
+  <xs:element name="Root" type="Symbol"/>
+</xs:schema>

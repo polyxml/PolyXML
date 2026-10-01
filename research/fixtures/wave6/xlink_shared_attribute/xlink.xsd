@@ -1,0 +1,5 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.w3.org/1999/xlink"
+           xmlns:xl="http://www.w3.org/1999/xlink">
+  <xs:attribute name="type" type="xs:string"/>
+</xs:schema>

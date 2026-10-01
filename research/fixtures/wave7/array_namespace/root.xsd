@@ -1,0 +1,7 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:a="urn:audit:array">
+  <xs:import namespace="urn:audit:array" schemaLocation="array.xsd"/>
+  <xs:element name="Container"><xs:complexType><xs:sequence>
+    <xs:element name="Values" type="a:ArrayOfString"/>
+  </xs:sequence></xs:complexType></xs:element>
+</xs:schema>

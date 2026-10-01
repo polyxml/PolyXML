@@ -1,0 +1,10 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xl="http://www.w3.org/1999/xlink">
+  <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
+  <xs:complexType name="ResourceLink"><xs:attribute ref="xl:type"/></xs:complexType>
+  <xs:complexType name="ArcLink"><xs:attribute ref="xl:type"/></xs:complexType>
+  <xs:element name="Links"><xs:complexType><xs:sequence>
+    <xs:element name="Resource" type="ResourceLink"/>
+    <xs:element name="Arc" type="ArcLink"/>
+  </xs:sequence></xs:complexType></xs:element>
+</xs:schema>

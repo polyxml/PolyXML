@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:audit:forward" targetNamespace="urn:audit:forward" elementFormDefault="qualified">
+  <xs:element name="Item" type="t:Item"/>
+  <xs:complexType name="Item">
+    <xs:sequence><xs:element name="Code" type="xs:string"/></xs:sequence>
+  </xs:complexType>
+</xs:schema>

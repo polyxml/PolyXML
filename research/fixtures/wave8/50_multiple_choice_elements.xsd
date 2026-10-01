@@ -1,0 +1,15 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="RightsController">
+    <xs:sequence>
+      <xs:choice>
+        <xs:element name="User" type="xs:string"/>
+        <xs:element name="Group" type="xs:string"/>
+      </xs:choice>
+      <xs:choice>
+        <xs:element name="Read" type="xs:boolean"/>
+        <xs:element name="Write" type="xs:boolean"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Controller" type="RightsController"/>
+</xs:schema>

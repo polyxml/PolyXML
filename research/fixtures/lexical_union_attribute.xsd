@@ -1,0 +1,15 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Empty">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value=""/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="IntOrEmpty">
+    <xs:union memberTypes="xs:int Empty"/>
+  </xs:simpleType>
+  <xs:element name="Root">
+    <xs:complexType>
+      <xs:attribute name="count" type="IntOrEmpty"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:audit:A" xmlns:a="urn:audit:A"
+           xmlns:s="urn:audit:shared" elementFormDefault="qualified">
+  <xs:import namespace="urn:audit:shared" schemaLocation="shared.xsd"/>
+  <xs:element name="ElementA" type="s:BaseType"/>
+</xs:schema>

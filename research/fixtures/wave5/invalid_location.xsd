@@ -1,0 +1,5 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Bad">
+    <xs:element name="Wrong" type="xs:string"/>
+  </xs:simpleType>
+</xs:schema>

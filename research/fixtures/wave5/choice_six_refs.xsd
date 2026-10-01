@@ -1,0 +1,14 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="e"><xs:complexType><xs:choice maxOccurs="unbounded">
+    <xs:element ref="a1"/><xs:element ref="a2"/><xs:element ref="a3"/>
+    <xs:element ref="a4"/><xs:element ref="a5"/><xs:element ref="a6"/>
+  </xs:choice><xs:attribute name="d" use="required"><xs:simpleType>
+    <xs:restriction base="xs:token"><xs:enumeration value="2"/><xs:enumeration value="3"/></xs:restriction>
+  </xs:simpleType></xs:attribute></xs:complexType></xs:element>
+  <xs:element name="a1"><xs:complexType><xs:attribute name="n" use="required" type="xs:string"/></xs:complexType></xs:element>
+  <xs:element name="a2"><xs:complexType><xs:attribute name="n" use="required" type="xs:string"/></xs:complexType></xs:element>
+  <xs:element name="a3"><xs:complexType><xs:attribute name="n" use="required" type="xs:string"/></xs:complexType></xs:element>
+  <xs:element name="a4"><xs:complexType><xs:attribute name="n" use="required" type="xs:string"/></xs:complexType></xs:element>
+  <xs:element name="a5"><xs:complexType><xs:attribute name="n" use="required" type="xs:string"/></xs:complexType></xs:element>
+  <xs:element name="a6"><xs:complexType><xs:attribute name="n" use="required" type="xs:string"/></xs:complexType></xs:element>
+</xs:schema>

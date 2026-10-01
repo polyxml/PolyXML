@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:audit:content" targetNamespace="urn:audit:content" elementFormDefault="qualified">
+  <xs:element name="Body"><xs:complexType><xs:choice>
+    <xs:element name="Uri" type="xs:string"/>
+    <xs:any namespace="##other" processContents="lax"/>
+  </xs:choice><xs:attribute name="content" type="xs:string"/></xs:complexType></xs:element>
+</xs:schema>

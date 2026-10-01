@@ -1,0 +1,11 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:group name="DocumentNameGroup"><xs:sequence>
+    <xs:element name="Vendor" type="xs:string"/>
+    <xs:element name="Name" type="xs:string"/>
+  </xs:sequence></xs:group>
+  <xs:complexType name="ComponentType"><xs:sequence>
+    <xs:group ref="DocumentNameGroup"/>
+    <xs:element name="Version" type="xs:string"/>
+  </xs:sequence></xs:complexType>
+  <xs:element name="Component" type="ComponentType"/>
+</xs:schema>

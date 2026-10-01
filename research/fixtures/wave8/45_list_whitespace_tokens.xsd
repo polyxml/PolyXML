@@ -1,0 +1,10 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="PointList">
+    <xs:list itemType="xs:string"/>
+  </xs:simpleType>
+  <xs:element name="Line">
+    <xs:complexType>
+      <xs:attribute name="points" type="PointList"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

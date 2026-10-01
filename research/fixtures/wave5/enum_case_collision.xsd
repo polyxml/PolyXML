@@ -1,0 +1,7 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="YesNo"><xs:restriction base="xs:string">
+    <xs:enumeration value="YES"/><xs:enumeration value="yes"/>
+    <xs:enumeration value="NO"/><xs:enumeration value="no"/>
+  </xs:restriction></xs:simpleType>
+  <xs:element name="Root" type="YesNo"/>
+</xs:schema>

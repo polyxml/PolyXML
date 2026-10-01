@@ -1,0 +1,8 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Header">
+    <xs:complexType><xs:sequence>
+      <xs:element name="Operation"><xs:simpleType><xs:restriction base="OperationCode"/></xs:simpleType></xs:element>
+    </xs:sequence></xs:complexType>
+  </xs:element>
+  <xs:simpleType name="OperationCode"><xs:restriction base="xs:string"><xs:length value="3"/></xs:restriction></xs:simpleType>
+</xs:schema>

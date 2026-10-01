@@ -1,0 +1,27 @@
+[workspace]
+output_base_dir = "/tmp/polyxml-wave7-modules"
+
+[modules.common]
+schemas = ["common.xsd"]
+
+[modules.order]
+schemas = ["order.xsd"]
+depends_on = ["common"]
+root_elements = ["Order"]
+
+[modules.invoice]
+schemas = ["invoice.xsd"]
+depends_on = ["common"]
+root_elements = ["Invoice"]
+
+[[generate]]
+target = "python"
+output = "py"
+
+[[generate]]
+target = "go"
+output = "go"
+
+[[generate]]
+target = "csharp"
+output = "cs"

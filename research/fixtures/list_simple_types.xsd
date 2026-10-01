@@ -1,0 +1,8 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="IntList"><xs:list itemType="xs:int"/></xs:simpleType>
+  <xs:simpleType name="WordList"><xs:list itemType="xs:string"/></xs:simpleType>
+  <xs:element name="Root"><xs:complexType><xs:sequence>
+    <xs:element name="Numbers" type="IntList"/>
+    <xs:element name="Words" type="WordList"/>
+  </xs:sequence></xs:complexType></xs:element>
+</xs:schema>

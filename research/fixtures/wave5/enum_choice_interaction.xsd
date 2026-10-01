@@ -1,0 +1,12 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:audit:enumchoice" targetNamespace="urn:audit:enumchoice" elementFormDefault="qualified">
+  <xs:element name="TopLevel"><xs:complexType><xs:choice maxOccurs="unbounded">
+    <xs:element name="TShirt" type="t:SizeType" minOccurs="0"/>
+    <xs:element name="Style" minOccurs="0"><xs:simpleType><xs:restriction base="xs:string">
+      <xs:enumeration value="Value1"/><xs:enumeration value="Value2"/>
+    </xs:restriction></xs:simpleType></xs:element>
+  </xs:choice></xs:complexType></xs:element>
+  <xs:simpleType name="SizeType"><xs:restriction base="xs:string">
+    <xs:enumeration value="Small"/><xs:enumeration value="Medium"/><xs:enumeration value="Large"/>
+  </xs:restriction></xs:simpleType>
+  <xs:simpleType name="HasNoElements"><xs:restriction base="xs:string"/></xs:simpleType>
+</xs:schema>

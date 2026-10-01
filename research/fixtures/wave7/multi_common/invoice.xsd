@@ -1,0 +1,8 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:audit:invoice" xmlns:i="urn:audit:invoice"
+           xmlns:c="urn:audit:common" elementFormDefault="qualified">
+  <xs:import namespace="urn:audit:common" schemaLocation="common.xsd"/>
+  <xs:element name="Invoice"><xs:complexType><xs:sequence>
+    <xs:element name="Shared" type="c:SharedType"/>
+  </xs:sequence></xs:complexType></xs:element>
+</xs:schema>

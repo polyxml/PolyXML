@@ -1,0 +1,21 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="Dep">
+    <xs:attribute name="id" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:element name="test">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ldeps">
+          <xs:complexType><xs:sequence>
+            <xs:element name="dep" type="Dep" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence></xs:complexType>
+        </xs:element>
+        <xs:element name="ddeps">
+          <xs:complexType><xs:sequence>
+            <xs:element name="dep" type="Dep" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence></xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

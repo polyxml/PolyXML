@@ -1,0 +1,8 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Flags">
+    <xs:complexType>
+      <xs:attribute name="active" type="xs:boolean" default="false"/>
+      <xs:attribute name="debug" type="xs:boolean" default="true"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

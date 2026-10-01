@@ -1,0 +1,19 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="StatusEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Pending"/>
+      <xs:enumeration value="Active"/>
+      <xs:enumeration value="Closed"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="StatusList">
+    <xs:list itemType="StatusEnum"/>
+  </xs:simpleType>
+  <xs:element name="Record">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="statuses" type="StatusList"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

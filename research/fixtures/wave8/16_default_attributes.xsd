@@ -1,0 +1,8 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Config">
+    <xs:complexType>
+      <xs:attribute name="enabled" type="xs:boolean" default="true"/>
+      <xs:attribute name="mode" type="xs:string" default="fast"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,9 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:a="urn:audit:typeA" xmlns:b="urn:audit:typeB">
+  <xs:import namespace="urn:audit:typeA" schemaLocation="a.xsd"/>
+  <xs:import namespace="urn:audit:typeB" schemaLocation="b.xsd"/>
+  <xs:element name="Root"><xs:complexType><xs:sequence>
+    <xs:element name="First" type="a:SharedType"/>
+    <xs:element name="Second" type="b:SharedType"/>
+  </xs:sequence></xs:complexType></xs:element>
+</xs:schema>

@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:c="urn:audit:common" targetNamespace="urn:audit:main">
+  <xs:import namespace="urn:audit:common" schemaLocation="common.xsd"/>
+  <xs:element name="Record"><xs:complexType>
+    <xs:attribute name="code" type="c:Code" use="required"/>
+  </xs:complexType></xs:element>
+</xs:schema>

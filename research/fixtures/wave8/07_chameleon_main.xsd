@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:audit:chameleon"
+           xmlns="urn:audit:chameleon">
+  <xs:include schemaLocation="07_chameleon_inc.xsd"/>
+  <xs:element name="Root" type="ChameleonType"/>
+</xs:schema>

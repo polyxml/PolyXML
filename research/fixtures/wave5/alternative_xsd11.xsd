@@ -1,0 +1,15 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" version="1.1">
+  <xs:complexType name="RangeType">
+    <xs:attribute name="kind" type="xs:string" use="required"/>
+    <xs:attribute name="low" type="xs:int" use="required"/>
+    <xs:attribute name="high" type="xs:int" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="SingleType">
+    <xs:attribute name="kind" type="xs:string" use="required"/>
+    <xs:attribute name="value" type="xs:int" use="required"/>
+  </xs:complexType>
+  <xs:element name="Limit">
+    <xs:alternative test="@kind = 'range'" type="RangeType"/>
+    <xs:alternative type="SingleType"/>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,8 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Root"><xs:complexType><xs:sequence>
+    <xs:element name="Code" type="CodeType"/>
+  </xs:sequence></xs:complexType></xs:element>
+  <xs:simpleType name="CodeType"><xs:restriction base="xs:string">
+    <xs:maxLength value="5"/>
+  </xs:restriction></xs:simpleType>
+</xs:schema>

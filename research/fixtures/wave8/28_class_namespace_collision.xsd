@@ -1,0 +1,8 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:audit:collision"
+           xmlns="urn:audit:collision">
+  <xs:complexType name="Collision">
+    <xs:sequence><xs:element name="val" type="xs:string"/></xs:sequence>
+  </xs:complexType>
+  <xs:element name="Collision" type="Collision"/>
+</xs:schema>

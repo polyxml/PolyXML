@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:audit:typeA" xmlns:a="urn:audit:typeA">
+  <xs:complexType name="SharedType"><xs:sequence>
+    <xs:element name="A" type="xs:string"/>
+  </xs:sequence></xs:complexType>
+</xs:schema>

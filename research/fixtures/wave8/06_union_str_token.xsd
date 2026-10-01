@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="StrUnion">
+    <xs:union memberTypes="xs:string xs:token"/>
+  </xs:simpleType>
+  <xs:element name="Root" type="StrUnion"/>
+</xs:schema>

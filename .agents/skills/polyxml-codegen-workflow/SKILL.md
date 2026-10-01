@@ -8,6 +8,130 @@ description: >-
 
 # PolyXML Polyglot Codegen Development & Verification Playbook
 
+## XML Schema semantics to regression-lock
+
+When triaging competitor reports, compile a minimal XSD, inspect the IR and
+generated code, then parse and serialize valid and invalid XML with the target
+runtime. Compare the result against an independent XSD validator. The
+2026-09-30 audit in `research/competitor-issue-audit-2026-09-30.md` found these
+current gaps:
+
+- A sequence nested inside a bounded choice is flattened into independent
+  fields; a valid alternative-only instance fails in generated Python, while
+  generated C# can serialize both branches together. Preserve the compositor
+  tree before applying target-specific union representations.
+- `fixed_value` reaches `FieldDef` but generated Python and C# accept and
+  serialize different values. Test both input validation and output validation.
+- Optional element defaults apply to a **present empty** element, not to an
+  absent one (W3C XSD primer, section 2.2). Generated Python currently fills
+  the absent field with the default and writes it back; Python and C# also
+  mishandle the present-empty boolean case.
+- Generated Python parsing accepts an unrelated root tag, and the root alias
+  is a `TypeAliasType` rather than a usable class. Test root name checks and
+  the documented import/constructor path together.
+- Generated Go aliases for global root elements have the same wire-name
+  problem: `type Schedule = ScheduleType` marshals as `<ScheduleType>` and
+  accepts an unrelated root. A root alias needs a wire-name check, not just
+  a unique type identifier.
+- Generated Go `time.Time` fields compile for optional `xs:time`, but
+  `encoding/xml` expects RFC 3339 date-time text; valid XSD `xs:time`,
+  `xs:date`, and timezone-free `xs:dateTime` lexical values fail. Exercise
+  actual XML parsing after checking generated imports.
+- Lexical `xs:union` element tests do not cover union-typed XML attributes.
+  The Go union lacks attribute text unmarshalling; C# emits an `[XmlElement]`
+  proxy for an attribute and silently drops attribute input. Test the XML
+  field kind as well as the union's value parser.
+- Official UBL Invoice 2.4 parses and emits C#, but `dotnet build` fails:
+  full output has duplicate names and sealed-base inheritance errors;
+  root-scoped record output has positional `Value` collisions (`CS8866`);
+  root-scoped mutable class output has invalid `Validate` overrides
+  (`CS0115`). The audit records the source snapshot and mode differences.
+  Reduce these failures to small fixtures before changing the C# generator.
+- `substitutionGroup` membership survives schema parsing but generated Python
+  and Go fields referencing an abstract head can silently discard concrete
+  substitute elements. Test `<Bond>` and `<Equity>` under a required
+  `<Instrument ref>` with actual generated XML parsers, not only IR assertions.
+- `xs:sequence minOccurs="0" maxOccurs="2"` is flattened into separate
+  lists in generated Python. A valid interleaved pair parses but serializes
+  with grouped fields and fails independent XSD validation. Preserve group
+  occurrences and order; this is distinct from unbounded `xs:choice`.
+- A nillable enum item in a repeated C# element is emitted as `List<Enum>`;
+  `XmlSerializer` rejects a schema-valid `xsi:nil="true"` item. Model nullable
+  *items* as well as collection presence. This differs from abstract-complex
+  `xsi:nil` coverage.
+- `xs:list` of integers currently becomes a string in Python and Go. A valid
+  whitespace-separated list parses as one string, and invalid lexical items
+  can pass generated Python parsing. Distinguish list-valued simple types
+  from ordinary string restrictions in the IR and codecs.
+
+Detailed follow-up issues: substitution groups #105, repeated sequences #106,
+nillable enum collections #107, typed `xs:list` #108, Go temporal lexical
+values #109, union-typed attributes #110, and Go root binding #111. Reuse their
+embedded XSDs and runtime acceptance checks when implementing fixes.
+Official UBL 2.4 Invoice C# compilation is tracked in #112, with the source
+snapshot, three generation modes, and compiler error classes recorded there.
+The next audit found three more generated-runtime gaps: ordinary namespaced
+`xs:element ref` children are silently lost by Go's lexical-prefix XML tag
+(#113); Python and Go discard declared `xs:any` foreign elements even though
+C# preserves the tested payload (#114); and a bounded choice with one
+`maxOccurs="unbounded"` element branch loses that branch's list cardinality
+(#115). Treat these separately from substitution groups, unknown-element
+tolerance, and unbounded *choice* order, respectively. The small imported enum
+attribute and `xs:all` fixtures were covered in their tested paths.
+
+The fifth competitor pass is in
+`research/competitor-issue-audit-wave5-2026-09-30.md`. Keep its negative
+schemas as negative checks: an unresolved type and an illegal child inside
+`xs:simpleType` currently pass CLI validation (#116). XSD 1.1
+`xs:alternative` also passes but degrades to untyped roots (#119); use an
+XSD 1.1 validator for that fixture. Generated Go/C# cannot handle a valid
+40-digit `xs:integer` (#117), and a date/dateTime lexical union has a Go
+compile error plus invalid C# output text (#118). Enum-only Go output imports
+unused `encoding/xml` (#121), so compile the smallest schema, not only a
+complex-type smoke case. Derived Python models with nested `Meta` trigger a
+Pyright override error (#120); run a static checker as well as Python import
+and XML round-trip tests when changing inheritance metadata.
+
+The sixth pass (`research/competitor-issue-audit-wave6-2026-09-30.md`) adds
+four generated-runtime regressions. Two exclusive choice branches may share
+one XML element name; flattening them into sibling fields makes Go's XML tags
+conflict and Python require an absent branch (#122). Two separate choices in
+one complex type must each enforce one selected branch (#123). An abstract
+root with a derived `xsi:type` parses in generated Python but generated Go
+silently drops the derived content (#124), despite closed #53. An imported
+global attribute such as `xl:type` needs its expanded QName: C# cannot
+reflect `[XmlAttribute("xl:type")]` and Go misses the value (#125). Use
+`lxml.etree.XMLSchema` to check fixture and instance validity, then execute
+the generated target runtime; compile success alone misses the Go data loss.
+
+The seventh pass (`research/competitor-issue-audit-wave7-2026-09-30.md`)
+checks cross-namespace roots, imported array items, shared module builds,
+same-local-name types, and entity behavior. When comparing shared-schema
+reports, use `polyxml.toml` modules with `depends_on`, not independent
+single-schema invocations: the manifest emits common types once for tested
+Python/Go/C# and the C# sources compiled and parsed both roots. Validate
+serialized namespace output independently. A controlled XXE probe did not
+read an external file, but generated Python silently changed declared and
+undeclared `&name;` references to `name` (#126); preserve a no-disclosure
+check while fixing that data corruption. Generated Rust's `encode_xml` writes
+an already-materialized model to `Write`; incremental production from an
+item iterator is a distinct enhancement (#127).
+
+Current xsdata code generation invokes `ruff` as a subprocess. If running an
+isolated `xsdata[cli]` virtual environment for same-schema comparisons, put
+its `bin/` directory on `PATH` as well as calling its `xsdata` executable;
+otherwise generation can fail with `FileNotFoundError: ruff` after writing
+files. Record the installed xsdata version and test its generated parser and
+serializer before describing a competitive result.
+
+When comparing an upstream issue, run a current competitor release on the
+same saved XSD where practical: open issues can be historical. The 2026-09-30
+audit's xgen #48 case no longer emitted the reported self-reference, while
+current XmlSchemaClassGenerator generated substitution alternatives but failed
+`XmlSerializer` construction for identical string-typed alternatives. Record
+tool versions and use runtime XML plus an independent XSD validator before a
+migration claim.
+
 ## Large multi-schema regression caution
 
 Root-scoped generation (`--root-element`, or `root_elements` in a workspace or

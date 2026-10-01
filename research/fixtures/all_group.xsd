@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Root"><xs:complexType><xs:all>
+    <xs:element name="First" type="xs:string"/>
+    <xs:element name="Second" type="xs:string"/>
+  </xs:all></xs:complexType></xs:element>
+</xs:schema>
