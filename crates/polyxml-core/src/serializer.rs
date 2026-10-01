@@ -337,6 +337,19 @@ impl XmlSerializer {
                         }
                     }
                 }
+            } else if field.kind == FieldKind::AnyAttribute {
+                if let Some(PolyValue::Object(map)) = get_field(idx, &field.name) {
+                    let mut sorted_keys: Vec<_> = map.keys().collect();
+                    sorted_keys.sort();
+                    for k in sorted_keys {
+                        if let Some(v) = map.get(k) {
+                            let mut buf = [0u8; lexical_core::BUFFER_SIZE];
+                            if let Some(attr_str) = Self::format_scalar_to(v, &mut buf) {
+                                elem.push_attribute((k.as_str(), attr_str));
+                            }
+                        }
+                    }
+                }
             }
         }
 

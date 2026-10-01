@@ -814,3 +814,26 @@ fn test_go_date_or_datetime_lexical_union() {
     assert!(code.contains("c.DateTimeValue.Format(time.RFC3339)"));
     assert!(code.contains("c.DateValue.Format(\"2006-01-02\")"));
 }
+
+#[test]
+fn test_go_any_attribute_codegen() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="Extensible">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+          </xs:sequence>
+          <xs:anyAttribute processContents="lax"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+    let codegen = GoCodegen::new(GoOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("AnyAttribute []xml.Attr `xml:\",any,attr\" json:\"-\"`"));
+}

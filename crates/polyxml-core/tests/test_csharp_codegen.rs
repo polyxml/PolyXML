@@ -1048,3 +1048,38 @@ fn test_csharp_simple_content_class_validator_and_unsealed_records() {
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn test_csharp_any_attribute_codegen() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="Extensible">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+          </xs:sequence>
+          <xs:anyAttribute processContents="lax"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).expect("parse failed");
+
+    // Test record mode
+    let record_codegen = CSharpCodegen::new(CSharpOptions::default());
+    let record_code = record_codegen.generate_module(&ir);
+    assert!(record_code
+        .contains("[property: XmlAnyAttribute] System.Xml.XmlAttribute[]? AnyAttribute = null"));
+
+    // Test class mode
+    let class_codegen = CSharpCodegen::new(CSharpOptions {
+        use_records: false,
+        ..Default::default()
+    });
+    let class_code = class_codegen.generate_module(&ir);
+    assert!(class_code.contains("[XmlAnyAttribute]"));
+    assert!(class_code
+        .contains("public System.Xml.XmlAttribute[]? AnyAttribute { get; set; } = default!;"));
+}

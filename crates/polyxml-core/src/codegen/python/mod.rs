@@ -803,6 +803,13 @@ impl PythonCodegen {
             _ => None,
         };
 
+        if field.kind == FieldKind::AnyAttribute {
+            return (
+                "dict[str, str]".to_string(),
+                format!("field(default_factory=dict, metadata={})", meta_dict),
+            );
+        }
+
         if is_list {
             (
                 format!("list[{}]", base_type),
@@ -884,6 +891,13 @@ impl PythonCodegen {
             _ => None,
         };
 
+        if field.kind == FieldKind::AnyAttribute {
+            return (
+                "dict[str, str]".to_string(),
+                format!("Field(default_factory=dict, {})", extra_clause),
+            );
+        }
+
         if is_list {
             (
                 format!("list[{}]", base_type),
@@ -932,7 +946,8 @@ impl PythonCodegen {
             FieldKind::Element => "Element",
             FieldKind::Attribute => "Attribute",
             FieldKind::Text => "Text",
-            FieldKind::Any | FieldKind::AnyAttribute => "Wildcard",
+            FieldKind::Any => "Wildcard",
+            FieldKind::AnyAttribute => "Attributes",
         };
 
         let mut parts = Vec::new();

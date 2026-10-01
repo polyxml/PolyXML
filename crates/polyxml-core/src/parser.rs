@@ -679,6 +679,7 @@ impl XmlDeserializer {
     }
 
     pub(crate) fn parse_attributes(e: &BytesStart, frame: &mut StackFrame) -> Result<()> {
+        let mut any_attrs: Option<HashMap<String, PolyValue>> = None;
         for attr in e.attributes().flatten() {
             let raw_key = attr.key.as_ref();
             if raw_key == "xmlns" || raw_key.starts_with("xmlns:") {
@@ -696,7 +697,17 @@ impl XmlDeserializer {
                     )?;
                     frame.values[field_idx] = Some(val);
                 }
+            } else if frame.schema.any_attribute_field.is_some() {
+                let unescaped = quick_xml::escape::unescape(attr.value.as_ref())?;
+                let val_str = unescaped.to_string();
+                let key_str = raw_key.to_string();
+                any_attrs
+                    .get_or_insert_with(HashMap::new)
+                    .insert(key_str, PolyValue::String(val_str));
             }
+        }
+        if let Some(any_idx) = frame.schema.any_attribute_field {
+            frame.values[any_idx] = Some(PolyValue::Object(any_attrs.unwrap_or_default()));
         }
         Ok(())
     }

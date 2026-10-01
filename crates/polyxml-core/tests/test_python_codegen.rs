@@ -712,3 +712,28 @@ fn test_python_simplecontent_default_factory() {
         "flag: BooleanWithAttr = field(default_factory=lambda: BooleanWithAttr(value=True)"
     ));
 }
+
+#[test]
+fn test_python_any_attribute_codegen() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="Extensible">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+          </xs:sequence>
+          <xs:anyAttribute processContents="lax"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new()
+        .parse_str(xsd)
+        .expect("schema parse failed");
+    let codegen = PythonCodegen::new(PythonOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("any_attribute: dict[str, str] = field(default_factory=dict, metadata={\"type\": \"Attributes\", \"name\": \"*\", \"json_name\": \"*\"})"));
+}

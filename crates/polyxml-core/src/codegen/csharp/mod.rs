@@ -307,6 +307,7 @@ impl CSharpCodegen {
             writeln!(out, "using System.Text.RegularExpressions;").unwrap();
         }
         if self.options.emit_xml_attributes {
+            writeln!(out, "using System.Xml;").unwrap();
             writeln!(out, "using System.Xml.Serialization;").unwrap();
         }
         if self.options.emit_json_attributes || self.options.emit_source_gen {
@@ -1361,6 +1362,9 @@ impl CSharpCodegen {
     }
 
     fn map_field_type(&self, f: &FieldDef, ir: &SchemaIR) -> String {
+        if f.kind == FieldKind::AnyAttribute {
+            return "System.Xml.XmlAttribute[]?".to_string();
+        }
         let base_type = match &f.type_ref {
             TypeRef::Primitive(p) => self.context.map_primitive(*p).to_string(),
             TypeRef::Named(qn) => {

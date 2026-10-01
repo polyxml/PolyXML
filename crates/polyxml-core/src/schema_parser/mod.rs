@@ -633,6 +633,11 @@ impl XsdParser {
                         "any" => {
                             fields.push(parse_any_field(e));
                         }
+                        "anyAttribute"
+                            if !fields.iter().any(|f| f.kind == FieldKind::AnyAttribute) =>
+                        {
+                            fields.push(parse_any_attribute_field(e));
+                        }
                         _ => {}
                     }
                 }
@@ -692,6 +697,11 @@ impl XsdParser {
                         }
                         "any" => {
                             fields.push(parse_any_field(e));
+                        }
+                        "anyAttribute"
+                            if !fields.iter().any(|f| f.kind == FieldKind::AnyAttribute) =>
+                        {
+                            fields.push(parse_any_attribute_field(e));
                         }
                         _ => {}
                     }
@@ -1861,6 +1871,23 @@ fn parse_any_field(_e: &BytesStart) -> FieldDef {
         kind: FieldKind::Any,
         type_ref: TypeRef::Primitive(PrimitiveType::AnyType),
         cardinality: Cardinality::unbounded(0),
+        nillable: false,
+        default_value: None,
+        fixed_value: None,
+        documentation: None,
+        facets: None,
+        is_cycle_cut: false,
+    }
+}
+
+fn parse_any_attribute_field(_e: &BytesStart) -> FieldDef {
+    FieldDef {
+        name: "any_attribute".to_string(),
+        xml_name: "*".to_string(),
+        namespace: None,
+        kind: FieldKind::AnyAttribute,
+        type_ref: TypeRef::Primitive(PrimitiveType::AnyType),
+        cardinality: Cardinality::optional_one(),
         nillable: false,
         default_value: None,
         fixed_value: None,

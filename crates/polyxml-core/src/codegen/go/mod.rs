@@ -1101,6 +1101,9 @@ impl GoCodegen {
     }
 
     fn resolve_field_type(&self, f: &FieldDef) -> String {
+        if f.kind == FieldKind::AnyAttribute {
+            return "[]xml.Attr".to_string();
+        }
         let base_type = self.context.map_type_ref(&f.type_ref);
 
         if f.cardinality.is_list() {
@@ -1146,32 +1149,41 @@ impl GoCodegen {
         }
 
         if self.options.emit_json_tags || self.options.backend == GoBackend::Sonic {
-            let is_opt = f.cardinality.is_optional() || f.nillable;
-            let raw_json_name = if f.kind == FieldKind::Text {
-                "value".to_string()
-            } else if f.xml_name.is_empty() {
-                f.name.clone()
+            if f.kind == FieldKind::AnyAttribute {
+                if self.options.emit_json_tags {
+                    parts.push("json:\"-\"".to_string());
+                }
+                if self.options.backend == GoBackend::Sonic {
+                    parts.push("sonic:\"-\"".to_string());
+                }
             } else {
-                f.xml_name.clone()
-            };
-            let mut json_name = raw_json_name.clone();
-            let mut counter = 2;
-            while seen_json.contains(&json_name) {
-                json_name = format!("{}_{}", raw_json_name, counter);
-                counter += 1;
-            }
-            seen_json.insert(json_name.clone());
+                let is_opt = f.cardinality.is_optional() || f.nillable;
+                let raw_json_name = if f.kind == FieldKind::Text {
+                    "value".to_string()
+                } else if f.xml_name.is_empty() {
+                    f.name.clone()
+                } else {
+                    f.xml_name.clone()
+                };
+                let mut json_name = raw_json_name.clone();
+                let mut counter = 2;
+                while seen_json.contains(&json_name) {
+                    json_name = format!("{}_{}", raw_json_name, counter);
+                    counter += 1;
+                }
+                seen_json.insert(json_name.clone());
 
-            let json_val = if is_opt {
-                format!("{},omitempty", json_name)
-            } else {
-                json_name
-            };
-            if self.options.emit_json_tags {
-                parts.push(format!("json:\"{}\"", json_val));
-            }
-            if self.options.backend == GoBackend::Sonic {
-                parts.push(format!("sonic:\"{}\"", json_val));
+                let json_val = if is_opt {
+                    format!("{},omitempty", json_name)
+                } else {
+                    json_name
+                };
+                if self.options.emit_json_tags {
+                    parts.push(format!("json:\"{}\"", json_val));
+                }
+                if self.options.backend == GoBackend::Sonic {
+                    parts.push(format!("sonic:\"{}\"", json_val));
+                }
             }
         }
 
