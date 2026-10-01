@@ -27,14 +27,14 @@ Bypasses legacy JNI overhead and avoids intermediate DOM allocation, providing d
 <dependency>
     <groupId>io.github.polyxml</groupId>
     <artifactId>polyxml</artifactId>
-    <version>0.33.4</version>
+    <version>0.33.5</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'io.github.polyxml:polyxml:0.33.4'
+implementation 'io.github.polyxml:polyxml:0.33.5'
 ```
 
 ---

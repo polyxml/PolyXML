@@ -1,3 +1,10 @@
+## [0.33.5](https://github.com/polyxml/PolyXML/compare/v0.33.4...v0.33.5) (2026-10-01)
+
+
+### Bug Fixes
+
+* **schema_parser,codegen:** preserve sequences nested inside xs:choice ([#101](https://github.com/polyxml/PolyXML/issues/101)) ([38ca082](https://github.com/polyxml/PolyXML/commit/38ca082fa0ef73a0105d95c6c6a184e1e7230fb6))
+
 ## [0.33.4](https://github.com/polyxml/PolyXML/compare/v0.33.3...v0.33.4) (2026-10-01)
 
 
