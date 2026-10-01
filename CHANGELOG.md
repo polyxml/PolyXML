@@ -1,3 +1,10 @@
+## [0.33.3](https://github.com/polyxml/PolyXML/compare/v0.33.2...v0.33.3) (2026-10-01)
+
+
+### Bug Fixes
+
+* **codegen/go:** preserve xsi:type derived content at abstract roots ([#124](https://github.com/polyxml/PolyXML/issues/124)) ([c5a55b7](https://github.com/polyxml/PolyXML/commit/c5a55b784c05bc04675ff20f9b3f214a38a457b5))
+
 ## [0.33.2](https://github.com/polyxml/PolyXML/compare/v0.33.1...v0.33.2) (2026-10-01)
 
 
