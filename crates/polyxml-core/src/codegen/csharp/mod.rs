@@ -1059,7 +1059,16 @@ impl CSharpCodegen {
                         } else {
                             "XmlElement"
                         };
-                        let _ = writeln!(out, "{}    [{}({:?})]", indent, xml_kind, f.xml_name);
+                        let namespace = f
+                            .namespace
+                            .as_ref()
+                            .map(|ns| format!(", Namespace = {ns:?}"))
+                            .unwrap_or_default();
+                        let _ = writeln!(
+                            out,
+                            "{}    [{}({:?}{namespace})]",
+                            indent, xml_kind, f.xml_name
+                        );
                         if self.options.emit_json_attributes {
                             let _ = writeln!(out, "{}    [JsonIgnore]", indent);
                         }
@@ -1113,7 +1122,16 @@ impl CSharpCodegen {
                         } else {
                             "XmlElement"
                         };
-                        let _ = writeln!(out, "{}    [{}({:?})]", indent, xml_kind, f.xml_name);
+                        let namespace = f
+                            .namespace
+                            .as_ref()
+                            .map(|ns| format!(", Namespace = {ns:?}"))
+                            .unwrap_or_default();
+                        let _ = writeln!(
+                            out,
+                            "{}    [{}({:?}{namespace})]",
+                            indent, xml_kind, f.xml_name
+                        );
                         if self.options.emit_json_attributes {
                             let _ = writeln!(out, "{}    [JsonIgnore]", indent);
                         }
@@ -1459,7 +1477,14 @@ impl CSharpCodegen {
             }
             if parts.is_empty() {
                 match f.kind {
-                    FieldKind::Attribute => parts.push(format!("XmlAttribute(\"{}\")", f.xml_name)),
+                    FieldKind::Attribute => {
+                        let namespace = f
+                            .namespace
+                            .as_ref()
+                            .map(|ns| format!(", Namespace = {ns:?}"))
+                            .unwrap_or_default();
+                        parts.push(format!("XmlAttribute({:?}{namespace})", f.xml_name));
+                    }
                     FieldKind::Text => parts.push("XmlText".to_string()),
                     FieldKind::Any => parts.push("XmlAnyElement".to_string()),
                     FieldKind::AnyAttribute => parts.push("XmlAnyAttribute".to_string()),

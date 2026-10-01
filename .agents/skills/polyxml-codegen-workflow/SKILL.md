@@ -698,3 +698,9 @@ Key gotchas when touching this area:
   the root; omitted, the instance's concrete schema is used (no selector).
   Both branches are covered in `tests/test_xsi_type.py` (11 tests, kept at
   100% statement/branch coverage).
+
+Global attribute references must retain their local name and namespace URI.
+C# `XmlAttribute` (including lexical proxies) needs `Namespace`; Go attribute
+XML tags must include the namespace even when it matches the owning type's
+namespace. Regression: `test_qualified_attributes` executes both runtimes
+with alternative prefixes and namespace declarations on child elements.

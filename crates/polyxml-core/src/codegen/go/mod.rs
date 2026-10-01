@@ -1230,7 +1230,7 @@ impl GoCodegen {
             let xml_val = match f.kind {
                 FieldKind::Attribute => {
                     let attr_name = match &f.namespace {
-                        Some(ns) if !ns.is_empty() && is_namespaced_ref(f, s, ir) => {
+                        Some(ns) if !ns.is_empty() => {
                             format!("{} {}", ns, f.xml_name)
                         }
                         _ => f.xml_name.clone(),
