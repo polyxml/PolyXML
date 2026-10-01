@@ -1,3 +1,10 @@
+## [0.33.4](https://github.com/polyxml/PolyXML/compare/v0.33.3...v0.33.4) (2026-10-01)
+
+
+### Bug Fixes
+
+* **codegen/go:** match namespaced xs:element ref by expanded QName ([#113](https://github.com/polyxml/PolyXML/issues/113)) ([41e5365](https://github.com/polyxml/PolyXML/commit/41e53658652dc99cc48c9d5b44eac1f7edc340fd))
+
 ## [0.33.3](https://github.com/polyxml/PolyXML/compare/v0.33.2...v0.33.3) (2026-10-01)
 
 

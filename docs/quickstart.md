@@ -185,7 +185,7 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     <dependency>
         <groupId>io.github.polyxml</groupId>
         <artifactId>polyxml</artifactId>
-        <version>0.33.3</version>
+        <version>0.33.4</version>
     </dependency>
     ```
 
