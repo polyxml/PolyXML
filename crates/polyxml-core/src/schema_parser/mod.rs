@@ -1805,16 +1805,29 @@ fn parse_element_field(
     in_choice: bool,
     in_unbounded_compositor: bool,
 ) -> Option<FieldDef> {
-    let name = get_attr_value(e, "name")
-        .or_else(|| get_attr_value(e, "ref").map(|r| strip_prefix(&r).to_string()))?;
+    let ref_attr = get_attr_value(e, "ref");
+    let name_attr = get_attr_value(e, "name");
 
-    let xml_name = get_attr_value(e, "name")
-        .or_else(|| get_attr_value(e, "ref"))
-        .unwrap_or_else(|| name.clone());
+    let (name, xml_name, namespace) = if let Some(ref r) = ref_attr {
+        let qname = resolve_qname(r, target_ns, prefixes);
+        let field_name = name_attr.unwrap_or_else(|| qname.local.clone());
+        let xml_name = qname.local;
+        let namespace = qname.namespace;
+        (field_name, xml_name, namespace)
+    } else {
+        let n = name_attr?;
+        let xml_name = n.clone();
+        let namespace = target_ns.map(Into::into);
+        (n, xml_name, namespace)
+    };
 
     let type_ref = get_attr_value(e, "type")
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
-        .or_else(|| get_attr_value(e, "ref").map(|r| resolve_type_ref(&r, target_ns, prefixes)))
+        .or_else(|| {
+            ref_attr
+                .as_ref()
+                .map(|r| resolve_type_ref(r, target_ns, prefixes))
+        })
         .unwrap_or(TypeRef::Primitive(PrimitiveType::String));
 
     let min_occurs = if in_choice {
@@ -1845,7 +1858,7 @@ fn parse_element_field(
     Some(FieldDef {
         name: sanitize_field_name(&name),
         xml_name,
-        namespace: target_ns.map(Into::into),
+        namespace,
         kind: FieldKind::Element,
         type_ref,
         cardinality: Cardinality {
@@ -1866,16 +1879,28 @@ fn parse_attribute_field(
     target_ns: Option<&str>,
     prefixes: &HashMap<String, String>,
 ) -> Option<FieldDef> {
-    let name = get_attr_value(e, "name")
-        .or_else(|| get_attr_value(e, "ref").map(|r| strip_prefix(&r).to_string()))?;
+    let ref_attr = get_attr_value(e, "ref");
+    let name_attr = get_attr_value(e, "name");
 
-    let xml_name = get_attr_value(e, "name")
-        .or_else(|| get_attr_value(e, "ref"))
-        .unwrap_or_else(|| name.clone());
+    let (name, xml_name, namespace) = if let Some(ref r) = ref_attr {
+        let qname = resolve_qname(r, target_ns, prefixes);
+        let field_name = name_attr.unwrap_or_else(|| qname.local.clone());
+        let xml_name = qname.local;
+        let namespace = qname.namespace;
+        (field_name, xml_name, namespace)
+    } else {
+        let n = name_attr?;
+        let xml_name = n.clone();
+        (n, xml_name, None)
+    };
 
     let type_ref = get_attr_value(e, "type")
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
-        .or_else(|| get_attr_value(e, "ref").map(|r| resolve_type_ref(&r, target_ns, prefixes)))
+        .or_else(|| {
+            ref_attr
+                .as_ref()
+                .map(|r| resolve_type_ref(r, target_ns, prefixes))
+        })
         .unwrap_or(TypeRef::Primitive(PrimitiveType::String));
 
     let is_required = get_attr_value(e, "use")
@@ -1894,7 +1919,7 @@ fn parse_attribute_field(
     Some(FieldDef {
         name: sanitize_field_name(&name),
         xml_name,
-        namespace: None, // Attributes are unqualified by default unless form="qualified"
+        namespace,
         kind: FieldKind::Attribute,
         type_ref,
         cardinality,

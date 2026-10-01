@@ -586,7 +586,11 @@ impl GoCodegen {
             let mapped_type = self.context.map_type_ref(&branch.type_ref);
             let mut tag_parts = Vec::new();
             if self.options.emit_xml_tags {
-                tag_parts.push(format!("xml:\"{},omitempty\"", branch.xml_name));
+                let branch_xml = match &branch.namespace {
+                    Some(ns) if !ns.is_empty() => format!("{} {}", ns, branch.xml_name),
+                    _ => branch.xml_name.clone(),
+                };
+                tag_parts.push(format!("xml:\"{},omitempty\"", branch_xml));
             }
             if self.options.emit_json_tags {
                 tag_parts.push(format!("json:\"{},omitempty\"", branch.xml_name));
@@ -1026,7 +1030,7 @@ impl GoCodegen {
             }
 
             let field_type = self.resolve_field_type(f);
-            let tag = self.build_field_struct_tags(f, &mut seen_json);
+            let tag = self.build_field_struct_tags(f, s, ir, &mut seen_json);
             writeln!(out, "    {} {}{}", field_name, field_type, tag).unwrap();
         }
 
@@ -1144,29 +1148,44 @@ impl GoCodegen {
         }
     }
 
-    fn build_field_struct_tags(&self, f: &FieldDef, seen_json: &mut HashSet<String>) -> String {
+    fn build_field_struct_tags(
+        &self,
+        f: &FieldDef,
+        s: &StructDef,
+        ir: &SchemaIR,
+        seen_json: &mut HashSet<String>,
+    ) -> String {
         let mut parts = Vec::new();
 
         if self.options.emit_xml_tags {
             let is_opt = f.cardinality.is_optional() || f.nillable;
             let xml_val = match f.kind {
                 FieldKind::Attribute => {
+                    let attr_name = match &f.namespace {
+                        Some(ns) if !ns.is_empty() => format!("{} {}", ns, f.xml_name),
+                        _ => f.xml_name.clone(),
+                    };
                     if is_opt {
-                        format!("{},attr,omitempty", f.xml_name)
+                        format!("{},attr,omitempty", attr_name)
                     } else {
-                        format!("{},attr", f.xml_name)
+                        format!("{},attr", attr_name)
                     }
                 }
                 FieldKind::Text => ",chardata".to_string(),
                 FieldKind::Any => ",any".to_string(),
                 FieldKind::AnyAttribute => ",any,attr".to_string(),
                 FieldKind::Element => {
+                    let elem_name = if is_namespaced_ref(f, s, ir) {
+                        format!("{} {}", f.namespace.as_ref().unwrap(), f.xml_name)
+                    } else {
+                        f.xml_name.clone()
+                    };
                     if f.xml_name.is_empty() {
                         ",any".to_string()
                     } else if is_opt {
-                        format!("{},omitempty", f.xml_name)
+                        format!("{},omitempty", elem_name)
                     } else {
-                        f.xml_name.clone()
+                        elem_name
                     }
                 }
             };
@@ -1311,7 +1330,7 @@ impl GoCodegen {
         let mut seen_json = HashSet::new();
         for (f, field_name) in s.fields.iter().zip(&field_names) {
             let field_type = self.resolve_field_type(f);
-            let tag = self.build_field_struct_tags(f, &mut seen_json);
+            let tag = self.build_field_struct_tags(f, s, ir, &mut seen_json);
             writeln!(out, "    {} {}{}", field_name, field_type, tag).unwrap();
         }
         writeln!(out, "}}\n").unwrap();
@@ -1646,4 +1665,20 @@ fn concrete_derivations<'a>(s: &'a StructDef, ir: &'a SchemaIR) -> Vec<&'a Struc
     }
     result.sort_by(|a, b| a.qname.local.cmp(&b.qname.local));
     result
+}
+
+fn is_namespaced_ref(f: &FieldDef, s: &StructDef, ir: &SchemaIR) -> bool {
+    let Some(ref ns) = f.namespace else {
+        return false;
+    };
+    if ns.is_empty() {
+        return false;
+    }
+    // If field namespace is different from struct namespace, it's definitely an external ref
+    if s.qname.namespace.as_deref() != Some(ns.as_str()) {
+        return true;
+    }
+    // If it matches a global element definition, it's an element ref
+    let q = QName::new(Some(ns.as_str()), &f.xml_name);
+    ir.elements.contains_key(&q)
 }

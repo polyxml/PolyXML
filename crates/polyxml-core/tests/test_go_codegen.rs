@@ -966,3 +966,115 @@ func TestAbstractDocumentRoundTrip(t *testing.T) {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn test_go_namespaced_element_ref_matching() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+      xmlns:t="urn:audit:ref" targetNamespace="urn:audit:ref"
+      elementFormDefault="qualified">
+      <xs:element name="Child" type="xs:string"/>
+      <xs:element name="Container"><xs:complexType><xs:sequence>
+        <xs:element ref="t:Child"/>
+      </xs:sequence></xs:complexType></xs:element>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let codegen = GoCodegen::new(GoOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    // Code must NOT contain schema prefix t:Child
+    assert!(
+        !code.contains("\"t:Child\""),
+        "Go codegen must not emit schema lexical prefix in tags: {code}"
+    );
+    // Code must emit expanded namespace QName
+    assert!(
+        code.contains("`xml:\"urn:audit:ref Child\" json:\"Child\"`"),
+        "Go codegen must emit expanded QName and clean JSON name in tags: {code}"
+    );
+
+    if Command::new("go").arg("version").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module ref_test\n\ngo 1.22\n").unwrap();
+    fs::write(dir.path().join("models.go"), &code).unwrap();
+    fs::write(
+        dir.path().join("models_test.go"),
+        r#"package models
+
+import (
+	"encoding/xml"
+	"strings"
+	"testing"
+)
+
+func TestNamespacedElementRef(t *testing.T) {
+	// 1. Default namespace instance
+	xml1 := `<Container xmlns="urn:audit:ref"><Child>abc</Child></Container>`
+	var c1 Container
+	if err := xml.Unmarshal([]byte(xml1), &c1); err != nil {
+		t.Fatalf("unmarshal xml1 failed: %v", err)
+	}
+	if c1.Child != "abc" {
+		t.Fatalf("expected Child 'abc', got %q", c1.Child)
+	}
+
+	// 2. Prefixed namespace instance (schema prefix t)
+	xml2 := `<t:Container xmlns:t="urn:audit:ref"><t:Child>abc</t:Child></t:Container>`
+	var c2 Container
+	if err := xml.Unmarshal([]byte(xml2), &c2); err != nil {
+		t.Fatalf("unmarshal xml2 failed: %v", err)
+	}
+	if c2.Child != "abc" {
+		t.Fatalf("expected Child 'abc', got %q", c2.Child)
+	}
+
+	// 3. Alternate prefix instance (prefix p)
+	xml3 := `<p:Container xmlns:p="urn:audit:ref"><p:Child>abc</p:Child></p:Container>`
+	var c3 Container
+	if err := xml.Unmarshal([]byte(xml3), &c3); err != nil {
+		t.Fatalf("unmarshal xml3 failed: %v", err)
+	}
+	if c3.Child != "abc" {
+		t.Fatalf("expected Child 'abc', got %q", c3.Child)
+	}
+
+	// 4. Foreign namespace URI with same local child name -> must NOT populate Child
+	xml4 := `<Container xmlns="urn:audit:ref"><Child xmlns="urn:audit:other">abc</Child></Container>`
+	var c4 Container
+	if err := xml.Unmarshal([]byte(xml4), &c4); err != nil {
+		t.Fatalf("unmarshal xml4 failed: %v", err)
+	}
+	if c4.Child != "" {
+		t.Fatalf("expected Child to remain empty for foreign namespace, got %q", c4.Child)
+	}
+
+	// 5. Roundtrip serialization preserves namespace
+	data, err := xml.Marshal(c1)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	dataStr := string(data)
+	if !strings.Contains(dataStr, "Child") || !strings.Contains(dataStr, "urn:audit:ref") {
+		t.Fatalf("marshaled XML missing Child or namespace: %s", dataStr)
+	}
+}
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new("go")
+        .args(["test", "-v", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .expect("go test failed to execute");
+
+    assert!(
+        output.status.success(),
+        "go test failed: stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
