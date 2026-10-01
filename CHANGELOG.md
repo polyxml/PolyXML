@@ -1,3 +1,10 @@
+## [0.33.6](https://github.com/polyxml/PolyXML/compare/v0.33.5...v0.33.6) (2026-10-01)
+
+
+### Bug Fixes
+
+* **codegen:** complete category 2 binding regressions ([7c35c3f](https://github.com/polyxml/PolyXML/commit/7c35c3f17564d806319efe38aeaeca9c898794eb)), closes [#104](https://github.com/polyxml/PolyXML/issues/104) [#105](https://github.com/polyxml/PolyXML/issues/105) [#106](https://github.com/polyxml/PolyXML/issues/106) [#107](https://github.com/polyxml/PolyXML/issues/107) [#109](https://github.com/polyxml/PolyXML/issues/109) [#110](https://github.com/polyxml/PolyXML/issues/110) [#111](https://github.com/polyxml/PolyXML/issues/111) [#115](https://github.com/polyxml/PolyXML/issues/115) [#122](https://github.com/polyxml/PolyXML/issues/122) [#101](https://github.com/polyxml/PolyXML/issues/101)
+
 ## [0.33.5](https://github.com/polyxml/PolyXML/compare/v0.33.4...v0.33.5) (2026-10-01)
 
 
