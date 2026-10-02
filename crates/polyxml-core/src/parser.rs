@@ -7,7 +7,7 @@ use smallvec::{smallvec, SmallVec};
 
 use crate::converters::ValueConverter;
 use crate::error::{PolyXmlError, Result};
-use crate::schema::{ModelSchema, ScalarType, ValueType};
+use crate::schema::{FieldKind, ModelSchema, ScalarType, ValueType};
 use crate::value::PolyValue;
 
 type NamespaceScope = Arc<HashMap<String, String>>;
@@ -71,6 +71,19 @@ impl StackFrame {
     }
 
     fn finish(mut self) -> Result<PolyValue> {
+        for (index, field) in self.schema.fields.iter().enumerate() {
+            if field.kind == FieldKind::Attribute && self.values[index].is_none() {
+                if let (Some(default), ValueType::Scalar(scalar)) =
+                    (&field.default_value, &field.val_type)
+                {
+                    self.values[index] = Some(ValueConverter::parse_scalar(
+                        scalar,
+                        default.as_bytes(),
+                        &field.name,
+                    )?);
+                }
+            }
+        }
         if !self.list_values.is_empty() {
             for (idx, list_opt) in self.list_values.into_iter().enumerate() {
                 if let Some(list) = list_opt {
@@ -105,6 +118,22 @@ impl StackFrame {
             values: self.values.into_vec().into_boxed_slice(),
         })
     }
+}
+
+fn parse_field_scalar(
+    scalar: &ScalarType,
+    text: &[u8],
+    field: &crate::schema::FieldSchema,
+) -> Result<PolyValue> {
+    let text = if text.is_empty() && field.kind != FieldKind::Attribute {
+        field
+            .default_value
+            .as_ref()
+            .map_or(text, |value| value.as_bytes())
+    } else {
+        text
+    };
+    ValueConverter::parse_scalar(scalar, text, &field.name)
 }
 
 pub struct XmlDeserializer;
@@ -601,20 +630,20 @@ impl XmlDeserializer {
                     {
                         let field = &current_schema.fields[field_idx];
                         match &field.val_type {
-                            ValueType::Scalar(_) => {
+                            ValueType::Scalar(scalar) => {
                                 let val = if is_nil {
                                     PolyValue::Null
                                 } else {
-                                    PolyValue::String(String::new())
+                                    parse_field_scalar(scalar, b"", field)?
                                 };
                                 stack.last_mut().unwrap().values[field_idx] = Some(val);
                             }
                             ValueType::List(inner) => match inner.as_ref() {
-                                ValueType::Scalar(_) => {
+                                ValueType::Scalar(scalar) => {
                                     let val = if is_nil {
                                         PolyValue::Null
                                     } else {
-                                        PolyValue::String(String::new())
+                                        parse_field_scalar(scalar, b"", field)?
                                     };
                                     stack.last_mut().unwrap().push_list_item(field_idx, val);
                                 }
@@ -860,9 +889,8 @@ impl XmlDeserializer {
                     } else if let Some((field_idx, ref scalar_type, is_list)) =
                         active_scalar_field.take()
                     {
-                        let field_name = &stack.last().unwrap().schema.fields[field_idx].name;
-                        let parsed_val =
-                            ValueConverter::parse_scalar(scalar_type, &text_buf, field_name)?;
+                        let field = &stack.last().unwrap().schema.fields[field_idx];
+                        let parsed_val = parse_field_scalar(scalar_type, &text_buf, field)?;
                         let frame = stack.last_mut().unwrap();
                         if is_list {
                             frame.push_list_item(field_idx, parsed_val);

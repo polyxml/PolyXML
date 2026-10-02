@@ -162,7 +162,7 @@ fn test_python_dataclass_codegen() {
     // Check fields
     assert!(code.contains("id: int = field(metadata={\"type\": \"Attribute\", \"name\": \"id\", \"json_name\": \"id\"})"));
     assert!(code.contains("type_: str | None = field(default=None, metadata={\"type\": \"Element\", \"name\": \"type\", \"json_name\": \"type\", \"namespace\": \"https://example.com/shop\", \"nillable\": True})"));
-    assert!(code.contains("status: OrderStatus = field(default=\"pending\", metadata={\"type\": \"Element\", \"name\": \"status\", \"json_name\": \"status\"})"));
+    assert!(code.contains("status: OrderStatus = field(default=\"pending\", metadata={\"type\": \"Element\", \"name\": \"status\", \"json_name\": \"status\", \"default\": \"pending\"})"));
     assert!(code.contains("tags: list[str] = field(default_factory=list, metadata={\"type\": \"Element\", \"name\": \"tag\", \"json_name\": \"tag\"})"));
 }
 

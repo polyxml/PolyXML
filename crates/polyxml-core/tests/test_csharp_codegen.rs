@@ -1232,3 +1232,49 @@ fn test_csharp_sequence_nested_inside_choice_codegen() {
     assert!(code.contains("string? Alternative = null"));
     assert!(code.contains("public record RootTypeSequence"));
 }
+
+#[test]
+fn element_defaults_preserve_absence_and_empty_presence() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/element_defaults.xsd"
+        ))
+        .unwrap();
+    for use_records in [true, false] {
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("App.csproj"), r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>"#).unwrap();
+        fs::write(
+            temp.path().join("Models.cs"),
+            CSharpCodegen::new(CSharpOptions {
+                namespace: "Models".into(),
+                use_records,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        fs::write(temp.path().join("Program.cs"), r#"using Models;using System.Xml.Serialization;
+var serializer=new XmlSerializer(typeof(Root));
+foreach(var document in new[]{"<Root/>","<Root><Flag/><Count></Count><Label/></Root>"}){
+var root=(Root)serializer.Deserialize(new StringReader(document))!;
+var present=document.Contains("Flag");
+if(present&&(root.Flag!=false||root.Count!=42||root.Label!="fallback"))throw new Exception("defaults missing");
+if(!present&&(root.Flag!=null||root.Count!=null||root.Label!=null))throw new Exception("absence lost");
+var writer=new StringWriter();serializer.Serialize(writer,root);
+if(!present&&writer.ToString().Contains("<Flag"))throw new Exception("absent value serialized");
+if(present&&!writer.ToString().Contains("<Flag>false</Flag>"))throw new Exception(writer.ToString());
+}"#).unwrap();
+        let _lock = DOTNET_LOCK.lock().unwrap();
+        let result = dotnet_command()
+            .arg("run")
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}

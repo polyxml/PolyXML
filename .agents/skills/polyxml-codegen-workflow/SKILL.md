@@ -704,3 +704,10 @@ C# `XmlAttribute` (including lexical proxies) needs `Namespace`; Go attribute
 XML tags must include the namespace even when it matches the owning type's
 namespace. Regression: `test_qualified_attributes` executes both runtimes
 with alternative prefixes and namespace declarations on child elements.
+
+Optional element defaults apply only to present empty elements; optional
+attribute defaults also apply when absent. Python emits XML default metadata
+separately from constructor defaults, and runtime FieldSchema carries the
+lexical default. C# defaulted scalar elements use a string XML proxy so an
+empty lexical value can be substituted before XmlSerializer's typed parser.
+Exercise both self-closing and explicit empty tags with boolean/int/string.

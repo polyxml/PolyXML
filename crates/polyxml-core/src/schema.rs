@@ -65,6 +65,7 @@ pub struct FieldSchema {
     pub kind: FieldKind,
     pub val_type: ValueType,
     pub required: bool,
+    pub default_value: Option<String>,
 }
 
 impl FieldSchema {
@@ -81,6 +82,7 @@ impl FieldSchema {
             kind,
             val_type,
             required: false,
+            default_value: None,
         }
     }
 
@@ -351,6 +353,7 @@ impl ModelSchema {
             }
 
             let mut field_schema = FieldSchema::new(&f.name, f.xml_name.as_bytes(), kind, val_type);
+            field_schema.default_value = f.default_value.clone();
             if let Some(ref ns) = f.namespace {
                 field_schema = field_schema.namespace(ns);
             }

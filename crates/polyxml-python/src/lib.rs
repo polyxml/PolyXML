@@ -417,6 +417,10 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            field_schema.default_value = meta
+                .as_ref()
+                .and_then(|m| m.get_item("default").ok())
+                .and_then(|v| v.extract::<String>().ok());
             if let Some(ns) = field_ns {
                 field_schema = field_schema.namespace(ns);
             }
@@ -494,6 +498,11 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            field_schema.default_value = field_obj
+                .getattr("metadata")
+                .ok()
+                .and_then(|m| m.get_item("default").ok())
+                .and_then(|v| v.extract::<String>().ok());
             if let Some(ns) = field_ns {
                 field_schema = field_schema.namespace(ns);
             }

@@ -565,3 +565,36 @@ def test_generated_models_reject_general_entities(tmp_path, backend):
             )
     model = module.Document.from_xml("<Document><Payload>&amp;&#65;&#x42;</Payload></Document>")
     assert model.payload == "&AB"
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_element_defaults_preserve_absence(tmp_path, backend):
+    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/element_defaults.xsd"
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(f"defaults_{backend}", tmp_path / "element_defaults.py")
+    absent = module.Root.from_xml("<Root/>")
+    assert (absent.flag, absent.count, absent.label, absent.mode) == (None, None, None, "auto")
+    assert ET.fromstring(absent.to_xml()).find("Flag") is None
+    for document in [
+        "<Root><Flag/><Count></Count><Label/></Root>",
+        "<Root><Flag></Flag><Count/><Label></Label></Root>",
+    ]:
+        present = module.Root.from_xml(document)
+        assert (present.flag, present.count, present.label) == (False, 42, "fallback")
+        encoded = present.to_xml()
+        assert ET.fromstring(encoded).findtext("Flag") == "false"
+        assert module.Root.from_xml(encoded).count == 42

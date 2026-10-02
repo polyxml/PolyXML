@@ -869,6 +869,55 @@ impl CSharpCodegen {
         let _ = writeln!(out, "{}    }};", indent);
     }
 
+    fn emit_default_scalar_proxy(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        name: &str,
+        ir: &SchemaIR,
+        indent: &str,
+    ) -> bool {
+        let Some(default) = field.default_value.as_ref() else {
+            return false;
+        };
+        if !self.options.emit_xml_attributes
+            || field.kind != FieldKind::Element
+            || field.cardinality.is_list()
+            || matches!(field.type_ref, TypeRef::Named(ref q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_) | TypeDef::Union(_))))
+        {
+            return false;
+        }
+        let ty = self.map_field_type(field, ir);
+        let base = ty.trim_end_matches('?');
+        let namespace = field
+            .namespace
+            .as_ref()
+            .map(|ns| format!(", Namespace = {ns:?}"))
+            .unwrap_or_default();
+        writeln!(
+            out,
+            "{indent}    [XmlIgnore] public {ty} {name} {{ get; set; }} = default!;"
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "{indent}    [XmlElement({:?}{namespace})] public string? {name}Xml {{",
+            field.xml_name
+        )
+        .unwrap();
+        writeln!(out, "{indent}        get {{ if ({name} is null) return null; var writer = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture); new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Serialize(writer, {name}); return System.Xml.Linq.XDocument.Parse(writer.ToString()).Root!.Value; }}").unwrap();
+        writeln!(out, "{indent}        set {{ if (value is null) {{ {name} = default!; return; }} var text = value.Length == 0 ? {default:?} : value; {name} = ({base})new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape(text) + \"</value>\"))!; }}
+{indent}    }}").unwrap();
+        if field.cardinality.is_optional() || field.nillable {
+            writeln!(
+                out,
+                "{indent}    public bool ShouldSerialize{name}Xml() => {name} is not null;"
+            )
+            .unwrap();
+        }
+        true
+    }
+
     fn emit_mixed_struct(
         &self,
         out: &mut String,
@@ -1030,7 +1079,7 @@ impl CSharpCodegen {
         }
 
         let has_lexical_union = self.options.emit_xml_attributes && s.fields.iter().any(|f| {
-            matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
+            f.default_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
         });
 
         if self.options.use_records && has_lexical_union {
@@ -1041,6 +1090,9 @@ impl CSharpCodegen {
             )
             .unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
+                if self.emit_default_scalar_proxy(out, f, name, ir, indent) {
+                    continue;
+                }
                 let ty = self.map_field_type(f, ir);
                 if let TypeRef::Named(q) = &f.type_ref {
                     if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()) {
@@ -1102,6 +1154,9 @@ impl CSharpCodegen {
             .unwrap();
             writeln!(out, "{}    public {}() {{ }}", indent, struct_name).unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
+                if self.emit_default_scalar_proxy(out, f, name, ir, indent) {
+                    continue;
+                }
                 let ty = self.map_field_type(f, ir);
                 if let TypeRef::Named(q) = &f.type_ref {
                     if self.options.emit_xml_attributes

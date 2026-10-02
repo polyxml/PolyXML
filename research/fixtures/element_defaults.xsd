@@ -1,0 +1,7 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+ <xs:element name="Root"><xs:complexType><xs:sequence>
+  <xs:element name="Flag" type="xs:boolean" minOccurs="0" default="false"/>
+  <xs:element name="Count" type="xs:int" minOccurs="0" default="42"/>
+  <xs:element name="Label" type="xs:string" minOccurs="0" default="fallback"/>
+ </xs:sequence><xs:attribute name="mode" type="xs:string" default="auto"/></xs:complexType></xs:element>
+</xs:schema>

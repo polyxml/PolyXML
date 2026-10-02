@@ -840,7 +840,11 @@ impl PythonCodegen {
                 format!("field(default_factory=list, metadata={})", meta_dict),
             )
         } else if field.cardinality.is_optional() || field.nillable {
-            if let Some(ref def) = field.default_value {
+            if let Some(def) = field
+                .default_value
+                .as_ref()
+                .filter(|_| field.kind == FieldKind::Attribute)
+            {
                 let py_val = self.format_default_value(def, &field.type_ref, ir);
                 (
                     format!("{} | None", base_type),
@@ -928,7 +932,11 @@ impl PythonCodegen {
                 format!("Field(default_factory=list, {})", extra_clause),
             )
         } else if field.cardinality.is_optional() || field.nillable {
-            if let Some(ref def) = field.default_value {
+            if let Some(def) = field
+                .default_value
+                .as_ref()
+                .filter(|_| field.kind == FieldKind::Attribute)
+            {
                 let py_val = self.format_default_value(def, &field.type_ref, ir);
                 (
                     format!("{} | None", base_type),
@@ -985,6 +993,9 @@ impl PythonCodegen {
             parts.push(format!("\"namespace\": \"{}\"", ns));
         }
 
+        if let Some(ref default) = field.default_value {
+            parts.push(format!("\"default\": {default:?}"));
+        }
         if field.nillable {
             parts.push("\"nillable\": True".to_string());
         }
