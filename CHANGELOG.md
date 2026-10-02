@@ -1,3 +1,18 @@
+## [0.33.10](https://github.com/polyxml/PolyXML/compare/v0.33.9...v0.33.10) (2026-10-02)
+
+
+### Bug Fixes
+
+* **codegen:** preserve typed whitespace-separated list values ([#108](https://github.com/polyxml/PolyXML/issues/108)) ([ffd5b92](https://github.com/polyxml/PolyXML/commit/ffd5b920952c0de4b79727001737314ca66dcc50))
+* compile and validate pinned UBL Invoice C# models ([#112](https://github.com/polyxml/PolyXML/issues/112)) ([6d55ada](https://github.com/polyxml/PolyXML/commit/6d55ada86df2166729f1aa92e4f3110ec814e9da))
+* preserve Go container QName through content validation ([#123](https://github.com/polyxml/PolyXML/issues/123)) ([d90340e](https://github.com/polyxml/PolyXML/commit/d90340ed1c0d0425823bf5b9a40c3208fe2471ac))
+* preserve temporal union lexical forms and date offsets ([#118](https://github.com/polyxml/PolyXML/issues/118)) ([00302d8](https://github.com/polyxml/PolyXML/commit/00302d87a9718550f8b79592f9eeaa3cfa0e4c9e))
+* reject abstract substitution heads and retain concrete members ([#105](https://github.com/polyxml/PolyXML/issues/105)) ([d372812](https://github.com/polyxml/PolyXML/commit/d37281274185a71bc68f18099774f0ca3134e1b7))
+* retain substitution metadata after root filtering ([#105](https://github.com/polyxml/PolyXML/issues/105)) ([f5fc88d](https://github.com/polyxml/PolyXML/commit/f5fc88d6df02615c41034ef3e3f1ad6fc9bf5146))
+* **schema:** enforce repeated sequence group order and bounds ([#106](https://github.com/polyxml/PolyXML/issues/106)) ([b22b5a1](https://github.com/polyxml/PolyXML/commit/b22b5a1c5c957ace5127a3ca66f7165f0689bcf0))
+* **schema:** reject unresolved types and illegal simpleType children ([#116](https://github.com/polyxml/PolyXML/issues/116)) ([f08818b](https://github.com/polyxml/PolyXML/commit/f08818b81117e1cf3093f57a056b7b19b68c18ef))
+* **schema:** reject unsupported conditional type alternatives ([#119](https://github.com/polyxml/PolyXML/issues/119)) ([b3744c4](https://github.com/polyxml/PolyXML/commit/b3744c45971083167703bae9b5e0227de73b9740))
+
 ## [0.33.9](https://github.com/polyxml/PolyXML/compare/v0.33.8...v0.33.9) (2026-10-02)
 
 
