@@ -1,3 +1,10 @@
+## [0.33.8](https://github.com/polyxml/PolyXML/compare/v0.33.7...v0.33.8) (2026-10-02)
+
+
+### Bug Fixes
+
+* **codegen:** enforce fixed values on input and output ([#102](https://github.com/polyxml/PolyXML/issues/102)) ([ad96fe3](https://github.com/polyxml/PolyXML/commit/ad96fe39e1dec67cb23428f921b4542eae33f959))
+
 ## [0.33.7](https://github.com/polyxml/PolyXML/compare/v0.33.6...v0.33.7) (2026-10-02)
 
 
