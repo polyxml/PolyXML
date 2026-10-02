@@ -726,3 +726,10 @@ Go named slices implement text codecs, and C# wrappers expose typed Value
 lists with a text proxy. Validate each item (including named restrictions
 and enum lexical values), and reject items containing XML whitespace on
 output. Empty lists remain distinct from omitted optional elements.
+
+Schema validity gates run before generation/dry-run: illegal direct children
+of simpleType, undeclared QName prefixes, unknown XSD built-ins, and unresolved
+type references are errors. Resolve references only after root-frame imports
+and forward declarations are merged. File parsing wraps diagnostics with the
+source path; grammar checks include line numbers. Annotation payloads must
+remain opaque to type-reference checking.

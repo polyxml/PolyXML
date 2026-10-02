@@ -25,6 +25,13 @@ pub enum SchemaError {
 
     #[error("Resolution error: {0}")]
     Resolution(String),
+
+    #[error("{path}: {source}")]
+    Located {
+        path: PathBuf,
+        #[source]
+        source: Box<SchemaError>,
+    },
 }
 
 /// A parsed `<xs:group>` definition: its flattened element fields plus the
@@ -130,7 +137,10 @@ impl XsdParser {
             Err(e) => Err(e.into()),
         };
         self.active_files.remove(&canonical);
-        let ir = parsed?;
+        let ir = parsed.map_err(|source| SchemaError::Located {
+            path: path.to_path_buf(),
+            source: Box::new(source),
+        })?;
 
         // Snapshot groups registered while parsing this file for cache replay.
         let file_owned: Vec<(QName, GroupDef)> = self
@@ -160,6 +170,7 @@ impl XsdParser {
         xml: &str,
         base_dir: Option<&Path>,
     ) -> Result<SchemaIR, SchemaError> {
+        validate_schema_grammar(xml)?;
         self.frame_depth += 1;
         let result = self.parse_str_body(xml, base_dir);
         self.frame_depth -= 1;
@@ -173,6 +184,7 @@ impl XsdParser {
         self.expand_group_refs(&mut ir, self.frame_depth == 0);
         if self.frame_depth == 0 {
             resolve_global_field_refs(&mut ir);
+            validate_type_references(&ir, xml)?;
             expand_substitution_fields(&mut ir);
             compile_mixed_types(&mut ir);
         }
@@ -1976,18 +1988,16 @@ fn resolve_type_ref(
     target_ns: Option<&str>,
     prefixes: &HashMap<String, String>,
 ) -> TypeRef {
-    if let Some(prim) = PrimitiveType::from_xsd_name(name) {
-        return TypeRef::Primitive(prim);
-    }
-
     if let Some((prefix, local)) = name.split_once(':') {
-        if prefix == "xs" || prefix == "xsd" {
-            if let Some(prim) = PrimitiveType::from_xsd_name(local) {
-                return TypeRef::Primitive(prim);
+        let ns = prefixes.get(prefix).cloned();
+        if ns.as_deref() == Some("http://www.w3.org/2001/XMLSchema") {
+            if let Some(primitive) = PrimitiveType::from_xsd_name(local) {
+                return TypeRef::Primitive(primitive);
             }
         }
-        let ns = prefixes.get(prefix).cloned();
         TypeRef::Named(QName::new(ns, local))
+    } else if let Some(primitive) = PrimitiveType::from_xsd_name(name) {
+        TypeRef::Primitive(primitive)
     } else {
         TypeRef::Named(QName::new(target_ns, name))
     }
@@ -2601,4 +2611,133 @@ fn capture_content_model(
     let mut preview = Reader::from_reader(*reader.get_ref());
     preview.config_mut().allow_unmatched_ends = true;
     Ok(children(&mut preview, "complexType", target_ns, prefixes)?.map(Particle::Sequence))
+}
+
+fn validate_type_references(ir: &SchemaIR, xml: &str) -> Result<(), SchemaError> {
+    fn reference(ty: &TypeRef, ir: &SchemaIR, xml: &str) -> Result<(), SchemaError> {
+        match ty {
+            TypeRef::Named(name) if !ir.types.contains_key(name) => {
+                let line = xml
+                    .find(&name.local)
+                    .map(|position| {
+                        format!(
+                            " at line {}",
+                            xml[..position].bytes().filter(|b| *b == b'\n').count() + 1
+                        )
+                    })
+                    .unwrap_or_default();
+                Err(SchemaError::Resolution(format!(
+                    "Unresolved type {name}{line}"
+                )))
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => reference(inner, ir, xml),
+            _ => Ok(()),
+        }
+    }
+    for element in ir.elements.values() {
+        reference(&element.type_ref, ir, xml)?;
+    }
+    for attribute in ir.attributes.values() {
+        reference(attribute, ir, xml)?;
+    }
+    for ty in ir.types.values() {
+        match ty {
+            TypeDef::Simple(simple) => reference(&simple.base_type, ir, xml)?,
+            TypeDef::Enum(enumeration) => reference(&enumeration.base_type, ir, xml)?,
+            TypeDef::Union(union) => {
+                for branch in &union.branches {
+                    reference(&branch.type_ref, ir, xml)?;
+                }
+            }
+            TypeDef::Struct(structure) => {
+                if let Some(base) = &structure.base_type {
+                    if !(base.namespace.as_deref() == Some("http://www.w3.org/2001/XMLSchema")
+                        && PrimitiveType::from_xsd_name(&base.local).is_some())
+                    {
+                        reference(&TypeRef::Named(base.clone()), ir, xml)?;
+                    }
+                }
+                for field in &structure.fields {
+                    reference(&field.type_ref, ir, xml)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
+    let mut reader = Reader::from_str(xml);
+    let mut stack = Vec::<(String, HashMap<String, String>)>::new();
+    loop {
+        let event = reader.read_event()?;
+        let (element, empty) = match event {
+            Event::Start(e) => (e, false),
+            Event::Empty(e) => (e, true),
+            Event::End(_) => {
+                stack.pop();
+                continue;
+            }
+            Event::Eof => break,
+            _ => continue,
+        };
+        let mut prefixes = stack.last().map(|(_, p)| p.clone()).unwrap_or_else(|| {
+            HashMap::from([("xml".into(), "http://www.w3.org/XML/1998/namespace".into())])
+        });
+        for attr in element.attributes().flatten() {
+            if let Some(prefix) = attr.key.as_ref().strip_prefix("xmlns:") {
+                prefixes.insert(prefix.into(), attr.value.to_string());
+            } else if attr.key.as_ref() == "xmlns" {
+                prefixes.insert(String::new(), attr.value.to_string());
+            }
+        }
+        let local = strip_prefix(element.name().into_inner());
+        let line = xml[..reader.buffer_position() as usize]
+            .bytes()
+            .filter(|b| *b == b'\n')
+            .count()
+            + 1;
+        let annotation = stack
+            .iter()
+            .any(|(name, _)| matches!(name.as_str(), "annotation" | "documentation" | "appinfo"));
+        if !annotation
+            && stack
+                .last()
+                .is_some_and(|(parent, _)| parent == "simpleType")
+            && !matches!(local, "annotation" | "restriction" | "list" | "union")
+        {
+            return Err(SchemaError::Malformed(format!(
+                "Illegal child {local} under simpleType at line {line}"
+            )));
+        }
+        for attr in element.attributes().flatten() {
+            if !annotation
+                && matches!(
+                    attr.key.as_ref(),
+                    "type" | "base" | "itemType" | "memberTypes" | "ref"
+                )
+            {
+                for value in attr.value.split_whitespace() {
+                    if let Some((prefix, local)) = value.split_once(':') {
+                        let Some(namespace) = prefixes.get(prefix) else {
+                            return Err(SchemaError::Resolution(format!(
+                                "Undeclared QName prefix {prefix} in {value} at line {line}"
+                            )));
+                        };
+                        if namespace == "http://www.w3.org/2001/XMLSchema"
+                            && attr.key.as_ref() != "ref"
+                            && PrimitiveType::from_xsd_name(local).is_none()
+                        {
+                            return Err(SchemaError::Resolution(format!(
+                                "Unknown built-in type {value} at line {line}"
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+        if !empty {
+            stack.push((local.into(), prefixes));
+        }
+    }
+    Ok(())
 }

@@ -2975,3 +2975,58 @@ package = "enterprise::models"
         );
     }
 }
+
+#[test]
+fn invalid_schema_grammar_and_types_fail_before_generation() {
+    let temp = tempdir().unwrap();
+    for (name, schema, diagnostic) in [
+        (
+            "unknown.xsd",
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="Root" type="MissingType"/></xs:schema>"#,
+            "MissingType",
+        ),
+        (
+            "location.xsd",
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:simpleType name="Bad"><xs:element name="Wrong" type="xs:string"/></xs:simpleType></xs:schema>"#,
+            "Illegal child element",
+        ),
+        (
+            "builtin.xsd",
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="Root" type="xs:NotAType"/></xs:schema>"#,
+            "Unknown built-in type",
+        ),
+    ] {
+        let path = temp.path().join(name);
+        fs::write(&path, schema).unwrap();
+        for command in [
+            vec!["validate"],
+            vec!["generate", "--lang", "go"],
+            vec!["generate", "--lang", "go", "--dry-run"],
+        ] {
+            let mut process = Command::new(env!("CARGO_BIN_EXE_polyxml"));
+            process.args(&command).arg(&path);
+            if command[0] != "validate" {
+                process.arg("--out").arg(temp.path().join("generated"));
+            }
+            let result = process.output().unwrap();
+            assert!(!result.status.success());
+            let errors = format!(
+                "{}{}",
+                String::from_utf8_lossy(&result.stdout),
+                String::from_utf8_lossy(&result.stderr)
+            );
+            assert!(errors.contains(diagnostic), "{errors}");
+            assert!(errors.contains(name), "{errors}");
+        }
+        assert!(!temp.path().join("generated").exists());
+    }
+    let forward = temp.path().join("forward.xsd");
+    fs::write(&forward,r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="Root" type="Later"/><xs:simpleType name="Later"><xs:restriction base="xs:string"/></xs:simpleType></xs:schema>"#).unwrap();
+    assert!(Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .arg("validate")
+        .arg(forward)
+        .output()
+        .unwrap()
+        .status
+        .success());
+}

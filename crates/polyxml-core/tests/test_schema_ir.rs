@@ -639,3 +639,15 @@ fn test_sequence_nested_inside_choice_preserved_in_ir() {
         ["First", "Second"]
     );
 }
+
+#[test]
+fn schema_errors_preserve_forward_imports_and_annotation_payloads() {
+    let schema = r#"<s:schema xmlns:s="http://www.w3.org/2001/XMLSchema"><s:simpleType name="Later"><s:annotation><s:appinfo><custom type="unbound:metadata"/></s:appinfo></s:annotation><s:restriction base="s:string"/></s:simpleType><s:element name="Root" type="Later"/></s:schema>"#;
+    assert!(XsdParser::new().parse_str(schema).is_ok());
+    for schema in [
+        r#"<s:schema xmlns:s="http://www.w3.org/2001/XMLSchema"><s:element name="Root" type="s:UnknownType"/></s:schema>"#,
+        r#"<s:schema xmlns:s="http://www.w3.org/2001/XMLSchema"><s:element name="Root" type="undefined:Type"/></s:schema>"#,
+    ] {
+        assert!(XsdParser::new().parse_str(schema).is_err());
+    }
+}
