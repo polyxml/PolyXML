@@ -916,7 +916,7 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
                 _ => None,
             };
             if matches!(base, TypeRef::Primitive(PrimitiveType::Date)) {
-                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);
+                let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02Z07:00\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}\n    if parsed, err := time.Parse(\"2006-01-02\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field, mapped, field);
             } else if matches!(base, TypeRef::Primitive(PrimitiveType::DateTime)) {
                 let _ = writeln!(out, "    if parsed, err := time.Parse(time.RFC3339, value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);
                 let _ = writeln!(out, "    if parsed, err := time.Parse(\"2006-01-02T15:04:05\", value); err == nil {{ v := {}{{Time: parsed, lexical: value}}; c.{} = &v; return nil }}", mapped, field);

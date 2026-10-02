@@ -100,7 +100,7 @@ fn lexical_unions_are_typed_in_all_targets() {
     assert!(csharp.contains("public abstract record NumberOrDay"));
     assert!(csharp.contains("public static NumberOrDay Parse(string text)"));
     assert!(csharp.contains("public string? NumberXml"));
-    assert!(csharp.contains("DateOnly.TryParseExact(value, \"yyyy-MM-dd\""));
+    assert!(csharp.contains("DateOnly.TryParseExact(value[..10], \"yyyy-MM-dd\""));
 
     let java = JavaCodegen::new(JavaOptions::default()).generate_module(&ir, "Models");
     assert!(java.contains("sealed interface NumberOrDay"));

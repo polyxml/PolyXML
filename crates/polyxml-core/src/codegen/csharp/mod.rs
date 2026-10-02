@@ -837,7 +837,9 @@ impl CSharpCodegen {
                 let _ = writeln!(out, "{}        if (value == \"true\" || value == \"1\") {{ var candidate{} = true; return new {}({}); }}", indent, idx, variant, wrap);
                 let _ = writeln!(out, "{}        if (value == \"false\" || value == \"0\") {{ var candidate{} = false; return new {}({}); }}", indent, idx, variant, wrap);
             } else if base_name == "DateOnly" {
-                let _ = writeln!(out, "{}        if (DateOnly.TryParseExact(value, \"yyyy-MM-dd\", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var candidate{})) return new {}({});", indent, idx, variant, wrap);
+                let _ = writeln!(out, "{}        if (System.Text.RegularExpressions.Regex.IsMatch(value, @\"^\\d{{4}}-\\d{{2}}-\\d{{2}}(?:Z|[+-](?:(?:0\\d|1[0-3]):[0-5]\\d|14:00))?$\") && DateOnly.TryParseExact(value[..10], \"yyyy-MM-dd\", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var candidate{})) return Preserve(new {}({}), value);", indent, idx, variant, wrap);
+            } else if base_name == "DateTimeOffset" {
+                let _ = writeln!(out, "{}        if (System.Text.RegularExpressions.Regex.IsMatch(value, @\"^\\d{{4}}-\\d{{2}}-\\d{{2}}T\\d{{2}}:\\d{{2}}:\\d{{2}}(?:\\.\\d+)?(?:Z|[+-](?:(?:0\\d|1[0-3]):[0-5]\\d|14:00))?$\")) {{ try {{ var candidate{} = System.Xml.XmlConvert.ToDateTimeOffset(value); return Preserve(new {}({}), value); }} catch (FormatException) {{ }} }}", indent, idx, variant, wrap);
             } else {
                 let _ = writeln!(
                     out,
@@ -852,11 +854,7 @@ impl CSharpCodegen {
             indent, name
         );
         let _ = writeln!(out, "{}    }}", indent);
-        let _ = writeln!(
-            out,
-            "{}    public string ToXmlString() => this switch",
-            indent
-        );
+        let _ = writeln!(out, "{indent}    private string? _lexical;\n{indent}    private string? _parsedCanonical;\n{indent}    private static {name} Preserve({name} member, string lexical) {{ member._parsedCanonical = member.FormatXmlValue(); member._lexical = lexical; return member; }}\n{indent}    public string ToXmlString() {{ var canonical = FormatXmlValue(); return canonical == _parsedCanonical ? _lexical! : canonical; }}\n{indent}    private string FormatXmlValue() => this switch");
         let _ = writeln!(out, "{}    {{", indent);
         for branch in &u.branches {
             let variant = choice_variant_name(branch);

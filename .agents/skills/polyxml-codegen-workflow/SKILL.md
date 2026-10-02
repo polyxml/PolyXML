@@ -738,3 +738,11 @@ XSD 1.1 xs:alternative conditional types are explicitly unsupported: schema
 preflight returns a source/line diagnostic and CLI validation/generation/
 dry-run fail before emitting a weaker model. Do not silently accept it, and
 ignore similarly named content inside annotation payloads.
+
+Temporal lexical unions must accept both timezone-free and zoned dates and
+date-times. Go date union parsing needs both date layouts. C# DateOnly and
+DateTimeOffset erase lexical distinctions, so retain parsed spelling alongside
+a canonical value snapshot and discard it when the typed value changes. Use
+invariant XML conversion, reject culture-specific date strings, and validate
+generated round trips against an independent XSD engine. Do not claim support
+for the entire XSD temporal range from platform date types.
