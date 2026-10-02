@@ -173,17 +173,44 @@ fn nillable_enum_collection_round_trips() {
         let temp = tempdir().unwrap();
         fs::write(temp.path().join("App.csproj"), r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>"#).unwrap();
         fs::write(temp.path().join("Models.cs"), code).unwrap();
+        let strict_ir = polyxml::schema_parser::XsdParser::new()
+            .parse_str(
+                &include_str!("../../../research/fixtures/nillable_enum_collection.xsd")
+                    .replace("nillable=\"true\"", "nillable=\"false\""),
+            )
+            .unwrap();
+        let strict_code = CSharpCodegen::new(CSharpOptions {
+            namespace: "StrictModels".into(),
+            use_records,
+            ..Default::default()
+        })
+        .generate_module(&strict_ir);
+        fs::write(temp.path().join("StrictModels.cs"), strict_code).unwrap();
+
         fs::write(temp.path().join("Program.cs"), r#"
 using System.Xml.Serialization;
 using NilModels;
 var serializer = new XmlSerializer(typeof(Root));
-var xml = "<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Item>A</Item><Item xsi:nil='true'/><Item>B</Item></Root>";
-var root = (Root)serializer.Deserialize(new StringReader(xml))!;
-if (root.Item is not { Count: 3 } || root.Item[0] != Code.A || root.Item[1] != null || root.Item[2] != Code.B) throw new Exception("nil item lost");
-var writer = new StringWriter();
-serializer.Serialize(writer, root);
-var decoded = (Root)serializer.Deserialize(new StringReader(writer.ToString()))!;
-if (decoded.Item is not { Count: 3 } || decoded.Item[1] != null || decoded.Item[2] != Code.B) throw new Exception("nil round trip lost");
+foreach (var xml in new[] {
+    "<Root/>",
+    "<Root><Item>A</Item></Root>",
+    "<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Item xsi:nil='true'/></Root>",
+    "<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Item>A</Item><Item xsi:nil='true'/><Item>B</Item></Root>"
+}) {
+    var root = (Root)serializer.Deserialize(new StringReader(xml))!;
+    var expected = xml.Contains("<Item>A") ? (xml.Contains("<Item>B") ? new Code?[] {Code.A, null, Code.B} : new Code?[] {Code.A}) : (xml.Contains("xsi:nil") ? new Code?[] {null} : Array.Empty<Code?>());
+    if (!root.Item.SequenceEqual(expected)) throw new Exception("nil input lost");
+    var writer = new StringWriter();
+    serializer.Serialize(writer, root);
+    var decoded = (Root)serializer.Deserialize(new StringReader(writer.ToString()))!;
+    if (!decoded.Item.SequenceEqual(expected)) throw new Exception("nil round trip lost");
+}
+var strict = new XmlSerializer(typeof(StrictModels.Root));
+try {
+    strict.Deserialize(new StringReader("<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Item xsi:nil='true'/></Root>"));
+    throw new Exception("non-nillable enum accepted nil");
+} catch (InvalidOperationException) {}
+
 "#).unwrap();
         let _lock = DOTNET_LOCK.lock().unwrap();
         let result = dotnet_command()
