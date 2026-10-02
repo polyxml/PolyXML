@@ -1,3 +1,15 @@
+# [0.34.0](https://github.com/polyxml/PolyXML/compare/v0.33.12...v0.34.0) (2026-10-02)
+
+
+### Bug Fixes
+
+* **ci:** use grep instead of rg in verify_spring_boot.sh ([8bee2b1](https://github.com/polyxml/PolyXML/commit/8bee2b17cd71c433ec3a02b9f2e9f1b03911a895))
+
+
+### Features
+
+* **java:** support Jackson 3 and Spring Boot 4 ([0bb3506](https://github.com/polyxml/PolyXML/commit/0bb35060189b4e8d3571e16585269e929dabdab9)), closes [#132](https://github.com/polyxml/PolyXML/issues/132)
+
 ## [0.33.12](https://github.com/polyxml/PolyXML/compare/v0.33.11...v0.33.12) (2026-10-02)
 
 
