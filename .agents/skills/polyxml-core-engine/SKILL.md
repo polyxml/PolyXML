@@ -105,6 +105,20 @@ Key mechanisms (regression-locked in `crates/polyxml-core/tests/test_schema_audi
    and its base; represent the choice as a synthetic union field. Only
    base-less choice-only types may become standalone unions.
 
+### Unique Particle Attribution
+
+XSD 1.0 UPA checks retain source particles in `SchemaIR.upa_documents`, before
+field flattening loses identity. Validate after the outer parser frame resolves
+imports, includes, groups, and substitution members. Cached chameleon documents
+must adopt the includer's namespace, including qualified elements and wildcards.
+Occurrence copies retain particle identity; separate group uses get distinct
+identities. Fixed-count adjacent elements with matching QNames can be valid.
+Run `cargo test -p polyxml --test test_upa` and, after building the CLI,
+`uv run --with lxml python scripts/verify_upa.py`. This compares 507 seeded
+models with Xerces, libxml2, and .NET 8. Xerces is the reference: the other
+validators differ on bounded and nullable repeated models. Explicit automaton
+budgets bound complex models; disjoint labels avoid occurrence expansion.
+
 ## 5. `xsi:type` Polymorphic Dispatch
 
 `ModelSchema.strict_root` optionally checks the document element's expanded

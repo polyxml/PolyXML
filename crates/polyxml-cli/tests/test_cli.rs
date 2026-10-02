@@ -3066,3 +3066,38 @@ fn unsupported_xsd_alternatives_fail_explicitly() {
     }
     assert!(!temp.path().join("generated").exists());
 }
+
+#[test]
+fn validate_and_generate_reject_upa_violations() {
+    let dir = tempdir().unwrap();
+    let schema = dir.path().join("ambiguous.xsd");
+    fs::write(
+        &schema,
+        include_str!("../../../research/fixtures/wave8/30_upa_violation.xsd"),
+    )
+    .unwrap();
+    for command in ["validate", "generate"] {
+        let mut process = Command::new(env!("CARGO_BIN_EXE_polyxml"));
+        process.arg(command).arg(&schema);
+        if command == "generate" {
+            process
+                .args(["--lang", "rust", "--out"])
+                .arg(dir.path().join("generated"));
+        }
+        let output = process.output().unwrap();
+        assert!(
+            !output.status.success(),
+            "{command} accepted non-deterministic schema"
+        );
+        let diagnostic = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            diagnostic.contains("Unique Particle Attribution (UPA)"),
+            "{diagnostic}"
+        );
+        assert!(!diagnostic.contains("All schemas valid"));
+    }
+}

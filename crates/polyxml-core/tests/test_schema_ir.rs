@@ -33,10 +33,11 @@ fn missing_included_schema_is_an_error() {
 
 #[test]
 fn consumed_child_subtrees_do_not_swallow_following_types() {
-    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test">
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test">
+      <xs:group name="Empty"><xs:sequence/></xs:group>
       <xs:complexType name="First"><xs:sequence>
         <xs:element name="nested"><xs:complexType><xs:sequence><xs:element name="value" type="xs:string"/></xs:sequence></xs:complexType></xs:element>
-        <xs:group ref="missing"><xs:annotation><xs:documentation>ignored</xs:documentation></xs:annotation></xs:group>
+        <xs:group ref="t:Empty"><xs:annotation><xs:documentation>ignored</xs:documentation></xs:annotation></xs:group>
       </xs:sequence></xs:complexType>
       <xs:complexType name="Second"><xs:sequence><xs:element name="other" type="xs:string"/></xs:sequence></xs:complexType>
     </xs:schema>"#;

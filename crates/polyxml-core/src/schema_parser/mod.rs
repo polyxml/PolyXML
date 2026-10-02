@@ -1,3 +1,4 @@
+pub mod upa;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -185,6 +186,7 @@ impl XsdParser {
         if self.frame_depth == 0 {
             resolve_global_field_refs(&mut ir);
             validate_type_references(&ir, xml)?;
+            upa::validate(&ir)?;
             ir.content_models.retain(|_, model| {
                 model.has_choice()
                     || model.has_repeated_sequence()
@@ -214,6 +216,7 @@ impl XsdParser {
         reader.config_mut().trim_text(true);
 
         let mut ir = SchemaIR::new();
+        ir.upa_documents.push(upa::Document::parse(xml)?);
         let mut target_namespace = None;
         // The `xml` prefix is bound by XML itself, even when the schema omits
         // an explicit xmlns:xml declaration (as Dublin Core's dc.xsd does).
@@ -2329,6 +2332,9 @@ fn unique_type_name(ir: &SchemaIR, target_ns: Option<&str>, base: &str) -> Strin
 /// Rewrite every namespace-less QName in the IR to `ns`. Used for chameleon
 /// includes, whose components adopt the including schema's target namespace.
 fn rekey_to_namespace(ir: &mut SchemaIR, ns: &str) {
+    for document in &mut ir.upa_documents {
+        document.adopt_namespace(ns);
+    }
     ir.target_namespace = Some(ns.to_string());
     ir.abstract_elements = std::mem::take(&mut ir.abstract_elements)
         .into_iter()
@@ -2548,6 +2554,7 @@ fn collect_chain_patterns(ir: &SchemaIR, q: &QName, visited: &mut HashSet<QName>
 }
 
 fn merge_ir(dest: &mut SchemaIR, src: SchemaIR) {
+    dest.upa_documents.extend(src.upa_documents);
     dest.abstract_elements.extend(src.abstract_elements);
     dest.ordered_types.extend(src.ordered_types);
     dest.content_models.extend(src.content_models);

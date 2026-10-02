@@ -484,6 +484,9 @@ pub struct SchemaIR {
     pub ordered_types: std::collections::BTreeSet<QName>,
     #[serde(default)]
     pub content_models: BTreeMap<QName, Particle>,
+    /// Source particle identity retained for schema-level XSD 1.0 UPA checks.
+    #[serde(default)]
+    pub upa_documents: Vec<crate::schema_parser::upa::Document>,
     /// Type owners outside the module currently being emitted. Definitions
     /// remain in `types` so generators can resolve their field semantics.
     #[serde(default)]

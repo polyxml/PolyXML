@@ -16,7 +16,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}==> [1/3] Running pure Rust schema IR & Tarjan SCC tests...${NC}"
-cargo test -p polyxml --test test_schema_ir
+cargo test -p polyxml --test test_schema_ir --test test_upa
 
 echo -e "${BLUE}==> [2/3] Running all 7 language codegen test suites...${NC}"
 cargo test -p polyxml \
