@@ -587,7 +587,11 @@ impl SchemaIR {
                                         field.namespace.as_deref(),
                                         &field.xml_name,
                                     );
-                                    if self.substitution_groups.contains_key(&element)
+                                    if (self.substitution_groups.contains_key(&element)
+                                        || self
+                                            .elements
+                                            .get(&element)
+                                            .is_some_and(|e| e.substitution_group.is_some()))
                                         && selected_elements.insert(element.clone())
                                     {
                                         pending_elements.push(element);
@@ -606,7 +610,11 @@ impl SchemaIR {
                                     branch.namespace.as_deref(),
                                     &branch.xml_name,
                                 );
-                                if self.substitution_groups.contains_key(&element)
+                                if (self.substitution_groups.contains_key(&element)
+                                    || self
+                                        .elements
+                                        .get(&element)
+                                        .is_some_and(|e| e.substitution_group.is_some()))
                                     && selected_elements.insert(element.clone())
                                 {
                                     pending_elements.push(element);
@@ -851,6 +859,7 @@ mod root_selection_tests {
         let mut parser = crate::schema_parser::XsdParser::new();
         let ir = parser.parse_str(xsd).unwrap();
         let selected = ir.select_root_elements(&["Container".into()]).unwrap();
+        // Preserve substitution metadata, including abstract heads, after expansion.
         assert!(selected
             .elements
             .contains_key(&QName::new(Some("urn:test"), "Head")));
