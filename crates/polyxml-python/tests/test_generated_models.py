@@ -783,3 +783,49 @@ def test_named_lexical_list_item_constraints(tmp_path, backend):
     root.numbers = [-1]
     with pytest.raises(ValueError):
         root.to_xml()
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_repeated_choice_branch_boundaries(tmp_path, backend):
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "research/fixtures/choice_branch_cardinality.xsd"
+    )
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(
+        f"choice_branch_bounds_{backend}", tmp_path / "choice_branch_cardinality.py"
+    )
+    for body in [
+        "<Timing>a</Timing>",
+        "<Timing>a</Timing><Timing>b</Timing>",
+        "<Drive>a</Drive>",
+        "<Load>b</Load>",
+    ]:
+        root = module.Root.from_xml("<Root>" + body + "</Root>")
+        module.Root.from_xml(root.to_xml())
+    for body in [
+        "",
+        "<Drive>a</Drive><Load>b</Load>",
+        "<Timing>a</Timing><Drive>b</Drive>",
+        "<Drive>a</Drive><Drive>b</Drive>",
+    ]:
+        with pytest.raises(ValueError, match="Content model constraint"):
+            module.Root.from_xml("<Root>" + body + "</Root>")
+    root = module.Root.from_xml("<Root><Timing>a</Timing></Root>")
+    root.drive = "conflict"
+    with pytest.raises(ValueError, match="Content model constraint"):
+        root.to_xml()

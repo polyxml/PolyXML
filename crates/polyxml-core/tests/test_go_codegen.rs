@@ -1280,3 +1280,54 @@ func TestSequence(t *testing.T){
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn repeated_choice_branch_rejects_mixed_and_empty_selections() {
+    let ir = XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/choice_branch_cardinality.xsd"
+        ))
+        .unwrap();
+    let structure = match ir.types.get(&QName::local("RootType")).unwrap() {
+        TypeDef::Struct(s) => s,
+        _ => panic!("expected struct"),
+    };
+    assert!(structure.fields.iter().any(|f| f.xml_name == "Timing"
+        && f.cardinality.max_occurs == polyxml::ir::OccursLimit::Unbounded));
+    let pattern = format!(
+        "^(?:{})$",
+        ir.content_models[&QName::local("RootType")].pattern()
+    );
+    let pattern = regex::Regex::new(&pattern).unwrap();
+    assert!(!pattern.is_match(""));
+    assert!(pattern.is_match("Timing;Timing;"));
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("go.mod"),
+        "module branchconstraints\n\ngo 1.22\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(temp.path().join("models_test.go"),r#"package models
+import("encoding/xml";"testing")
+func TestBranches(t *testing.T){
+for _,body:=range []string{`<Timing>a</Timing>`,`<Timing>a</Timing><Timing>b</Timing>`,`<Drive>a</Drive>`,`<Load>b</Load>`}{var root Root;if err:=xml.Unmarshal([]byte(`<Root>`+body+`</Root>`),&root);err!=nil{t.Fatal(err)};if _,err:=xml.Marshal(root);err!=nil{t.Fatal(err)}}
+for _,body:=range []string{``,`<Drive>a</Drive><Load>b</Load>`,`<Timing>a</Timing><Drive>b</Drive>`,`<Drive>a</Drive><Drive>b</Drive>`}{var root Root;if err:=xml.Unmarshal([]byte(`<Root>`+body+`</Root>`),&root);err==nil{t.Fatal("invalid branch accepted",body)}}
+var root Root;if err:=xml.Unmarshal([]byte(`<Root><Timing>a</Timing></Root>`),&root);err!=nil{t.Fatal(err)};drive:="b";root.Drive=&drive;if _,err:=xml.Marshal(root);err==nil{t.Fatal("mixed output accepted")}
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(temp.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
