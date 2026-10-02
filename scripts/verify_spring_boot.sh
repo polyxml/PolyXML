@@ -3,7 +3,7 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 java -version
-if ! javac -version 2>&1 | rg -q '^javac 25([.]|$)'; then
+if ! javac -version 2>&1 | grep -qE '^javac 25([.]|$)'; then
   echo 'Set JAVA_HOME and PATH to a Java 25 JDK.' >&2
   exit 1
 fi
