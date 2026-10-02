@@ -171,3 +171,8 @@ The runtime dispatches polymorphic elements through a **type registry on
   use the dynamic runtime. `polyxml-js` bindings are scalar-flat today, so
   dispatch is unreachable from JS until the binding supports nested schemas;
   the core dispatch algorithm itself is shared.
+
+General entity references are unsupported and must raise a parse error,
+including in unknown skipped elements; never substitute the entity's name.
+Predefined entities and numeric character references remain supported.
+External entity resolution stays disabled. See `test_security`.

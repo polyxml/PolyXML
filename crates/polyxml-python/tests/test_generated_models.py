@@ -531,3 +531,37 @@ def test_codecs_flag_disabled():
         mod = _load_module_from_file("gen_no_codecs", out_dir / "warehouse.py")
         assert not hasattr(mod.Inventory, "from_xml")
         assert not hasattr(mod.Inventory, "to_xml")
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_generated_models_reject_general_entities(tmp_path, backend):
+    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/wave7/xxe_text.xsd"
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(f"entities_{backend}", tmp_path / "xxe_text.py")
+    sentinel = tmp_path / "sentinel.txt"
+    sentinel.write_text("PRIVATE_SENTINEL_VALUE")
+    for declaration in [
+        "",
+        "<!DOCTYPE Document [<!ENTITY audit 'EXPECTED'>]>",
+        f"<!DOCTYPE Document [<!ENTITY audit SYSTEM '{sentinel.as_uri()}'>]>",
+    ]:
+        with pytest.raises(ValueError, match="Unsupported general entity reference"):
+            module.Document.from_xml(
+                declaration + "<Document><Payload>&audit;</Payload></Document>"
+            )
+    model = module.Document.from_xml("<Document><Payload>&amp;&#65;&#x42;</Payload></Document>")
+    assert model.payload == "&AB"

@@ -162,3 +162,30 @@ fn test_malformed_unclosed_cdata_rejection() {
     let bad_xml = br#"<Doc><body><![CDATA[unclosed cdata</body></Doc>"#;
     assert!(deserialize(bad_xml, schema).is_err());
 }
+
+#[test]
+fn unsupported_general_entities_are_rejected() {
+    let schema = ModelSchema::builder("Document")
+        .field(FieldSchema::new(
+            "payload",
+            b"Payload",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .build();
+    for xml in [
+        "<Document><Payload>&audit;</Payload></Document>",
+        "<!DOCTYPE Document [<!ENTITY audit 'EXPECTED'>]><Document><Payload>&audit;</Payload></Document>",
+        "<!DOCTYPE Document [<!ENTITY audit SYSTEM 'file:///nonexistent/sentinel'>]><Document><Payload>&audit;</Payload></Document>",
+        "<Document><Unknown>&audit;</Unknown></Document>",
+    ] {
+        let error = deserialize(xml.as_bytes(), Arc::clone(&schema)).unwrap_err();
+        assert!(error.to_string().contains("Unsupported general entity reference"), "{error}");
+    }
+    let value = deserialize(
+        b"<Document><Payload>&amp;&#65;&#x42;</Payload></Document>",
+        schema,
+    )
+    .unwrap();
+    assert_eq!(value.get("payload"), Some(&PolyValue::String("&AB".into())));
+}

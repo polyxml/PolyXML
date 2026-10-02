@@ -245,7 +245,10 @@ fn append_general_ref(
     } else if let Some(s) = quick_xml::escape::resolve_xml_entity(e.as_ref()) {
         s.as_bytes()
     } else {
-        e.as_ref().as_bytes()
+        return Err(PolyXmlError::SchemaError(format!(
+            "Unsupported general entity reference: &{};",
+            e.as_ref()
+        )));
     };
 
     if active_scalar {
@@ -779,6 +782,15 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::GeneralRef(ref e)) => {
+                    // Entity validity is independent of whether a field is retained.
+                    if !e.is_char_ref()
+                        && quick_xml::escape::resolve_xml_entity(e.as_ref()).is_none()
+                    {
+                        return Err(PolyXmlError::SchemaError(format!(
+                            "Unsupported general entity reference: &{};",
+                            e.as_ref()
+                        )));
+                    }
                     if unknown_depth > 0 {
                         continue;
                     }
