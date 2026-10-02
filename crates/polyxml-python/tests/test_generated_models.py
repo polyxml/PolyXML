@@ -634,3 +634,45 @@ def test_fixed_values_validate_input_and_output(tmp_path, backend):
     root.code = "wrong"
     with pytest.raises(ValueError, match="Fixed value constraint"):
         root.to_xml()
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_separate_choice_groups_enforce_constraints(tmp_path, backend):
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "research/fixtures/wave6/two_choice_groups.xsd"
+    )
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(f"choices_{backend}", tmp_path / "two_choice_groups.py")
+    for first in ["BStar", "BTerm"]:
+        for second in ["MeanMotionDdot", "Agom"]:
+            document = f"<Parameters><{first}>a</{first}><MeanMotionDot>b</MeanMotionDot><{second}>c</{second}></Parameters>"
+            root = module.Parameters.from_xml(document)
+            module.Parameters.from_xml(root.to_xml())
+    for document in [
+        "<Parameters><BStar>a</BStar><BTerm>x</BTerm><MeanMotionDot>b</MeanMotionDot><Agom>c</Agom></Parameters>",
+        "<Parameters><MeanMotionDot>b</MeanMotionDot><Agom>c</Agom></Parameters>",
+        "<Parameters/>",
+    ]:
+        with pytest.raises(ValueError, match="Content model constraint"):
+            module.Parameters.from_xml(document)
+    root = module.Parameters.from_xml(
+        "<Parameters><BStar>a</BStar><MeanMotionDot>b</MeanMotionDot><Agom>c</Agom></Parameters>"
+    )
+    root.b_term = "conflict"
+    with pytest.raises(ValueError, match="Content model constraint"):
+        root.to_xml()

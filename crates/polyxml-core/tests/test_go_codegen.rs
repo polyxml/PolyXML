@@ -1196,3 +1196,48 @@ func TestNamespacedElementRef(t *testing.T) {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn separate_choices_enforce_each_group() {
+    let ir = XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/wave6/two_choice_groups.xsd"
+        ))
+        .unwrap();
+    assert!(ir
+        .content_models
+        .contains_key(&QName::local("ParametersType")));
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("go.mod"),
+        "module choiceconstraints\n\ngo 1.22\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(temp.path().join("models_test.go"),r#"package models
+import("encoding/xml";"testing")
+func TestChoices(t *testing.T){
+for _,first:=range []string{"BStar","BTerm"}{for _,second:=range []string{"MeanMotionDdot","Agom"}{
+ document:=`<Parameters><`+first+`>a</`+first+`><MeanMotionDot>b</MeanMotionDot><`+second+`>c</`+second+`></Parameters>`
+ var root Parameters;if err:=xml.Unmarshal([]byte(document),&root);err!=nil{t.Fatal(err)}
+ data,err:=xml.Marshal(root);if err!=nil{t.Fatal(err)};if err:=xml.Unmarshal(data,&root);err!=nil{t.Fatal(err)}
+}}
+for _,document:=range []string{`<Parameters><BStar>a</BStar><BTerm>x</BTerm><MeanMotionDot>b</MeanMotionDot><Agom>c</Agom></Parameters>`,`<Parameters><MeanMotionDot>b</MeanMotionDot><Agom>c</Agom></Parameters>`,`<Parameters/>`}{var root Parameters;if err:=xml.Unmarshal([]byte(document),&root);err==nil{t.Fatal("invalid choice accepted",document)}}
+var empty Parameters;if _,err:=xml.Marshal(empty);err==nil{t.Fatal("invalid output accepted")}
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(temp.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

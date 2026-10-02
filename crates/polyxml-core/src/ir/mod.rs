@@ -1,4 +1,6 @@
 pub mod chunker;
+pub mod particle;
+pub use particle::Particle;
 pub mod tarjan;
 
 pub use chunker::{partition_topological_chunks, ChunkPlan, TypeChunk};
@@ -467,6 +469,8 @@ pub struct SchemaIR {
     /// repeated particle or substitution-member order during serialization.
     #[serde(default)]
     pub ordered_types: std::collections::BTreeSet<QName>,
+    #[serde(default)]
+    pub content_models: BTreeMap<QName, Particle>,
     /// Type owners outside the module currently being emitted. Definitions
     /// remain in `types` so generators can resolve their field semantics.
     #[serde(default)]

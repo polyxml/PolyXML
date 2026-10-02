@@ -119,6 +119,7 @@ pub struct ModelSchema {
     pub is_abstract: bool,
     /// Require the document element to match this schema's expanded QName.
     pub strict_root: bool,
+    pub content_pattern: Option<regex::Regex>,
     /// Concrete derivations eligible for `xsi:type` dispatch. Python may
     /// refresh this registry when subclasses are defined after first use.
     variants: Arc<RwLock<Vec<Arc<ModelSchema>>>>,
@@ -399,6 +400,12 @@ impl ModelSchema {
                 builder = builder.namespace(ns);
             }
             builder = builder.is_abstract(s.is_abstract);
+            if let Some(model) = ir.content_models.get(&s.qname) {
+                builder = builder.content_pattern(
+                    regex::Regex::new(&format!("^(?:{})$", model.pattern()))
+                        .expect("validated content pattern"),
+                );
+            }
 
             // Flatten the xs:extension content model: base-chain fields
             // precede the struct's own fields (mirrors the Java codegen).
@@ -537,6 +544,7 @@ pub struct ModelSchemaBuilder {
     fields: Vec<FieldSchema>,
     is_abstract: bool,
     strict_root: bool,
+    content_pattern: Option<regex::Regex>,
 }
 
 impl ModelSchemaBuilder {
@@ -548,6 +556,7 @@ impl ModelSchemaBuilder {
             fields: Vec::new(),
             is_abstract: false,
             strict_root: false,
+            content_pattern: None,
         }
     }
 
@@ -559,6 +568,11 @@ impl ModelSchemaBuilder {
 
     pub fn xml_name(mut self, xml_name: &[u8]) -> Self {
         self.xml_name = Some(xml_name.to_vec());
+        self
+    }
+
+    pub fn content_pattern(mut self, pattern: regex::Regex) -> Self {
+        self.content_pattern = Some(pattern);
         self
     }
 
@@ -632,6 +646,7 @@ impl ModelSchemaBuilder {
             mixed_content: None,
             is_abstract: self.is_abstract,
             strict_root: self.strict_root,
+            content_pattern: self.content_pattern,
             variants: Arc::new(RwLock::new(Vec::new())),
         })
     }
@@ -678,4 +693,20 @@ pub(crate) fn validate_fixed(
         Ok(())
     }
     check(&field.val_type, value, fixed, &field.name)
+}
+
+pub(crate) fn validate_content(schema: &ModelSchema, tokens: &str) -> crate::error::Result<()> {
+    if let Some(pattern) = &schema.content_pattern {
+        if !pattern.is_match(tokens) {
+            return Err(crate::error::PolyXmlError::SchemaError(format!(
+                "Content model constraint violated for {}",
+                schema.name
+            )));
+        }
+    }
+    Ok(())
+}
+
+pub fn compile_content_pattern(pattern: &str) -> std::result::Result<regex::Regex, regex::Error> {
+    regex::Regex::new(pattern)
 }

@@ -371,6 +371,10 @@ impl GoCodegen {
         }
         self.emit_root_aliases(&mut body, ir);
 
+        if self.options.emit_xml_tags && !ir.content_models.is_empty() {
+            self.emit_content_helpers(&mut body);
+        }
+
         // Assemble final output with package and imports
         let mut out = String::new();
         if let Some(ref header) = self.options.custom_header {
@@ -399,20 +403,21 @@ impl GoCodegen {
             imports.push("\"encoding/xml\"");
         }
         if self.options.emit_xml_tags
-            && ir
-                .types
-                .values()
-                .any(|def| matches!(def, TypeDef::Struct(s) if ir.has_ordered_content(s)))
+            && (!ir.content_models.is_empty()
+                || ir
+                    .types
+                    .values()
+                    .any(|def| matches!(def, TypeDef::Struct(s) if ir.has_ordered_content(s))))
         {
             imports.push("\"bytes\"");
         }
         if has_fmt || body.contains("fmt.") {
             imports.push("\"fmt\"");
         }
-        if has_io {
+        if has_io || body.contains("io.") {
             imports.push("\"io\"");
         }
-        if has_patterns {
+        if has_patterns || body.contains("regexp.") {
             imports.push("\"regexp\"");
         }
         if ir
@@ -1108,9 +1113,48 @@ impl GoCodegen {
             self.emit_mixed_struct_xml(out, s, ir, &field_names);
         }
 
+        if self.options.emit_xml_tags && !ir.has_ordered_content(s) && !s.is_abstract {
+            if let Some(model) = ir.content_models.get(&s.qname) {
+                self.emit_content_codec(out, s, &format!("^(?:{})$", model.pattern()));
+            }
+        }
         if self.options.validate_facets {
             self.emit_struct_validator(out, s, ir, &field_names);
         }
+    }
+
+    fn emit_content_helpers(&self, out: &mut String) {
+        out.push_str(r#"
+func polyxmlReadElement(d *xml.Decoder, start xml.StartElement) ([]byte,error) {
+ var buffer bytes.Buffer; encoder:=xml.NewEncoder(&buffer);depth:=1
+ token:=xml.Token(start)
+ for {
+  if element,ok:=token.(xml.StartElement);ok { attrs:=element.Attr[:0];for _,a:=range element.Attr {if a.Name.Space!="xmlns"&&a.Name.Local!="xmlns" {attrs=append(attrs,a)}};element.Attr=attrs;token=element }
+  if err:=encoder.EncodeToken(token);err!=nil{return nil,err}
+  if depth==0{break}
+  next,err:=d.Token();if err!=nil{return nil,err};token=next
+  switch token.(type){case xml.StartElement:depth++;case xml.EndElement:depth--}
+ }
+ if err:=encoder.Flush();err!=nil{return nil,err};return buffer.Bytes(),nil
+}
+func polyxmlValidateContent(data []byte,pattern string) error {
+ decoder:=xml.NewDecoder(bytes.NewReader(data));depth:=0;tokens:=""
+ for {token,err:=decoder.Token();if err==io.EOF{break};if err!=nil{return err};switch v:=token.(type){case xml.StartElement:depth++;if depth==2{if v.Name.Space!=""{tokens+="{"+v.Name.Space+"}"};tokens+=v.Name.Local+";"};case xml.EndElement:depth--}}
+ matched,err:=regexp.MatchString(pattern,tokens);if err!=nil{return err};if !matched{return fmt.Errorf("content model constraint violated")};return nil
+}
+"#);
+    }
+    fn emit_content_codec(&self, out: &mut String, structure: &StructDef, pattern: &str) {
+        let name = type_ident(&structure.qname);
+        writeln!(out,"func (v *{name}) UnmarshalXML(d *xml.Decoder,start xml.StartElement) error {{
+ data,err:=polyxmlReadElement(d,start);if err!=nil{{return err}};if err:=polyxmlValidateContent(data,{pattern:?});err!=nil{{return err}}
+ type Alias {name};return xml.Unmarshal(data,(*Alias)(v))
+}}
+func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
+ type Alias {name};var buffer bytes.Buffer;encoder:=xml.NewEncoder(&buffer);if err:=encoder.EncodeElement(Alias(v),start);err!=nil{{return err}};if err:=polyxmlValidateContent(buffer.Bytes(),{pattern:?});err!=nil{{return err}}
+ decoder:=xml.NewDecoder(&buffer);for {{token,err:=decoder.Token();if err==io.EOF{{return nil}};if err!=nil{{return err}};if err:=e.EncodeToken(token);err!=nil{{return err}}}}
+}}
+").unwrap();
     }
 
     fn emit_mixed_struct_xml(

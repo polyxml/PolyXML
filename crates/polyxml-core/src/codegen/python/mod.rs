@@ -645,6 +645,14 @@ impl PythonCodegen {
             }
             let _ = writeln!(out, "        name = \"{}\"", s.qname.local);
             out.push_str("        strict_root = False\n");
+            if let Some(model) = ir.content_models.get(&s.qname) {
+                writeln!(
+                    out,
+                    "        content_pattern = {:?}",
+                    format!("^(?:{})$", model.pattern())
+                )
+                .unwrap();
+            }
             if let Some(ref ns) = s.qname.namespace {
                 let _ = writeln!(out, "        namespace = \"{}\"", ns);
             }

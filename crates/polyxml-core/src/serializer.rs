@@ -302,6 +302,52 @@ impl XmlSerializer {
             }
         }
 
+        if schema.content_pattern.is_some() {
+            let mut tokens = String::new();
+            for (index, field) in schema.fields.iter().enumerate() {
+                if field.kind != FieldKind::Element {
+                    continue;
+                }
+                let Some(value) = get_field(index, &field.name) else {
+                    continue;
+                };
+                let items: Vec<&PolyValue> = match value {
+                    PolyValue::List(items) => items.iter().collect(),
+                    PolyValue::Null => Vec::new(),
+                    _ => vec![value],
+                };
+                for item in items {
+                    if let Some(mixed) = &schema.mixed_content {
+                        if index == mixed.items_index {
+                            if let Some(kind) = item.get("kind").and_then(PolyValue::as_str) {
+                                if let Some(branch) = mixed
+                                    .branches
+                                    .iter()
+                                    .find(|branch| branch.variant_name == kind)
+                                {
+                                    if branch.xml_name == b"#text" {
+                                        continue;
+                                    }
+                                    if let Some(ns) = &branch.namespace {
+                                        tokens.push_str(&format!("{{{ns}}}"));
+                                    }
+                                    tokens.push_str(std::str::from_utf8(&branch.xml_name)?);
+                                    tokens.push(';');
+                                }
+                            }
+                            continue;
+                        }
+                    }
+                    if let Some(ns) = &field.namespace {
+                        tokens.push_str(&format!("{{{ns}}}"));
+                    }
+                    tokens.push_str(std::str::from_utf8(&field.xml_name)?);
+                    tokens.push(';');
+                }
+            }
+            crate::schema::validate_content(schema, &tokens)?;
+        }
+
         let local_tag = std::str::from_utf8(tag_name)?;
         let qualified_tag = if let Some(ctx) = ns_ctx {
             ctx.qualify_element(local_tag, element_ns)

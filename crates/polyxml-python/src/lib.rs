@@ -315,6 +315,13 @@ fn extract_schema_from_class<'py>(
     let mut builder = ModelSchema::builder(class_name);
 
     if let Ok(meta_cls) = cls.getattr("Meta") {
+        if let Ok(pattern) = meta_cls.getattr("content_pattern") {
+            let pattern: String = pattern.extract()?;
+            builder = builder.content_pattern(
+                polyxml::schema::compile_content_pattern(&pattern)
+                    .map_err(|error| pyo3::exceptions::PyValueError::new_err(error.to_string()))?,
+            );
+        }
         if let Ok(strict_root) = meta_cls.getattr("strict_root") {
             builder = builder.strict_root(strict_root.extract::<bool>().unwrap_or(false));
         }

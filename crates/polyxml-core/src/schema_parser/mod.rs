@@ -493,6 +493,16 @@ impl XsdParser {
             get_attr_value(start, "mixed").is_some_and(|value| value == "true" || value == "1");
 
         let qname = QName::new(target_ns, name.clone());
+        if !is_mixed {
+            if let Some(model) = capture_content_model(reader, target_ns, prefixes)? {
+                if model.has_choice() {
+                    regex::Regex::new(&format!("^(?:{})$", model.pattern())).map_err(|error| {
+                        SchemaError::Malformed(format!("Unsupported content model: {error}"))
+                    })?;
+                    ir.content_models.insert(qname.clone(), model);
+                }
+            }
+        }
         let mut fields = Vec::new();
         let mut base_type = None;
         let mut documentation = None;
@@ -831,7 +841,10 @@ impl XsdParser {
                                 let needs_fields = fields[frame.fields_start..]
                                     .iter()
                                     .any(|f| f.cardinality.is_list())
-                                    || frame.has_sequence_branch;
+                                    || frame.has_sequence_branch
+                                    || (!choice_is_unbounded
+                                        && is_nested_choice
+                                        && ir.content_models.contains_key(&qname));
                                 if (choice_is_unbounded
                                     || is_nested_choice
                                     || (compositor_stack.is_empty() && base_type.is_some()))
@@ -2255,6 +2268,16 @@ fn unique_type_name(ir: &SchemaIR, target_ns: Option<&str>, base: &str) -> Strin
 /// includes, whose components adopt the including schema's target namespace.
 fn rekey_to_namespace(ir: &mut SchemaIR, ns: &str) {
     ir.target_namespace = Some(ns.to_string());
+    ir.content_models = std::mem::take(&mut ir.content_models)
+        .into_iter()
+        .map(|(mut name, mut model)| {
+            if name.namespace.is_none() {
+                name.namespace = Some(ns.into());
+            }
+            model.adopt_namespace(ns);
+            (name, model)
+        })
+        .collect();
     ir.ordered_types = std::mem::take(&mut ir.ordered_types)
         .into_iter()
         .map(|mut q| {
@@ -2455,6 +2478,7 @@ fn collect_chain_patterns(ir: &SchemaIR, q: &QName, visited: &mut HashSet<QName>
 
 fn merge_ir(dest: &mut SchemaIR, src: SchemaIR) {
     dest.ordered_types.extend(src.ordered_types);
+    dest.content_models.extend(src.content_models);
     for (k, v) in src.types {
         dest.types.insert(k, v);
     }
@@ -2467,4 +2491,92 @@ fn merge_ir(dest: &mut SchemaIR, src: SchemaIR) {
     for (k, v) in src.substitution_groups {
         dest.substitution_groups.entry(k).or_default().extend(v);
     }
+}
+
+fn capture_content_model(
+    reader: &Reader<&[u8]>,
+    target_ns: Option<&str>,
+    prefixes: &HashMap<String, String>,
+) -> Result<Option<crate::ir::Particle>, SchemaError> {
+    use crate::ir::Particle;
+    fn children(
+        reader: &mut Reader<&[u8]>,
+        end: &str,
+        target_ns: Option<&str>,
+        prefixes: &HashMap<String, String>,
+    ) -> Result<Option<Vec<Particle>>, SchemaError> {
+        let mut result = Vec::new();
+        loop {
+            match reader.read_event()? {
+                Event::Start(e) | Event::Empty(e)
+                    if matches!(
+                        strip_prefix(e.name().into_inner()),
+                        "group" | "any" | "extension" | "restriction" | "all"
+                    ) =>
+                {
+                    return Ok(None)
+                }
+                Event::Start(e) => {
+                    let local = strip_prefix(e.name().into_inner());
+                    if matches!(local, "sequence" | "choice") {
+                        let Some(items) = children(reader, local, target_ns, prefixes)? else {
+                            return Ok(None);
+                        };
+                        let model = if local == "choice" {
+                            Particle::Choice(items)
+                        } else {
+                            Particle::Sequence(items)
+                        };
+                        result.push(repeat(model, &e));
+                    } else if local == "element" {
+                        if let Some(field) =
+                            parse_element_field(&e, target_ns, prefixes, false, false)
+                        {
+                            result.push(repeat(
+                                Particle::Element(QName::new(field.namespace, field.xml_name)),
+                                &e,
+                            ));
+                        }
+                        reader.read_to_end(e.name())?;
+                    }
+                }
+                Event::Empty(e) if strip_prefix(e.name().into_inner()) == "element" => {
+                    if let Some(field) = parse_element_field(&e, target_ns, prefixes, false, false)
+                    {
+                        result.push(repeat(
+                            Particle::Element(QName::new(field.namespace, field.xml_name)),
+                            &e,
+                        ));
+                    }
+                }
+                Event::End(e) if strip_prefix(e.name().into_inner()) == end => {
+                    return Ok(Some(result))
+                }
+                Event::Eof => return Ok(None),
+                _ => {}
+            }
+        }
+    }
+    fn repeat(model: Particle, e: &BytesStart) -> Particle {
+        let min = get_attr_value(e, "minOccurs")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1);
+        let max = match get_attr_value(e, "maxOccurs").as_deref() {
+            Some("unbounded") => None,
+            Some(value) => value.parse().ok(),
+            None => Some(1),
+        };
+        if min == 1 && max == Some(1) {
+            model
+        } else {
+            Particle::Repeat {
+                particle: Box::new(model),
+                min,
+                max,
+            }
+        }
+    }
+    let mut preview = Reader::from_reader(*reader.get_ref());
+    preview.config_mut().allow_unmatched_ends = true;
+    Ok(children(&mut preview, "complexType", target_ns, prefixes)?.map(Particle::Sequence))
 }

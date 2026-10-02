@@ -18,6 +18,7 @@ pub(crate) struct StackFrame {
     list_values: SmallVec<[Option<Vec<PolyValue>>; 4]>,
     frame_text_buf: Option<Vec<u8>>,
     mixed_parent_kind: Option<String>,
+    content_tokens: String,
 }
 
 impl StackFrame {
@@ -34,6 +35,7 @@ impl StackFrame {
             list_values: SmallVec::new(),
             frame_text_buf,
             mixed_parent_kind: None,
+            content_tokens: String::new(),
         }
     }
 
@@ -71,6 +73,7 @@ impl StackFrame {
     }
 
     fn finish(mut self) -> Result<PolyValue> {
+        crate::schema::validate_content(&self.schema, &self.content_tokens)?;
         for (index, field) in self.schema.fields.iter().enumerate() {
             if field.kind == FieldKind::Attribute && self.values[index].is_none() {
                 if let (Some(default), ValueType::Scalar(scalar)) = (
@@ -429,6 +432,13 @@ impl XmlDeserializer {
                         unknown_depth += 1;
                         continue;
                     }
+                    if active_scalar_field.is_none()
+                        && active_mixed_scalar.is_none()
+                        && any_stack.is_empty()
+                    {
+                        let scope = namespace_stack.last().unwrap();
+                        record_content_token(stack.last_mut().unwrap(), e, scope);
+                    }
                     if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
                         unknown_depth = 1;
                         continue;
@@ -604,6 +614,10 @@ impl XmlDeserializer {
                         || active_mixed_scalar.is_some()
                     {
                         continue;
+                    }
+                    if any_stack.is_empty() {
+                        let scope = namespace_scope(namespace_stack.last().unwrap(), e);
+                        record_content_token(stack.last_mut().unwrap(), e, &scope);
                     }
                     if !any_stack.is_empty() {
                         let scope = namespace_scope(namespace_stack.last().unwrap(), e);
@@ -1073,5 +1087,20 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
                 _ => {}
             }
         }
+    }
+}
+
+fn record_content_token(
+    frame: &mut StackFrame,
+    element: &BytesStart,
+    scope: &HashMap<String, String>,
+) {
+    if frame.schema.content_pattern.is_some() {
+        let (ns, local) = resolve_element_qname(element, scope);
+        if let Some(ns) = ns {
+            frame.content_tokens.push_str(&format!("{{{ns}}}"));
+        }
+        frame.content_tokens.push_str(&local);
+        frame.content_tokens.push(';');
     }
 }

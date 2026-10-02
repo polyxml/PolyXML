@@ -711,3 +711,10 @@ separately from constructor defaults, and runtime FieldSchema carries the
 lexical default. C# defaulted scalar elements use a string XML proxy so an
 empty lexical value can be substituted before XmlSerializer's typed parser.
 Exercise both self-closing and explicit empty tags with boolean/int/string.
+
+`SchemaIR.content_models` retains source choice/sequence particle boundaries
+independently of flattened fields. Python Meta.content_pattern and Go XML
+codecs enforce supported element-only choices on reads and writes. Mixed
+content, model groups, all-groups, and derivations need separate handling;
+do not infer complete content-model validation from these patterns. Chameleon
+namespace adoption must rekey both model owners and particle element QNames.
