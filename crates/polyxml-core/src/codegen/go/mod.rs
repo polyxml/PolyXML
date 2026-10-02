@@ -1186,8 +1186,9 @@ func polyxmlValidateContent(data []byte,pattern string) error {
  type Alias {name};return xml.Unmarshal(data,(*Alias)(v))
 }}
 func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
+ if start.Name.Local=={name:?} && v.XMLName.Local!=\"\" {{start.Name=v.XMLName}}
  type Alias {name};var buffer bytes.Buffer;encoder:=xml.NewEncoder(&buffer);if err:=encoder.EncodeElement(Alias(v),start);err!=nil{{return err}};if err:=polyxmlValidateContent(buffer.Bytes(),{pattern:?});err!=nil{{return err}}
- decoder:=xml.NewDecoder(&buffer);for {{token,err:=decoder.Token();if err==io.EOF{{return nil}};if err!=nil{{return err}};if err:=e.EncodeToken(token);err!=nil{{return err}}}}
+ return e.EncodeElement(Alias(v),start)
 }}
 ").unwrap();
     }
