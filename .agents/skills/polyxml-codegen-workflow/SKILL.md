@@ -733,3 +733,8 @@ type references are errors. Resolve references only after root-frame imports
 and forward declarations are merged. File parsing wraps diagnostics with the
 source path; grammar checks include line numbers. Annotation payloads must
 remain opaque to type-reference checking.
+
+XSD 1.1 xs:alternative conditional types are explicitly unsupported: schema
+preflight returns a source/line diagnostic and CLI validation/generation/
+dry-run fail before emitting a weaker model. Do not silently accept it, and
+ignore similarly named content inside annotation payloads.

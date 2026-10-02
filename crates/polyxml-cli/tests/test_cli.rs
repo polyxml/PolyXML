@@ -3030,3 +3030,39 @@ fn invalid_schema_grammar_and_types_fail_before_generation() {
         .status
         .success());
 }
+
+#[test]
+fn unsupported_xsd_alternatives_fail_explicitly() {
+    let temp = tempdir().unwrap();
+    let schema = temp.path().join("alternative.xsd");
+    fs::write(
+        &schema,
+        include_str!("../../../research/fixtures/wave5/alternative_xsd11.xsd"),
+    )
+    .unwrap();
+    for arguments in [
+        vec!["validate"],
+        vec!["generate", "--lang", "python"],
+        vec!["generate", "--lang", "go"],
+        vec!["generate", "--lang", "csharp", "--dry-run"],
+    ] {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_polyxml"));
+        command.args(&arguments).arg(&schema);
+        if arguments[0] == "generate" {
+            command.arg("--out").arg(temp.path().join("generated"));
+        }
+        let result = command.output().unwrap();
+        assert!(!result.status.success());
+        let message = format!(
+            "{}{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(
+            message.contains("Unsupported XSD 1.1 xs:alternative"),
+            "{message}"
+        );
+        assert!(message.contains("line"), "{message}");
+    }
+    assert!(!temp.path().join("generated").exists());
+}

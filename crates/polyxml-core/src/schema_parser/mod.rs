@@ -2699,6 +2699,22 @@ fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
         let annotation = stack
             .iter()
             .any(|(name, _)| matches!(name.as_str(), "annotation" | "documentation" | "appinfo"));
+        let prefix = element
+            .name()
+            .into_inner()
+            .split_once(':')
+            .map(|(prefix, _)| prefix)
+            .unwrap_or("");
+        if !annotation
+            && local == "alternative"
+            && prefixes
+                .get(prefix)
+                .is_some_and(|ns| ns == "http://www.w3.org/2001/XMLSchema")
+        {
+            return Err(SchemaError::Malformed(format!(
+                "Unsupported XSD 1.1 xs:alternative at line {line}"
+            )));
+        }
         if !annotation
             && stack
                 .last()
