@@ -148,6 +148,7 @@ PolyXML eliminates intermediate DOM allocations entirely:
 ### 3. Modern Language Idioms (2024–2026) vs. 20-Year-Old Code Generation
 Most legacy compilers were architected during the Java 5 / C++98 era. They generate sprawling boilerplate:
 - **Immutable by default, mutable on request**: PolyXML generates immutable Java 22+ `record` types and `sealed interface` choice models that support compiler-enforced pattern matching without default branches. When a legacy framework requires JavaBeans, `--style pojo --feature builder` emits no-arg classes with getters/setters and fluent builders instead — same facets, same codecs.
+- **Spring Boot integration**: `--backend jackson3` emits Jackson 3 annotations for Boot 4; `--backend jackson` selects Jackson 2 for Boot 3. Generated records and POJOs are verified with Java 25 and Boot 4.1.1. See [setup and XML-text configuration](languages/java.md#spring-boot-4-and-jackson-3).
 - **No more raw pointers or Xerces**: PolyXML generates clean C++20 value types, `std::variant`, and C++20 concepts with zero external runtime dependencies.
 - **No more untyped Python bags**: PolyXML generates `@dataclass(slots=True, kw_only=True)` and Pydantic v2 models leveraging Python 3.12 PEP 695 type aliases (`type Sku = ...`) and PEP 604 union syntax (`TypeA | TypeB`).
 

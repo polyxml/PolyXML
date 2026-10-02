@@ -58,7 +58,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 
 Instead of relying on single-language generators with divergent capabilities, PolyXML unifies your data contracts while generating idiomatic, high-performance code tailored to each target:
 
-- **☕ Java (22+)**: Immutable records with sealed interface choices and pattern matching, direct streaming codecs without runtime reflection overhead, and optional Jakarta validation (`@Size`, `@Pattern`, `@Min`, `@Max`).
+- **☕ Java (22+)**: Immutable records with sealed interface choices and pattern matching, direct streaming codecs without runtime reflection overhead, optional Jakarta validation (`@Size`, `@Pattern`, `@Min`, `@Max`), and Jackson 2/3 backends for Spring Boot 3/4.
 - **🐍 Python (3.12+)**: Modern `@dataclass(slots=True)` and Pydantic V2 models, up to **10.0x faster read / 23.5x write** than `xsdata`, with optional Ahead-of-Time native PyO3 compiled extensions.
 - **🔷 C# / .NET (8+)**: Modern primary constructor `record` types, polymorphic choice unions preserving document order, and native `System.Text.Json` source-gen compatibility.
 - **🐹 Go (1.22+)**: Idiomatic structs with `xml:",any"` document order preservation, strict choice exclusivity validation, and simultaneous JSON annotations.
@@ -87,9 +87,9 @@ polyxml generate schemas/pain.001.001.09.xsd \
   --lang python --lang rust --lang csharp --lang java \
   --lang typescript --lang go --lang cpp --out ./generated
 
-# Target-specific backend, style, and enhancements
+# Java 25 / Spring Boot 4 with Jackson 3
 polyxml generate schemas/pain.001.001.09.xsd --lang java \
-  --backend jackson --style pojo --feature builder --feature direct-codec \
+  --backend jackson3 --style pojo --feature builder --feature validation \
   --package com.enterprise.banking --out ./generated/java
 
 # Filter massive schemas to selected root elements and reachable types
@@ -99,6 +99,11 @@ polyxml generate schemas/uci.xsd --lang rust \
 # 2. Or build an entire enterprise project declaratively
 polyxml build --config polyxml.toml
 ```
+
+For Spring Boot 4, use `--backend jackson3`; `--backend jackson` retains Jackson 2
+for Spring Boot 3 applications. See the [Java guide](docs/languages/java.md#spring-boot-4-and-jackson-3)
+for Boot-managed dependencies and the XML-text record customizer. Generated
+models are verified on Java 25 with Spring Boot 4.1.1 in a dedicated CI job.
 
 All 7 targets are declared in a single [`polyxml.toml` workspace manifest](docs/guides/compiler.md).
 
@@ -152,7 +157,7 @@ All three production showcase repositories demonstrate core PolyXML capabilities
 | Showcase Repository | Domain & Schemas | Distinct PolyXML Features Highlighted |
 | :--- | :--- | :--- |
 | **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**<br>`polyxml-defense-examples` | **USAF UCI v2.5** ([8.3 MB schema, 5,558 types](https://github.com/polyxml/polyxml-defense-examples#readme))<br>↔ **Anduril Lattice SDK** (Protobuf/JSON) | • **`backend = "aot"`**: Ahead-of-Time compiled PyO3 native extension in the [telemetry bridge example](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)<br>• **`features = ["rkyv"]`**: Opt-in zero-copy binary serialization in Rust for telemetry & tactical radio links<br>• **`xsd:extension` Inlining**: Base headers (`SecurityInformation`, `MessageHeader`) inlined into derived commands<br>• **Massive Schema Validation**: `polyxml validate` on the [Open-Arsenal schema](https://github.com/polyxml/polyxml-defense-examples#readme)<br>• **Standard Library Java 22+**: Zero-dependency immutable records with `java.time.Instant`<br>• **Edge C2 Streaming**: Browser/Node WebAssembly streaming drone swarm telemetry via `parseStream` |
-| **[💳 Global Finance & Banking](https://github.com/polyxml/polyxml-finance-examples)**<br>`polyxml-finance-examples` | **ISO 20022 `pacs.008`** (Interbank XML)<br>↔ **FinTech Intents** (FedNow/Stripe JSON) | • **`backend = "jackson"`**: Enterprise Jackson XML/JSON annotations for Spring Boot / Jakarta EE banking<br>• **`backend = "source-gen"`**: C# 12 / .NET 8 `System.Text.Json` source generation for Native AOT<br>• **Strict Facets & Attributes**: XML attributes on simple content (`Ccy="USD"`) & `xs:pattern` regexes (UETR, IBAN)<br>• **Batch Payment Streaming**: WebAssembly `parseStream` consuming high-volume `<Document>` payment batches |
+| **[💳 Global Finance & Banking](https://github.com/polyxml/polyxml-finance-examples)**<br>`polyxml-finance-examples` | **ISO 20022 `pacs.008`** (Interbank XML)<br>↔ **FinTech Intents** (FedNow/Stripe JSON) | • **`backend = "jackson"`**: Jackson 2 XML/JSON annotations for Spring Boot 3 / Jakarta EE banking<br>• **`backend = "source-gen"`**: C# 12 / .NET 8 `System.Text.Json` source generation for Native AOT<br>• **Strict Facets & Attributes**: XML attributes on simple content (`Ccy="USD"`) & `xs:pattern` regexes (UETR, IBAN)<br>• **Batch Payment Streaming**: WebAssembly `parseStream` consuming high-volume `<Document>` payment batches |
 | **[🚍 Smart Cities & Transit](https://github.com/polyxml/polyxml-transit-examples)**<br>`polyxml-transit-examples` | **CEN SIRI v2.0 & NeTEx** (European Norm)<br>↔ **Google GTFS-RT** (Protobuf/JSON) | • **`backend = "sonic"`**: ByteDance's JIT/AVX-accelerated JSON engine for high-throughput Go microservices<br>• **Deeply Nested Collections**: Hierarchical arrays (`VehicleActivity[]`, `MonitoredCall[]`)<br>• **C++20 Concepts & Value Equality**: `XmlModel` concept verification and `operator==` structural comparisons<br>• **Client-Side Map Streaming**: WebAssembly streaming transit vehicle deliveries into passenger maps |
 
 ---

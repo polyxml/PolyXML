@@ -1,0 +1,13 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:orders" targetNamespace="urn:orders" elementFormDefault="qualified">
+  <xs:simpleType name="Status"><xs:restriction base="xs:string"><xs:enumeration value="NEW"/><xs:enumeration value="PAID"/></xs:restriction></xs:simpleType>
+  <xs:complexType name="Amount"><xs:simpleContent><xs:extension base="xs:decimal"><xs:attribute name="currency" type="xs:string" use="required"/></xs:extension></xs:simpleContent></xs:complexType>
+  <xs:complexType name="Order"><xs:sequence>
+    <xs:element name="customer"><xs:simpleType><xs:restriction base="xs:string"><xs:minLength value="1"/></xs:restriction></xs:simpleType></xs:element>
+    <xs:element name="status" type="t:Status"/>
+    <xs:element name="created" type="xs:dateTime"/>
+    <xs:element name="note" type="xs:string" minOccurs="0"/>
+    <xs:element name="amount" type="t:Amount"/>
+    <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
+  </xs:sequence><xs:attribute name="id" type="xs:string" use="required"/></xs:complexType>
+  <xs:element name="Order" type="t:Order"/>
+</xs:schema>

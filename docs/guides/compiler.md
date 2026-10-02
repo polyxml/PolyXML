@@ -98,7 +98,7 @@ polyxml generate \
 | **Root Elements** | `--root-element ELEMENT` | Repeatable global element selection; use `{namespace-URI}local-name` if the local name is ambiguous. | All roots and types |
 | **Model Style** | `--style` | Target-specific type representation; see the table below. | Existing target default |
 | **Enhancements** | `--feature NAME` | Repeatable; also accepts comma-separated names. | None added |
-| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic`/`aot` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
+| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic`/`aot` for Python; `standard`/`jackson`/`jackson3` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
 | **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
 | **Split Units** | `--split-units` | Partition large schemas into topologically-sorted compilation units (`chunk_XX.rs`) for Rust to prevent deep macro recursion and memory exhaustion. | `false` |
@@ -131,11 +131,15 @@ including with `--dry-run`.
 | Python | `dataclass`, `pydantic` | `dataclass` (dataclass backend only) | `slots`, `kw-only` (dataclass backend only) |
 | Rust | `standard` | — | `zero-copy`, `phf`; `rkyv` is accepted but [currently incompatible with rkyv 0.8](../languages/rust.md) |
 | TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | — |
-| Java | `standard`, `jackson` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec`, `validation` |
+| Java | `standard`, `jackson`, `jackson3` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec`, `validation` |
 
 | C# | `standard`, `source-gen` | `record-class` (default), `record-struct`, `class` (mutable) | — |
 | C++ | `standard`, `glaze` | — | — |
 | Go | `standard`, `easyjson`, `sonic` ([Sonic tag limitation](../languages/go.md)) | — | — |
+
+Java `jackson3` targets Spring Boot 4; `jackson` and its existing `spring` /
+`spring-boot` aliases select Jackson 2. See [Spring Boot setup](../languages/java.md#spring-boot-4-and-jackson-3)
+for dependencies, Java 25 verification, and record XML text configuration.
 
 Java's `--feature validation` (or `features = ["validation"]` in a manifest)
 adds Jakarta Bean Validation annotations to generated records and mutable
@@ -164,7 +168,7 @@ The same options work in both `[[generate]]` and `[codegen.<target>]`:
 ```toml
 [codegen.java]
 output = "generated/java"
-backend = "jackson"
+backend = "jackson3" # Jackson 3 / Spring Boot 4; use "jackson" for Jackson 2
 style = "pojo"
 features = ["builder", "direct-codec"]
 ```
@@ -214,7 +218,7 @@ codecs = true
 target = "java"
 output = "src/generated/java"
 package = "com.enterprise.banking.iso20022"
-backend = "jackson"
+backend = "jackson3" # Jackson 3 / Spring Boot 4; use "jackson" for Jackson 2
 # style = "pojo"        # record (default) | pojo (JavaBeans, alias class)
 # features = ["builder", "direct-codec"]
 

@@ -91,6 +91,7 @@ pub fn candidates(kind: &str, words: &[String]) -> Vec<String> {
             "typebox",
             "standard",
             "jackson",
+            "jackson3",
             "source-gen",
             "glaze",
             "easyjson",

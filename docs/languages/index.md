@@ -30,7 +30,7 @@ All seven targets can generate models from XSD with `polyxml generate`. The defa
 | [Go](go.md) | Go structs with XML and JSON tags | EasyJSON annotations; Sonic tags (see the [current limitation](go.md)) |
 | [TypeScript / Node.js](node.md) | TypeScript interfaces | Zod, Valibot, or TypeBox schemas |
 | [WebAssembly](wasm.md) | Browser, Edge & Node runtime (`@polyxml/wasm`) | Streaming `parseStream`, schema validation, zero-dependency Wasm |
-| [Java](java.md) | Java records | POJOs, builders, direct XML codecs, Jackson backend |
+| [Java](java.md) | Java records | POJOs, builders, direct XML codecs, Jackson 2/3, Spring Boot 4 |
 | [C#](csharp.md) | Record classes | Mutable classes, record structs, source generation |
 
 The [compiler guide](../guides/compiler.md) lists the exact backend, style, and feature values accepted by the CLI. For parsing and serialization from application code, start with your language guide. For command-line generation, validation, builds, and transcoding, start with the [compiler guide](../guides/compiler.md).

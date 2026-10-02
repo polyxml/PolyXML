@@ -3,6 +3,25 @@ use crate::codegen::flatten_fields;
 use crate::ir::{FieldDef, FieldKind};
 
 impl JavaCodegen {
+    pub(super) fn emit_jackson_property_order(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ir: &SchemaIR,
+        indent: &str,
+    ) {
+        if self.options.backend == JavaBackend::Jackson3 {
+            // Jackson 3 sorts properties alphabetically by default. XML
+            // sequences must instead retain the schema's declaration order.
+            let names = flatten_fields(s, ir)
+                .into_iter()
+                .map(|field| format!("{:?}", field.xml_name))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let _ = writeln!(out, "{indent}@JsonPropertyOrder({{{names}}})");
+        }
+    }
+
     pub(super) fn emit_value_class(
         &self,
         out: &mut String,
@@ -141,6 +160,7 @@ impl JavaCodegen {
         if let Some(doc) = &s.documentation {
             self.emit_docstring(out, doc, indent);
         }
+        self.emit_jackson_property_order(out, s, ir, indent);
         if self.options.backend.is_jackson() {
             let _ = writeln!(out, "{indent}@JsonIgnoreProperties(ignoreUnknown = true)\n{indent}@JsonInclude(JsonInclude.Include.NON_NULL)\n{indent}@JacksonXmlRootElement(localName = {:?}, namespace = {:?})", s.qname.local, s.qname.namespace.as_deref().unwrap_or(""));
             // Bind the explicitly annotated fields only; avoids duplicate XML properties after bean name normalization.

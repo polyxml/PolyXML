@@ -65,7 +65,7 @@ cargo install polyxml-cli
 | **Python** | `python` | Modern Python 3.12+ `@dataclass` or Pydantic v2 models, field constraints, zero-copy streaming codecs |
 | **Rust** | `rust` | Zero-copy `Cow<'a, str>` & owned structs, automatic recursive boxing (`Box<T>`), streaming serializers/deserializers, rkyv wire format (`--feature rkyv`) |
 | **C++** | `cpp` | Modern C++20/C++23 value types, C++20 Modules (`--mode modules`), Glaze reflection (`--backend glaze`), CMake/Meson export |
-| **Java** | `java` | Java 22+ records or mutable JavaBeans (`--style pojo`), fluent builders (`--feature builder`), direct StAX codecs (`--feature direct-codec`), Jackson XML/JSON annotations (`--backend jackson`) |
+| **Java** | `java` | Java 22+ records or mutable JavaBeans (`--style pojo`), fluent builders (`--feature builder`), direct StAX codecs (`--feature direct-codec`), Jackson 2/3 XML/JSON annotations (`--backend jackson` / `--backend jackson3`) |
 | **TypeScript** | `typescript` | TypeScript 5+ interfaces, discriminated unions, runtime validation schemas via Zod, Valibot, or TypeBox (`--backend`) |
 | **Go** | `go` | Idiomatic Go 1.22+ structs with `encoding/xml` tags, reflectionless EasyJSON (`--backend easyjson`) & ByteDance Sonic JIT (`--backend sonic`) |
 | **C#** | `csharp` | Modern C# 12 / .NET 8+ mutable classes (`--style class`), records and record structs (`--style record-struct`), compile-time Native AOT source generation (`--backend source-gen`) |
@@ -85,8 +85,8 @@ polyxml generate --lang python --out ./generated/python schemas/order.xsd
 # Generate Pydantic v2 models with runtime validation
 polyxml generate --lang python --backend pydantic --out ./generated/python schemas/order.xsd
 
-# Generate Java 22 records with Enterprise Jackson annotations
-polyxml generate --lang java --backend jackson --package com.enterprise.banking --out ./generated/java schemas/order.xsd
+# Generate Java models for Java 25 / Spring Boot 4 with Jackson 3
+polyxml generate --lang java --backend jackson3 --package com.enterprise.banking --out ./generated/java schemas/order.xsd
 
 # Generate C++20 Modules with Glaze reflectionless serde
 polyxml generate --lang cpp --mode modules --backend glaze --package enterprise::crm --out ./generated/cpp schemas/order.xsd
@@ -166,7 +166,7 @@ codecs = true
 target = "java"
 output = "src/generated/java"
 package = "com.enterprise.banking.iso20022"
-backend = "jackson"
+backend = "jackson3" # Spring Boot 4; use "jackson" for Jackson 2
 
 [[generate]]
 target = "typescript"
@@ -209,3 +209,8 @@ Run `polyxml completions bash`, `polyxml completions zsh`, or
 `polyxml completions fish` to generate a shell script. Backend, style, and feature
 suggestions are filtered by the selected language(s). See the
 [compiler guide](../../docs/guides/compiler.md#shell-completion) for installation.
+
+For Spring Boot dependency setup and the XML-text record customizer, see the
+[Java guide](../../docs/languages/java.md#spring-boot-4-and-jackson-3). Generated
+records and POJOs are tested on Java 25 with Spring Boot 4.1.1; run
+`./scripts/verify_spring_boot.sh` from the repository root to reproduce the checks.

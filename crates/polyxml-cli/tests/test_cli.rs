@@ -2332,7 +2332,7 @@ fn unified_supported_backends_and_styles_validate() {
         ),
         (
             "java",
-            vec!["standard", "jackson"],
+            vec!["standard", "jackson", "jackson3"],
             vec!["record", "pojo", "class"],
         ),
         (
@@ -2448,7 +2448,7 @@ fn completion_candidates_follow_target_validation() {
         (
             "backend",
             vec!["generate", "--lang=java"],
-            vec!["standard", "jackson"],
+            vec!["standard", "jackson", "jackson3"],
         ),
         (
             "backend",
@@ -2513,7 +2513,7 @@ fn bash_completion_filters_values_in_the_shell() {
     for (words, expected) in [
         (
             vec!["generate", "--lang", "java", "--backend", ""],
-            vec!["standard", "jackson"],
+            vec!["standard", "jackson", "jackson3"],
         ),
         (
             vec!["generate", "--lang", "=", "ts", "--backend", "=", "v"],
@@ -2612,7 +2612,7 @@ _polyxml
         String::from_utf8_lossy(&result.stdout)
             .lines()
             .collect::<Vec<_>>(),
-        ["standard", "jackson"]
+        ["standard", "jackson", "jackson3"]
     );
 }
 
@@ -2655,7 +2655,7 @@ complete -C 'polyxml generate --lang java --backend '
         String::from_utf8_lossy(&result.stdout)
             .lines()
             .collect::<Vec<_>>(),
-        ["jackson", "standard"]
+        ["jackson", "jackson3", "standard"]
     );
 }
 
@@ -3099,5 +3099,70 @@ fn validate_and_generate_reject_upa_violations() {
             "{diagnostic}"
         );
         assert!(!diagnostic.contains("All schemas valid"));
+    }
+}
+
+#[test]
+fn jackson3_cli_and_manifest_emit_equivalent_models() {
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("schema.xsd"),
+        include_str!("../../../tests/java-spring/schema.xsd"),
+    )
+    .unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .current_dir(dir.path())
+        .args([
+            "generate",
+            "schema.xsd",
+            "--lang",
+            "java",
+            "--backend",
+            "jackson3",
+            "--style",
+            "pojo",
+            "--feature",
+            "builder,validation",
+            "--package",
+            "example.models",
+            "--out",
+            "cli",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    fs::write(
+        dir.path().join("polyxml.toml"),
+        r#"[workspace]
+schemas = ["schema.xsd"]
+[[generate]]
+target = "java"
+backend = "jackson3"
+style = "pojo"
+features = ["builder", "validation"]
+package = "example.models"
+output = "manifest"
+"#,
+    )
+    .unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .current_dir(dir.path())
+        .args(["build", "--config", "polyxml.toml"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    for name in ["Order.java", "Amount.java", "Status.java"] {
+        let cli = fs::read_to_string(dir.path().join("cli").join(name)).unwrap();
+        let manifest = fs::read_to_string(dir.path().join("manifest").join(name)).unwrap();
+        assert_eq!(cli, manifest);
+        assert!(cli.contains("tools.jackson.dataformat.xml.annotation"));
     }
 }

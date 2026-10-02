@@ -1,6 +1,6 @@
 ---
 title: Java
-description: Ultra-fast Java XML processing using Java 22 Foreign Function & Memory API (Project Panama) with zero-JNI overhead.
+description: Generate Java records and POJOs for Spring Boot 4 and Jackson 3, use direct StAX codecs, or integrate the Java 22+ native binding.
 ---
 
 # Java
@@ -16,7 +16,7 @@ Records remain the default. Select mutable JavaBeans for setter-based frameworks
 
 ```bash
 polyxml generate schema.xsd --lang java --style pojo --feature builder --out generated
-polyxml generate schema.xsd --lang java --style pojo --backend jackson --feature builder --out generated
+polyxml generate schema.xsd --lang java --style pojo --backend jackson3 --feature builder --out generated
 polyxml generate schema.xsd --lang java --style record --feature builder --out generated
 ```
 
@@ -47,9 +47,93 @@ dense messages narrow the gap. Choose the representation for its ergonomics and
 benchmark your own schema before optimizing for this.
 This is not full XSD validation. The Jackson backend annotates fields explicitly and
 disables automatic bean-property discovery to avoid duplicate properties after XML
-names are converted to Java identifiers. It requires Jackson 2.x XML/annotations;
-standard POJOs and direct codecs require only the JDK. No Jakarta Validation dependency
-is introduced.
+names are converted to Java identifiers. The `jackson` backend requires Jackson 2.x XML/annotations; `jackson3` targets Jackson 3.
+Standard POJOs and direct codecs require only the JDK. Jakarta Validation is
+optional and enabled with `--feature validation`.
+
+## Spring Boot 4 and Jackson 3
+
+Use `--backend jackson3` for Spring Boot 4. The `jackson`, `spring`, and
+`spring-boot` backends retain Jackson 2 behavior for existing applications;
+`jackson-3`, `jackson_3`, and `spring-boot-4` select Jackson 3.
+
+```bash
+polyxml generate schema.xsd --lang java --backend jackson3 --style pojo \
+  --feature builder,validation --package com.example.models --out generated
+```
+
+The same options work in a manifest:
+
+```toml
+[[generate]]
+target = "java"
+backend = "jackson3"
+style = "pojo"
+features = ["builder", "validation"]
+package = "com.example.models"
+output = "generated/java"
+```
+
+For Maven, inherit the Spring Boot parent (the integration fixture pins 4.1.1)
+so Boot manages compatible dependency versions. Add:
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-webmvc</artifactId>
+</dependency>
+<dependency>
+  <groupId>tools.jackson.dataformat</groupId>
+  <artifactId>jackson-dataformat-xml</artifactId>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+```
+
+Jackson 3 XML annotations live in `tools.jackson.dataformat.xml.annotation`;
+core annotations remain in `com.fasterxml.jackson.annotation`. The new backend
+emits schema property order explicitly, overriding Jackson 3's default alphabetical
+sort so ordinary XSD sequences retain their element order. Generated models
+need no native PolyXML library. Spring's HTTP converters handle them as XML or
+JSON according to content negotiation. Use `@Valid @RequestBody` on controller
+parameters to activate generated Jakarta constraints. This validates supported
+model constraints, not the complete XSD content model.
+
+For **records with simple content and attributes**, configure the XML text
+property name to match the generated `value` component:
+
+```java
+@Bean
+XmlMapperBuilderCustomizer polyxmlXmlText() {
+    return builder -> builder.nameForTextElement("value");
+}
+```
+
+Import `org.springframework.context.annotation.Bean` and
+`org.springframework.boot.jackson.autoconfigure.XmlMapperBuilderCustomizer`.
+For standalone XML mapping, use
+`tools.jackson.dataformat.xml.XmlMapper.builder().nameForTextElement("value").build()`.
+POJOs also work with this setting. Without it, Jackson's default empty text
+property name cannot bind the record constructor's `value` parameter.
+
+The reproducible integration test uses Java 25, Spring Boot 4.1.1, and its
+managed Jackson 3.1.5 dependencies. It compiles generated records and POJOs with
+builders, validation, and direct codecs; tests JSON/XML mapper and real HTTP
+round trips, namespaces, attributes, text, enum and temporal values, repeated
+items, absent optional values, invalid requests, and XSD validation of returned XML:
+
+```bash
+# Set JAVA_HOME and PATH to a Java 25 JDK first.
+./scripts/verify_spring_boot.sh
+```
+
+See `tests/java-spring/` for the fixture. The test requires Maven and dependency
+downloads on its first run, so it is separate from the fast Rust test suites
+and runs in a dedicated Java 25 CI job.
+The existing direct-codec limits below still apply; this does not establish
+GraalVM native-image compatibility or general Jackson support for every XSD.
 
 ## Direct streaming XML codecs
 
@@ -104,7 +188,7 @@ output = "generated/java"
 package = "com.enterprise.models"
 style = "pojo"
 features = ["builder", "direct-codec"]
-backend = "jackson"
+backend = "standard" # Optional: jackson3 for Boot 4 or jackson for Jackson 2
 ```
 
 The same options work under `[codegen.java]`. See the
@@ -303,9 +387,12 @@ In high-throughput enterprise architectures (e.g. processing millions of ISO 200
 
 ---
 
-## 6. Enterprise Jackson Backend (`--backend jackson`)
+## 6. Jackson 2 Backend (`--backend jackson`)
 
 PolyXML's code generator supports an opt-in **Jackson backend** that annotates generated Java 22+ `record`s with [Jackson](https://github.com/FasterXML/jackson) annotations for seamless integration with **Spring Boot 3**, **Quarkus**, **Micronaut**, and any framework using `ObjectMapper` or `XmlMapper`.
+
+This section covers Jackson 2. For Spring Boot 4, use the
+[Jackson 3 setup above](#spring-boot-4-and-jackson-3).
 
 ### Quick Start
 

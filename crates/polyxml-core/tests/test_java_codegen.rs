@@ -1101,3 +1101,50 @@ public class Main {
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn jackson3_preserves_core_annotations_and_maps_record_text() {
+    use polyxml::schema_parser::XsdParser;
+    let ir = XsdParser::new()
+        .parse_str(include_str!("../../../tests/java-spring/schema.xsd"))
+        .unwrap();
+    for records in [false, true] {
+        let sources = JavaCodegen::new(JavaOptions {
+            backend: JavaBackend::Jackson3,
+            use_records: records,
+            emit_builder: true,
+            bean_validation: true,
+            ..Default::default()
+        })
+        .generate_files(&ir);
+        let amount = sources
+            .iter()
+            .find(|(name, _)| name == "Amount.java")
+            .unwrap()
+            .1
+            .as_str();
+        assert!(amount.contains("import com.fasterxml.jackson.annotation.*;"));
+        assert!(amount.contains("import tools.jackson.dataformat.xml.annotation.*;"));
+        assert!(!amount.contains("import com.fasterxml.jackson.dataformat"));
+        assert!(amount.contains("@JacksonXmlText"));
+        assert!(amount.contains("@NotNull"));
+        assert!(amount.contains("AmountBuilder"));
+        assert!(amount.contains("@JsonPropertyOrder({\"value\", \"currency\"})"));
+    }
+    for alias in [
+        "jackson3",
+        "jackson-3",
+        "jackson_3",
+        "spring-boot-4",
+        " JACKSON3 ",
+    ] {
+        assert_eq!(
+            JavaBackend::from_str_loose(alias),
+            Some(JavaBackend::Jackson3)
+        );
+    }
+    assert_eq!(
+        JavaBackend::from_str_loose("spring-boot"),
+        Some(JavaBackend::Jackson)
+    );
+}

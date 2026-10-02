@@ -78,7 +78,7 @@ pub struct GenerateArgs {
     #[arg(short = 'l', long = "lang", value_name = "LANG")]
     pub lang: Vec<String>,
 
-    /// Target language backend (e.g. 'dataclass' or 'pydantic' for python)
+    /// Target backend (e.g. dataclass/pydantic for Python; standard/jackson/jackson3 for Java)
     #[arg(short = 'b', long = "backend", value_name = "BACKEND")]
     pub backend: Option<String>,
 

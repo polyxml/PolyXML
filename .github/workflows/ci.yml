@@ -289,3 +289,23 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/target/release
         run: mvn test -DargLine="--enable-native-access=ALL-UNNAMED -Djava.library.path=${{ github.workspace }}/target/release"
+
+  java-spring-check:
+    name: Java 25 / Spring Boot 4 generated models
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Java 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: "temurin"
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: tests/java-spring/pom.xml
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Test generated JSON/XML models through Spring HTTP converters
+        run: ./scripts/verify_spring_boot.sh

@@ -24,6 +24,8 @@ pub enum JavaBackend {
     Standard,
     /// Jackson-annotated records for Spring Boot / enterprise JSON+XML binding.
     Jackson,
+    /// Jackson 3 annotations for Spring Boot 4 JSON+XML binding.
+    Jackson3,
 }
 
 impl JavaBackend {
@@ -31,12 +33,13 @@ impl JavaBackend {
         match s.to_lowercase().trim() {
             "standard" | "std" | "default" => Some(Self::Standard),
             "jackson" | "spring" | "spring-boot" | "enterprise" => Some(Self::Jackson),
+            "jackson3" | "jackson-3" | "jackson_3" | "spring-boot-4" => Some(Self::Jackson3),
             _ => None,
         }
     }
 
     pub fn is_jackson(self) -> bool {
-        matches!(self, Self::Jackson)
+        matches!(self, Self::Jackson | Self::Jackson3)
     }
 }
 
@@ -365,7 +368,11 @@ impl JavaCodegen {
         if self.options.backend.is_jackson() {
             out.push('\n');
             out.push_str("import com.fasterxml.jackson.annotation.*;\n");
-            out.push_str("import com.fasterxml.jackson.dataformat.xml.annotation.*;\n");
+            if self.options.backend == JavaBackend::Jackson3 {
+                out.push_str("import tools.jackson.dataformat.xml.annotation.*;\n");
+            } else {
+                out.push_str("import com.fasterxml.jackson.dataformat.xml.annotation.*;\n");
+            }
         }
 
         out.push('\n');
@@ -445,6 +452,7 @@ impl JavaCodegen {
         let jackson = self.options.backend.is_jackson();
 
         // Jackson class-level annotations
+        self.emit_jackson_property_order(out, s, ir, indent);
         if jackson {
             let _ = writeln!(out, "{}@JsonIgnoreProperties(ignoreUnknown = true)", indent);
             let _ = writeln!(out, "{}@JsonInclude(JsonInclude.Include.NON_EMPTY)", indent);
@@ -488,10 +496,14 @@ impl JavaCodegen {
                     .as_deref()
                     .map(|ns| format!(", namespace = {:?}", ns))
                     .unwrap_or_default();
-                annotations.push(format!(
-                    "@JacksonXmlProperty(localName = {:?}, isAttribute = {}{})",
-                    field.xml_name, is_attr, ns_part
-                ));
+                if field.kind == crate::ir::FieldKind::Text {
+                    annotations.push("@JacksonXmlText".to_string());
+                } else {
+                    annotations.push(format!(
+                        "@JacksonXmlProperty(localName = {:?}, isAttribute = {}{})",
+                        field.xml_name, is_attr, ns_part
+                    ));
+                }
 
                 // List fields: @JacksonXmlElementWrapper(useWrapping = false)
                 if is_list {

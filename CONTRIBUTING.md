@@ -82,3 +82,17 @@ npm test
 2. Implement your changes, including corresponding unit/integration tests.
 3. Commit with clear, conventional messages (e.g. `feat(core): add support for mixed content nodes`).
 4. Push to your fork and open a Pull Request against `main`. Ensure all CI checks pass.
+
+### Java 25 and Spring Boot integration
+
+Set `JAVA_HOME` and `PATH` to a Java 25 JDK, install Maven, and run:
+
+```bash
+./scripts/verify_spring_boot.sh
+```
+
+This generates records and POJOs, runs Spring Boot 4.1.1 JSON/XML HTTP tests,
+checks validation, and validates returned XML against the fixture XSD. Maven
+downloads uncached dependencies. The dedicated Java 25 CI job runs the same
+command. See [the fixture](tests/java-spring/README.md) and
+[Java setup](docs/languages/java.md#spring-boot-4-and-jackson-3).

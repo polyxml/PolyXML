@@ -47,7 +47,7 @@ impl<'a> TargetEmitOptions<'a> {
         let supported_backends = match target {
             "python" => "dataclass, pydantic, aot",
             "typescript" => "interfaces, zod, valibot, typebox",
-            "java" => "standard, jackson",
+            "java" => "standard, jackson, jackson3",
             "csharp" => "standard, source-gen",
             "cpp" => "standard, glaze",
             "go" => "standard, easyjson, sonic",

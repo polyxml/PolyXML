@@ -773,3 +773,26 @@ string wrappers, Java BigInteger, and Python int. Update Rust lexical dispatch
 and lifetime inference together; changing only its primitive mapping can emit
 `Cow::decode_xml`. Go defined aliases need their own text methods. C# strings
 need XML proxies to enforce integer lexical grammar on both read and write.
+
+### Spring Boot 4 / Jackson 3 verification
+
+Java `jackson3` (aliases `jackson-3`, `jackson_3`, `spring-boot-4`) shares
+model generation with Jackson 2 but imports XML annotations from
+`tools.jackson.dataformat.xml.annotation`. Core annotations stay in
+`com.fasterxml.jackson.annotation`. Preserve `jackson`/`spring`/`spring-boot`
+legacy selection. CLI and manifest equivalence is covered by a CLI regression.
+
+Run `scripts/verify_spring_boot.sh` with Maven and Java 25 on JAVA_HOME/PATH.
+The temporary Maven fixture pins Boot 4.1.1 with managed Jackson 3.1.5 and
+executes actual JSON/XML HTTP converters, Jakarta validation, mapper round
+trips, and direct codecs for generated records and POJOs. It is deliberately
+separate from the fast suite because uncached Maven dependencies need network.
+Records with simpleContent and attributes need `@JacksonXmlText` and an
+`XmlMapperBuilderCustomizer` setting `nameForTextElement("value")`; Jackson's
+default empty text name cannot bind a record's value creator property.
+Do not replace that XML text annotation with a child element annotation.
+
+Jackson 3 sorts properties alphabetically by default. Emit `@JsonPropertyOrder`
+from flattened schema fields for its struct models, including inherited fields,
+or valid reads can produce XSD-invalid XML on writes. The Spring fixture checks
+returned XML against the source XSD independently using the JDK validator.

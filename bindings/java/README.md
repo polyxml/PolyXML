@@ -19,6 +19,15 @@ Bypasses legacy JNI overhead and avoids intermediate DOM allocation, providing d
 
 ---
 
+## Generated models for Spring Boot
+
+Use the CLI's `--lang java --backend jackson3` for Spring Boot 4 or
+`--backend jackson` for Jackson 2 / Spring Boot 3. Generated models and
+direct StAX codecs use Java APIs and do not require this native binding.
+Java 25 / Spring Boot 4.1.1 integration is verified in a dedicated CI job;
+the [Java guide](../../docs/languages/java.md#spring-boot-4-and-jackson-3)
+contains dependencies and XML-text record configuration.
+
 ## Installation
 
 ### Maven
@@ -43,7 +52,7 @@ implementation 'io.github.polyxml:polyxml:0.33.12'
 
 - **⚡ Zero JNI Overhead**: Direct C-ABI invocations via Java 22 Foreign Function & Memory API (`java.lang.foreign`).
 - **☕ Modern Java 22+ Records**: Native integration with immutable records, sealed interfaces, and pattern matching.
-- **🔄 StAX & Jackson Backends**: Drop-in codecs for standard enterprise Java frameworks (Spring Boot 3, Quarkus, Micronaut).
+- **Generated model integration**: The separate CLI emits direct StAX codecs and Jackson 2/3 annotations for Spring applications. See [the Java guide](../../docs/languages/java.md#spring-boot-4-and-jackson-3).
 - **🛡️ Memory Safe**: Automatic arena memory management with `Arena.ofConfined()`.
 
 ---
