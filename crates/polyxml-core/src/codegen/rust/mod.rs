@@ -1969,6 +1969,7 @@ impl RustCodegen {
             return;
         }
         let field = &s.fields[0];
+        let mut methods = HashSet::new();
         for root in ir.elements.values() {
             if root.type_ref != TypeRef::Named(s.qname.clone())
                 || root.nillable
@@ -1983,11 +1984,17 @@ impl RustCodegen {
             } else {
                 format!("impl {name}")
             };
-            let method = format!("write_{}_items", AsSnakeCase(&root.qname.local));
+            let base_method = format!("write_{}_items", AsSnakeCase(&root.qname.local));
+            let mut method = base_method.clone();
+            let mut suffix = 2;
+            while !methods.insert(method.clone()) {
+                method = format!("{base_method}_{suffix}");
+                suffix += 1;
+            }
             writeln!(out, "\n{impl_type} {{").unwrap();
             out.push_str("    /// Produce a document incrementally, retaining only the current item.\n    /// Errors may leave partial XML in the sink; publish files only after success.\n");
             writeln!(out, "    pub fn {method}<W: std::io::Write, I: IntoIterator<Item = {item_type}>>(sink: &mut W, items: I) -> Result<()> {{").unwrap();
-            out.push_str("        let mut writer = Writer::new(sink);\n");
+            out.push_str("        let writer = &mut Writer::new(sink);\n");
             writeln!(
                 out,
                 "        let {}start = BytesStart::new({:?});",
@@ -2003,21 +2010,13 @@ impl RustCodegen {
                 writeln!(out, "        start.push_attribute((\"xmlns\", {ns:?}));").unwrap();
             }
             out.push_str("        writer.write_event(Event::Start(start))?;\n        let mut count = 0usize;\n");
-            let mut body = String::new();
-            self.emit_element_serialize(&mut body, field, "items", ir);
-            body = body.replace("for item in &self.items {", "for item in items {");
             let mut checks = String::new();
             if let crate::ir::OccursLimit::Count(max) = field.cardinality.max_occurs {
                 writeln!(checks, "            if count == {max} {{ return Err(PolyXmlError::SchemaError(\"maxOccurs exceeded\".into())); }}").unwrap();
             }
             checks.push_str("            count = count.checked_add(1).ok_or_else(|| PolyXmlError::SchemaError(\"item count overflow\".into()))?;\n");
             self.emit_pattern_check(&mut checks, field, "&item.to_string()", ir);
-            body = body.replacen(
-                "for item in items {\n",
-                &format!("for item in items {{\n{checks}"),
-                1,
-            );
-            out.push_str(&body.replace("encode_xml(writer,", "encode_xml(&mut writer,"));
+            self.emit_element_serialize_from(out, field, "items", ir, Some("items"), &checks);
             if field.cardinality.min_occurs > 0 {
                 writeln!(out, "        if count < {} {{ return Err(PolyXmlError::SchemaError(\"minOccurs not satisfied\".into())); }}", field.cardinality.min_occurs).unwrap();
             }
@@ -2482,6 +2481,18 @@ impl RustCodegen {
         rust_name: &str,
         ir: &SchemaIR,
     ) {
+        self.emit_element_serialize_from(out, field, rust_name, ir, None, "");
+    }
+
+    fn emit_element_serialize_from(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        rust_name: &str,
+        ir: &SchemaIR,
+        source: Option<&str>,
+        before_item: &str,
+    ) {
         let is_list = field.cardinality.is_list() || field.type_ref.is_list();
         let is_optional = field.cardinality.is_optional() || field.nillable;
         let is_string = self.field_is_string(&field.type_ref, ir);
@@ -2490,7 +2501,11 @@ impl RustCodegen {
         let is_enum = self.field_is_enum(&field.type_ref, ir).is_some();
 
         if is_list {
-            let _ = writeln!(out, "        for item in &self.{} {{", rust_name);
+            let source = source
+                .map(str::to_owned)
+                .unwrap_or_else(|| format!("&self.{rust_name}"));
+            let _ = writeln!(out, "        for item in {source} {{");
+            out.push_str(before_item);
             if is_string {
                 let _ = writeln!(
                     out,

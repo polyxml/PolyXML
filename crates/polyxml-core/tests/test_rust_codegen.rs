@@ -1325,12 +1325,17 @@ fn incremental_root_writer_is_schema_scoped() {
         assert!(code.contains("for item in items"));
         assert!(code.contains("start.push_attribute((\"xmlns\", \"urn:items\"))"));
         assert!(code.contains("if count < 1"));
-        assert!(code.contains("item.encode_xml(&mut writer, Some(\"Item\"))"));
+        assert!(code.contains("item.encode_xml(writer, Some(\"Item\"))"));
         let bounded = xsd.replace("maxOccurs=\"unbounded\"", "maxOccurs=\"2\"");
         let ir = XsdParser::new().parse_str(&bounded).unwrap();
         let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
         assert!(code.contains("if count == 2"));
         for unsupported in [
+            xsd.replace(
+                "elementFormDefault=\"qualified\"",
+                "elementFormDefault=\"qualified\" attributeFormDefault=\"qualified\"",
+            ),
+            xsd.replace("<xs:sequence>", "<xs:sequence minOccurs=\"0\">"),
             xsd.replace(
                 "name=\"Item\" type=\"t:ItemType\"",
                 "name=\"Item\" type=\"t:ItemType\" nillable=\"true\"",
@@ -1346,7 +1351,11 @@ fn incremental_root_writer_is_schema_scoped() {
         ] {
             let ir = XsdParser::new().parse_str(&unsupported).unwrap();
             let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
-            assert!(!code.contains("pub fn write_batch_items"), "{unsupported}");
+            assert!(
+                !code.contains("pub fn write_batch_items"),
+                "{unsupported}\n{:?}",
+                ir.upa_documents
+            );
         }
     }
 }

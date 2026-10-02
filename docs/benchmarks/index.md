@@ -180,3 +180,6 @@ For publishable measurements, run on an otherwise idle host, repeat the full
 suite, and keep raw output with the Git revision, CPU/OS, and toolchain versions.
 Compare read with read and write with write on the same payload; generated
 models, DOM parsers, and transcoding pipelines can return different values.
+
+- [Incremental Rust writer memory](incremental-writer.md): generated iterator
+  producers writing increasing item counts to files, with independent XSD validation.

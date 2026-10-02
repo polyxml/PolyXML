@@ -360,3 +360,63 @@ let restored_xml = json_to_xml(
 ## 9. rkyv generation status
 
 The CLI accepts `--feature rkyv`, but the generated `#[rkyv(check_bytes)]` attribute is incompatible with rkyv 0.8. Do not enable this option for new projects until the generator is updated and its output is verified against the rkyv version you use. The default Rust output does not require rkyv.
+
+## Incremental item production
+
+`model.encode_xml(&mut Writer<W>, tag_name)` writes an existing model to a
+sink, but its repeated fields are already materialized in `Vec`s. `to_xml()`
+also retains the final document bytes. For a root containing one repeated
+element in a plain sequence, generation additionally exposes an associated
+`write_<root>_items(&mut sink, iterator)` function. It needs neither a root
+instance nor a collected child list.
+
+For example, this schema declares a required sequence of items:
+
+```xml
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="ItemType">
+    <xs:sequence><xs:element name="Name" type="xs:string"/></xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="BatchType">
+    <xs:sequence>
+      <xs:element name="Item" type="ItemType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Batch" type="BatchType"/>
+</xs:schema>
+```
+
+Generate Rust models using `polyxml generate items.xsd --lang rust --out src`.
+The lazy iterator below creates one item at a time:
+
+```rust
+use items::{Batch, ItemType};
+use std::io::{BufWriter, Write};
+
+let mut sink = BufWriter::new(std::fs::File::create("batch.xml")?);
+let items = (0..1_000_000).map(|i| ItemType {
+    name: format!("Item {i}").into(),
+});
+Batch::write_batch_items(&mut sink, items)?;
+sink.flush()?;
+```
+
+The producer writes the declared root name and namespace, escapes item text,
+and preserves each item's field order through its generated codec. It checks
+`minOccurs` at iterator exhaustion and `maxOccurs` before writing an excess
+item. An excess item is consumed to detect the error. Sink errors propagate;
+a failed call may leave partial XML. The caller owns buffering, flushing, and
+publishing the output file.
+
+This API is generated for named, concrete sequence types with exactly one
+repeated child, no root attributes, and element namespaces matching the root
+throughout the item types. Unqualified documents and uniformly qualified
+documents with local unqualified attributes are supported. Choices, repeated
+or optional groups, inheritance, references, wildcards, recursion, nillable
+values, named simple restrictions, and qualified attributes are excluded.
+Existing model codecs remain available for those schemas. The producer checks
+the root collection's occurrence bounds; it is not a complete per-item XSD
+validator. Python iterable production is not exposed by this API.
+
+See the [memory study](../benchmarks/incremental-writer.md) for the compiled
+example, independent XSD validation, and reproducible peak RSS measurements.
