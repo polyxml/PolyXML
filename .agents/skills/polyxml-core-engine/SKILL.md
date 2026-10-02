@@ -187,3 +187,9 @@ Element-only repeated sequences retain group cardinality in the source
 particle model. Ordered item streams preserve wire order; their codecs must
 also validate group completeness, order, and upper bounds on read/write.
 Do not validate only per-field list lengths: A,A,B,B is not (A,B),(A,B).
+
+Abstract global elements are recorded separately from abstract complex types.
+Resolve source particle references transitively through substitution groups,
+exclude abstract heads/intermediate members from wire alternatives, and retain
+head occurrence constraints. Removing abstract branches alone is insufficient:
+the codec must reject an abstract-head input and a missing required member.

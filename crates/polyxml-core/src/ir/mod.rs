@@ -461,6 +461,8 @@ pub struct SchemaIR {
     pub namespaces: Vec<NamespaceDeclaration>,
     pub types: BTreeMap<QName, TypeDef>,
     pub elements: BTreeMap<QName, ElementDef>,
+    #[serde(default)]
+    pub abstract_elements: BTreeSet<QName>,
     /// Declared types of global attributes, used to resolve `<xs:attribute ref>`.
     #[serde(default)]
     pub attributes: BTreeMap<QName, TypeRef>,

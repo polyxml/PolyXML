@@ -865,3 +865,40 @@ def test_duplicate_choice_names_validate_branch_shapes(tmp_path, backend):
     ]:
         with pytest.raises(ValueError, match="Content model constraint"):
             module.Person.from_xml("<Person>" + body + "</Person>")
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_abstract_substitution_head_is_rejected(tmp_path, backend):
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/substitution_group.xsd"
+    )
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(
+        f"abstract_substitutions_{backend}", tmp_path / "substitution_group.py"
+    )
+    for body in ["<Instrument>a</Instrument>", "", "<Bond xmlns='wrong'>a</Bond>"]:
+        with pytest.raises(ValueError, match="Content model constraint"):
+            module.Portfolio.from_xml(
+                "<Portfolio xmlns='urn:audit:substitution'>" + body + "</Portfolio>"
+            )
+    root = module.Portfolio.from_xml(
+        "<Portfolio xmlns='urn:audit:substitution'><Bond>a</Bond><Equity>b</Equity></Portfolio>"
+    )
+    module.Portfolio.from_xml(root.to_xml())
+    root.items = []
+    with pytest.raises(ValueError, match="Content model constraint"):
+        root.to_xml()

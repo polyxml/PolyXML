@@ -1368,3 +1368,45 @@ for _,body:=range []string{`<MaxAge>25</MaxAge><MaxAge>30</MaxAge>`,`<MinAge>18<
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn abstract_substitution_heads_are_rejected() {
+    let schema = include_str!("../../../research/fixtures/substitution_group.xsd");
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    assert!(ir
+        .abstract_elements
+        .contains(&QName::new(Some("urn:audit:substitution"), "Instrument")));
+    assert!(
+        !ir.content_models[&QName::new(Some("urn:audit:substitution"), "PortfolioType")]
+            .pattern()
+            .contains("Instrument")
+    );
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("go.mod"),
+        "module substitutions\n\ngo 1.22\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(temp.path().join("models_test.go"),r#"package models
+import("encoding/xml";"testing")
+func TestSubstitutions(t *testing.T){
+for _,body:=range []string{`<Instrument>a</Instrument>`,``,`<Bond xmlns="wrong">a</Bond>`}{var root Portfolio;if err:=xml.Unmarshal([]byte(`<Portfolio xmlns="urn:audit:substitution">`+body+`</Portfolio>`),&root);err==nil{t.Fatal("invalid substitution accepted",body)}}
+var root Portfolio;if err:=xml.Unmarshal([]byte(`<Portfolio xmlns="urn:audit:substitution"><Bond>a</Bond><Equity>b</Equity></Portfolio>`),&root);err!=nil{t.Fatal(err)};if _,err:=xml.Marshal(root);err!=nil{t.Fatal(err)};root.Items=nil;if _,err:=xml.Marshal(root);err==nil{t.Fatal("empty output accepted")}
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(temp.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

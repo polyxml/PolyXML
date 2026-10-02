@@ -1262,7 +1262,12 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
                 continue;
             }
             let mapped = self.context.map_type_ref(&branch.type_ref);
-            let _ = writeln!(out, "            case {:?}:\n                var value {mapped}\n                if err := d.DecodeElement(&value, &element); err != nil {{ return err }}\n                v.{item_field} = append(v.{item_field}, {union_name}{{{branch_field}: &value}})", branch.xml_name);
+            let namespace_guard = if content_pattern.is_some() {
+                format!("if element.Name.Space != {:?} {{return fmt.Errorf(\"unexpected element namespace\")}}",branch.namespace.as_deref().unwrap_or(""))
+            } else {
+                String::new()
+            };
+            let _ = writeln!(out, "            case {:?}:\n                {namespace_guard}\n                var value {mapped}\n                if err := d.DecodeElement(&value, &element); err != nil {{ return err }}\n                v.{item_field} = append(v.{item_field}, {union_name}{{{branch_field}: &value}})", branch.xml_name);
         }
         if content_pattern.is_some() {
             out.push_str("            default: return fmt.Errorf(\"unexpected content element\")\n            }\n        case xml.EndElement:\n            if element.Name == start.Name { return v.validateContent() }\n        }\n    }\n}\n\n");

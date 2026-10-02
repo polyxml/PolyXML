@@ -185,6 +185,18 @@ impl XsdParser {
         if self.frame_depth == 0 {
             resolve_global_field_refs(&mut ir);
             validate_type_references(&ir, xml)?;
+            ir.content_models.retain(|_, model| {
+                model.has_choice()
+                    || model.has_repeated_sequence()
+                    || model
+                        .has_substitution_reference(&ir.substitution_groups, &ir.abstract_elements)
+            });
+            for model in ir.content_models.values_mut() {
+                model.resolve_references(&ir.substitution_groups, &ir.abstract_elements);
+                regex::Regex::new(&format!("^(?:{})$", model.pattern())).map_err(|error| {
+                    SchemaError::Malformed(format!("Unsupported content model: {error}"))
+                })?;
+            }
             expand_substitution_fields(&mut ir);
             compile_mixed_types(&mut ir);
         }
@@ -326,6 +338,11 @@ impl XsdParser {
                                 &prefixes,
                                 &mut ir,
                             )? {
+                                if get_attr_value(e, "abstract")
+                                    .is_some_and(|value| value == "true" || value == "1")
+                                {
+                                    ir.abstract_elements.insert(elem_def.qname.clone());
+                                }
                                 ir.add_element(elem_def);
                             }
                         }
@@ -416,6 +433,11 @@ impl XsdParser {
                                 target_namespace.as_deref(),
                                 &prefixes,
                             ) {
+                                if get_attr_value(e, "abstract")
+                                    .is_some_and(|value| value == "true" || value == "1")
+                                {
+                                    ir.abstract_elements.insert(elem_def.qname.clone());
+                                }
                                 ir.add_element(elem_def);
                             }
                         }
@@ -507,7 +529,7 @@ impl XsdParser {
         let qname = QName::new(target_ns, name.clone());
         if !is_mixed {
             if let Some(model) = capture_content_model(reader, target_ns, prefixes)? {
-                if model.has_choice() || model.has_repeated_sequence() {
+                if model.has_choice() || model.has_repeated_sequence() || model.has_reference() {
                     regex::Regex::new(&format!("^(?:{})$", model.pattern())).map_err(|error| {
                         SchemaError::Malformed(format!("Unsupported content model: {error}"))
                     })?;
@@ -1661,7 +1683,9 @@ fn expand_substitution_fields(ir: &mut SchemaIR) {
         let mut expanded = false;
         for field in snapshot.fields {
             let head = QName::new(field.namespace.clone(), strip_prefix(&field.xml_name));
-            fields.push(field.clone());
+            if field.kind != FieldKind::Element || !ir.abstract_elements.contains(&head) {
+                fields.push(field.clone());
+            }
             if field.kind != FieldKind::Element {
                 continue;
             }
@@ -1678,7 +1702,11 @@ fn expand_substitution_fields(ir: &mut SchemaIR) {
                 if let Some(children) = ir.substitution_groups.get(&member) {
                     pending.extend(children.iter().cloned());
                 }
-                if let Some(element) = ir.elements.get(&member) {
+                if let Some(element) = ir
+                    .elements
+                    .get(&member)
+                    .filter(|_| !ir.abstract_elements.contains(&member))
+                {
                     let mut replacement = field.clone();
                     replacement.name = sanitize_field_name(&member.local);
                     replacement.xml_name = member.local.clone();
@@ -2300,6 +2328,15 @@ fn unique_type_name(ir: &SchemaIR, target_ns: Option<&str>, base: &str) -> Strin
 /// includes, whose components adopt the including schema's target namespace.
 fn rekey_to_namespace(ir: &mut SchemaIR, ns: &str) {
     ir.target_namespace = Some(ns.to_string());
+    ir.abstract_elements = std::mem::take(&mut ir.abstract_elements)
+        .into_iter()
+        .map(|mut name| {
+            if name.namespace.is_none() {
+                name.namespace = Some(ns.into());
+            }
+            name
+        })
+        .collect();
     ir.content_models = std::mem::take(&mut ir.content_models)
         .into_iter()
         .map(|(mut name, mut model)| {
@@ -2509,6 +2546,7 @@ fn collect_chain_patterns(ir: &SchemaIR, q: &QName, visited: &mut HashSet<QName>
 }
 
 fn merge_ir(dest: &mut SchemaIR, src: SchemaIR) {
+    dest.abstract_elements.extend(src.abstract_elements);
     dest.ordered_types.extend(src.ordered_types);
     dest.content_models.extend(src.content_models);
     for (k, v) in src.types {
@@ -2565,7 +2603,11 @@ fn capture_content_model(
                             parse_element_field(&e, target_ns, prefixes, false, false)
                         {
                             result.push(repeat(
-                                Particle::Element(QName::new(field.namespace, field.xml_name)),
+                                if get_attr_value(&e, "ref").is_some() {
+                                    Particle::Reference(QName::new(field.namespace, field.xml_name))
+                                } else {
+                                    Particle::Element(QName::new(field.namespace, field.xml_name))
+                                },
                                 &e,
                             ));
                         }
@@ -2576,7 +2618,11 @@ fn capture_content_model(
                     if let Some(field) = parse_element_field(&e, target_ns, prefixes, false, false)
                     {
                         result.push(repeat(
-                            Particle::Element(QName::new(field.namespace, field.xml_name)),
+                            if get_attr_value(&e, "ref").is_some() {
+                                Particle::Reference(QName::new(field.namespace, field.xml_name))
+                            } else {
+                                Particle::Element(QName::new(field.namespace, field.xml_name))
+                            },
                             &e,
                         ));
                     }
