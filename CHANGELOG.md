@@ -1,3 +1,10 @@
+## [0.33.9](https://github.com/polyxml/PolyXML/compare/v0.33.8...v0.33.9) (2026-10-02)
+
+
+### Bug Fixes
+
+* **schema:** retain and enforce separate choice groups ([#123](https://github.com/polyxml/PolyXML/issues/123)) ([9212262](https://github.com/polyxml/PolyXML/commit/921226200a03ca4d7a008b81ab34a90e2e7e8428))
+
 ## [0.33.8](https://github.com/polyxml/PolyXML/compare/v0.33.7...v0.33.8) (2026-10-02)
 
 
