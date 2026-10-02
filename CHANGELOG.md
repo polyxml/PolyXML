@@ -1,3 +1,12 @@
+## [0.33.7](https://github.com/polyxml/PolyXML/compare/v0.33.6...v0.33.7) (2026-10-02)
+
+
+### Bug Fixes
+
+* **codegen:** apply element defaults only to empty present values ([#103](https://github.com/polyxml/PolyXML/issues/103)) ([577e620](https://github.com/polyxml/PolyXML/commit/577e620b65de7d747261a82a79a683a1aae074a5))
+* **codegen:** bind global attributes by expanded QName ([#125](https://github.com/polyxml/PolyXML/issues/125)) ([62bd41b](https://github.com/polyxml/PolyXML/commit/62bd41ba93d434ef787fbdf9c5d4cae8e00fb545))
+* **parser:** reject unsupported general entity references ([#126](https://github.com/polyxml/PolyXML/issues/126)) ([f5c00f3](https://github.com/polyxml/PolyXML/commit/f5c00f3a884e7c93fc1df00814ea161793b4123a))
+
 ## [0.33.6](https://github.com/polyxml/PolyXML/compare/v0.33.5...v0.33.6) (2026-10-01)
 
 
