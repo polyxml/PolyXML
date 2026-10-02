@@ -1,3 +1,10 @@
+## [0.33.11](https://github.com/polyxml/PolyXML/compare/v0.33.10...v0.33.11) (2026-10-02)
+
+
+### Bug Fixes
+
+* preserve unbounded XSD integer values across targets ([#117](https://github.com/polyxml/PolyXML/issues/117)) ([4dd5433](https://github.com/polyxml/PolyXML/commit/4dd54337f131669cd20de891d4a12d2983500a28))
+
 ## [0.33.10](https://github.com/polyxml/PolyXML/compare/v0.33.9...v0.33.10) (2026-10-02)
 
 
