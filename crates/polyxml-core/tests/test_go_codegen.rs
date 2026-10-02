@@ -1331,3 +1331,40 @@ var root Root;if err:=xml.Unmarshal([]byte(`<Root><Timing>a</Timing></Root>`),&r
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn duplicate_choice_names_reject_invalid_branch_shapes() {
+    let ir = XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/wave6/duplicate_choice_branch_name.xsd"
+        ))
+        .unwrap();
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("go.mod"),
+        "module duplicatechoices\n\ngo 1.22\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(temp.path().join("models_test.go"),r#"package models
+import("encoding/xml";"testing")
+func TestBranches(t *testing.T){
+for _,body:=range []string{``,`<MaxAge>25</MaxAge>`,`<MinAge>18</MinAge>`,`<MinAge>18</MinAge><MaxAge>25</MaxAge>`}{var root Person;if err:=xml.Unmarshal([]byte(`<Person>`+body+`</Person>`),&root);err!=nil{t.Fatal(err)};if _,err:=xml.Marshal(root);err!=nil{t.Fatal(err)}}
+for _,body:=range []string{`<MaxAge>25</MaxAge><MaxAge>30</MaxAge>`,`<MinAge>18</MinAge><MaxAge>25</MaxAge><MaxAge>30</MaxAge>`,`<MaxAge>25</MaxAge><MinAge>18</MinAge>`}{var root Person;if err:=xml.Unmarshal([]byte(`<Person>`+body+`</Person>`),&root);err==nil{t.Fatal("invalid shape accepted",body)}}
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(temp.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

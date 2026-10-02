@@ -829,3 +829,39 @@ def test_repeated_choice_branch_boundaries(tmp_path, backend):
     root.drive = "conflict"
     with pytest.raises(ValueError, match="Content model constraint"):
         root.to_xml()
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_duplicate_choice_names_validate_branch_shapes(tmp_path, backend):
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "research/fixtures/wave6/duplicate_choice_branch_name.xsd"
+    )
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(
+        f"duplicate_shapes_{backend}", tmp_path / "duplicate_choice_branch_name.py"
+    )
+    for body in ["", "<MaxAge>25</MaxAge>", "<MinAge>18</MinAge><MaxAge>25</MaxAge>"]:
+        root = module.Person.from_xml("<Person>" + body + "</Person>")
+        module.Person.from_xml(root.to_xml())
+    for body in [
+        "<MaxAge>25</MaxAge><MaxAge>30</MaxAge>",
+        "<MinAge>18</MinAge><MaxAge>25</MaxAge><MaxAge>30</MaxAge>",
+        "<MaxAge>25</MaxAge><MinAge>18</MinAge>",
+    ]:
+        with pytest.raises(ValueError, match="Content model constraint"):
+            module.Person.from_xml("<Person>" + body + "</Person>")
