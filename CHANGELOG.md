@@ -1,3 +1,10 @@
+## [0.33.12](https://github.com/polyxml/PolyXML/compare/v0.33.11...v0.33.12) (2026-10-02)
+
+
+### Bug Fixes
+
+* **schema:** enforce XSD 1.0 Unique Particle Attribution ([e24503a](https://github.com/polyxml/PolyXML/commit/e24503a9b4169a495d67c34b75648aea5991f90c)), closes [#131](https://github.com/polyxml/PolyXML/issues/131)
+
 ## [0.33.11](https://github.com/polyxml/PolyXML/compare/v0.33.10...v0.33.11) (2026-10-02)
 
 
