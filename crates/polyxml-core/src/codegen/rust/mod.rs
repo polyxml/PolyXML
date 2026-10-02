@@ -1892,6 +1892,137 @@ impl RustCodegen {
         out.push_str("    }\n");
 
         out.push_str("}\n");
+        self.emit_incremental_roots(out, s, ir, types_with_lifetime);
+    }
+
+    /// Only expose the producer API where ordinary item codecs preserve the schema.
+    fn emit_incremental_roots(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ir: &SchemaIR,
+        lifetimes: &HashSet<QName>,
+    ) {
+        fn supported(
+            s: &StructDef,
+            ir: &SchemaIR,
+            namespace: &Option<String>,
+            seen: &mut HashSet<QName>,
+        ) -> bool {
+            if ir
+                .upa_documents
+                .iter()
+                .find_map(|doc| doc.uniform_sequence(&s.qname, namespace))
+                != Some(true)
+            {
+                return false;
+            }
+            if !seen.insert(s.qname.clone()) {
+                return false;
+            }
+            if s.base_type.is_some()
+                || s.is_abstract
+                || s.is_mixed
+                || ir.ordered_types.contains(&s.qname)
+            {
+                return false;
+            }
+            if ir
+                .content_models
+                .get(&s.qname)
+                .is_some_and(|p| p.has_choice() || p.has_reference() || p.has_repeated_sequence())
+            {
+                return false;
+            }
+            s.fields.iter().all(|f| {
+                if f.nillable
+                    || f.is_cycle_cut
+                    || f.xml_name.contains(':')
+                    || f.type_ref.is_list()
+                    || f.type_ref.is_boxed()
+                {
+                    return false;
+                }
+                match f.kind {
+                    FieldKind::Element if &f.namespace != namespace => return false,
+                    FieldKind::Attribute if f.namespace.is_some() => return false,
+                    FieldKind::Element | FieldKind::Attribute | FieldKind::Text => {}
+                    _ => return false,
+                }
+                match &f.type_ref {
+                    TypeRef::Named(q) => match ir.types.get(q) {
+                        Some(TypeDef::Struct(child)) => {
+                            supported(child, ir, namespace, &mut seen.clone())
+                        }
+                        Some(TypeDef::Enum(_)) => true,
+                        _ => false,
+                    },
+                    TypeRef::Primitive(_) => true,
+                    _ => false,
+                }
+            })
+        }
+        if s.fields.len() != 1
+            || s.fields[0].kind != FieldKind::Element
+            || !s.fields[0].cardinality.is_list()
+        {
+            return;
+        }
+        let field = &s.fields[0];
+        for root in ir.elements.values() {
+            if root.type_ref != TypeRef::Named(s.qname.clone())
+                || root.nillable
+                || !supported(s, ir, &root.qname.namespace, &mut HashSet::new())
+            {
+                continue;
+            }
+            let name = type_ident(&s.qname);
+            let item_type = self.format_rust_type_ref(&field.type_ref, lifetimes);
+            let impl_type = if self.options.zero_copy && lifetimes.contains(&s.qname) {
+                format!("impl<'a> {name}<'a>")
+            } else {
+                format!("impl {name}")
+            };
+            let method = format!("write_{}_items", AsSnakeCase(&root.qname.local));
+            writeln!(out, "\n{impl_type} {{").unwrap();
+            out.push_str("    /// Produce a document incrementally, retaining only the current item.\n    /// Errors may leave partial XML in the sink; publish files only after success.\n");
+            writeln!(out, "    pub fn {method}<W: std::io::Write, I: IntoIterator<Item = {item_type}>>(sink: &mut W, items: I) -> Result<()> {{").unwrap();
+            out.push_str("        let mut writer = Writer::new(sink);\n");
+            writeln!(
+                out,
+                "        let {}start = BytesStart::new({:?});",
+                if root.qname.namespace.is_some() {
+                    "mut "
+                } else {
+                    ""
+                },
+                root.qname.local
+            )
+            .unwrap();
+            if let Some(ns) = &root.qname.namespace {
+                writeln!(out, "        start.push_attribute((\"xmlns\", {ns:?}));").unwrap();
+            }
+            out.push_str("        writer.write_event(Event::Start(start))?;\n        let mut count = 0usize;\n");
+            let mut body = String::new();
+            self.emit_element_serialize(&mut body, field, "items", ir);
+            body = body.replace("for item in &self.items {", "for item in items {");
+            let mut checks = String::new();
+            if let crate::ir::OccursLimit::Count(max) = field.cardinality.max_occurs {
+                writeln!(checks, "            if count == {max} {{ return Err(PolyXmlError::SchemaError(\"maxOccurs exceeded\".into())); }}").unwrap();
+            }
+            checks.push_str("            count = count.checked_add(1).ok_or_else(|| PolyXmlError::SchemaError(\"item count overflow\".into()))?;\n");
+            self.emit_pattern_check(&mut checks, field, "&item.to_string()", ir);
+            body = body.replacen(
+                "for item in items {\n",
+                &format!("for item in items {{\n{checks}"),
+                1,
+            );
+            out.push_str(&body.replace("encode_xml(writer,", "encode_xml(&mut writer,"));
+            if field.cardinality.min_occurs > 0 {
+                writeln!(out, "        if count < {} {{ return Err(PolyXmlError::SchemaError(\"minOccurs not satisfied\".into())); }}", field.cardinality.min_occurs).unwrap();
+            }
+            writeln!(out, "        writer.write_event(Event::End(BytesEnd::new({:?})))?;\n        Ok(())\n    }}\n}}", root.qname.local).unwrap();
+        }
     }
 
     fn emit_integer_bounds(

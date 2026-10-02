@@ -796,3 +796,17 @@ Jackson 3 sorts properties alphabetically by default. Emit `@JsonPropertyOrder`
 from flattened schema fields for its struct models, including inherited fields,
 or valid reads can produce XSD-invalid XML on writes. The Spring fixture checks
 returned XML against the source XSD independently using the JDK validator.
+
+### Incremental Rust producer verification (#127)
+
+For the generated `write_<root>_items` producer, build the CLI then run
+`.venv/bin/python scripts/verify_incremental_writer.py` (requires lxml and GNU
+`time`). It compiles owned/borrowed generated models, checks occurrence errors
+and sink failures, validates XML with libxml2, and records fresh-process RSS.
+Use `--output` to retain raw samples. Ordinary `encode_xml` streams an existing
+model; this producer consumes owned items from an iterator without a root Vec.
+Eligibility must use `upa::Document` source QNames: flattened FieldDef namespace
+metadata does not preserve every local `form`/`elementFormDefault` distinction.
+Expose the API only for plain sequence roots with one repeated field and item
+codecs whose element namespaces match the root. Keep unsupported schema shapes
+out of the API rather than claiming full streaming schema support.

@@ -1310,3 +1310,43 @@ fn test_rust_digit_prefixed_module_sanitization() {
     assert!(mod_file.1.contains("pub mod _17_report;"));
     assert!(mod_file.1.contains("pub use _17_report::*;"));
 }
+
+#[test]
+fn incremental_root_writer_is_schema_scoped() {
+    let xsd = include_str!("../../../tests/fixtures/incremental/items.xsd");
+    for zero_copy in [true, false] {
+        let ir = XsdParser::new().parse_str(xsd).unwrap();
+        let code = RustCodegen::new(RustOptions {
+            zero_copy,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        assert!(code.contains("pub fn write_batch_items"));
+        assert!(code.contains("for item in items"));
+        assert!(code.contains("start.push_attribute((\"xmlns\", \"urn:items\"))"));
+        assert!(code.contains("if count < 1"));
+        assert!(code.contains("item.encode_xml(&mut writer, Some(\"Item\"))"));
+        let bounded = xsd.replace("maxOccurs=\"unbounded\"", "maxOccurs=\"2\"");
+        let ir = XsdParser::new().parse_str(&bounded).unwrap();
+        let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+        assert!(code.contains("if count == 2"));
+        for unsupported in [
+            xsd.replace(
+                "name=\"Item\" type=\"t:ItemType\"",
+                "name=\"Item\" type=\"t:ItemType\" nillable=\"true\"",
+            ),
+            xsd.replace(
+                "elementFormDefault=\"qualified\"",
+                "elementFormDefault=\"unqualified\"",
+            ),
+            xsd.replace(
+                "name=\"Batch\" type=\"t:BatchType\"",
+                "name=\"Batch\" type=\"t:BatchType\" nillable=\"true\"",
+            ),
+        ] {
+            let ir = XsdParser::new().parse_str(&unsupported).unwrap();
+            let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+            assert!(!code.contains("pub fn write_batch_items"), "{unsupported}");
+        }
+    }
+}
