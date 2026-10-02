@@ -516,6 +516,41 @@ impl GoCodegen {
         let type_name = type_ident(&simple.qname);
         let base_type = self.context.map_type_ref(&simple.base_type);
         writeln!(out, "type {} {}\n", type_name, base_type).unwrap();
+        if let TypeRef::List(item) = &simple.base_type {
+            let item_type = self.context.map_type_ref(item);
+            writeln!(out,"func (v *{type_name}) UnmarshalText(text []byte) error {{
+ values:=make({type_name},0);for _,token:=range strings.FieldsFunc(string(text),func(c rune)bool{{return c==' '||c=='\\t'||c=='\\r'||c=='\\n'}}) {{
+ var value {item_type};var escaped strings.Builder;if err:=xml.EscapeText(&escaped,[]byte(token));err!=nil{{return err}};if err:=xml.Unmarshal([]byte(\"<v>\"+escaped.String()+\"</v>\"),&value);err!=nil{{return err}};if err:=polyxmlValidate{type_name}Item(value);err!=nil{{return err}};values=append(values,value)
+ }};*v=values;return nil
+}}
+func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len(v));for _,item:=range v {{if err:=polyxmlValidate{type_name}Item(item);err!=nil{{return nil,err}};data,err:=xml.Marshal(item);if err!=nil{{return nil,err}};var token string;if err:=xml.Unmarshal(data,&token);err!=nil{{return nil,err}};if token==\"\"||strings.ContainsAny(token,\" \\t\\r\\n\"){{return nil,fmt.Errorf(\"invalid list item\")}};tokens=append(tokens,token)}};return []byte(strings.Join(tokens,\" \")),nil
+}}
+").unwrap();
+            writeln!(
+                out,
+                "func polyxmlValidate{type_name}Item(value {item_type}) error {{"
+            )
+            .unwrap();
+            if let TypeRef::Named(name) = item.as_ref() {
+                match ir.types.get(name) {
+                    Some(TypeDef::Simple(simple)) => {
+                        self.emit_facet_checks(out, &simple.facets, "value", "    ")
+                    }
+                    Some(TypeDef::Enum(enumeration)) => {
+                        let variants = enumeration
+                            .variants
+                            .iter()
+                            .map(|v| format!("{:?}", v.value))
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        writeln!(out,"switch string(value) {{case {variants}: default:return fmt.Errorf(\"invalid enum list item\")}}").unwrap();
+                    }
+                    _ => {}
+                }
+            }
+            out.push_str("    return nil\n}\n\n");
+            return;
+        }
         if matches!(
             super::primitive_base(&simple.base_type, ir),
             TypeRef::Primitive(PrimitiveType::Date | PrimitiveType::Time | PrimitiveType::DateTime)

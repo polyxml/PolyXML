@@ -216,20 +216,53 @@ impl XmlSerializer {
     fn format_scalar_to<'a>(
         val: &'a PolyValue,
         buf: &'a mut [u8; lexical_core::BUFFER_SIZE],
-    ) -> Option<&'a str> {
+    ) -> Option<Cow<'a, str>> {
         match val {
-            PolyValue::String(s) => Some(s.as_str()),
+            PolyValue::String(s) => Some(Cow::Borrowed(s.as_str())),
             PolyValue::Int(i) => {
                 let bytes = lexical_core::write(*i, buf);
-                std::str::from_utf8(bytes).ok()
+                std::str::from_utf8(bytes).ok().map(Cow::Borrowed)
             }
             PolyValue::Float(f) => {
                 let bytes = lexical_core::write(*f, buf);
-                std::str::from_utf8(bytes).ok()
+                std::str::from_utf8(bytes).ok().map(Cow::Borrowed)
             }
-            PolyValue::Bool(b) => Some(if *b { "true" } else { "false" }),
+            PolyValue::List(items) => {
+                let mut parts = Vec::with_capacity(items.len());
+                for item in items {
+                    let mut buffer = [0u8; lexical_core::BUFFER_SIZE];
+                    parts.push(Self::format_scalar_to(item, &mut buffer)?.into_owned());
+                }
+                Some(Cow::Owned(parts.join(" ")))
+            }
+            PolyValue::Bool(b) => Some(Cow::Borrowed(if *b { "true" } else { "false" })),
             _ => None,
         }
+    }
+
+    fn validate_lexical_list_items(ty: &ValueType, value: &PolyValue) -> Result<()> {
+        if let ValueType::Scalar(ScalarType::List(_)) = ty {
+            if let PolyValue::List(items) = value {
+                for item in items {
+                    if let PolyValue::String(text) = item {
+                        if text.is_empty() || text.contains([' ', '\t', '\r', '\n']) {
+                            return Err(PolyXmlError::SerializationError(
+                                "Invalid whitespace-separated list item".into(),
+                            ));
+                        }
+                    }
+                }
+            } else {
+                return Err(PolyXmlError::SerializationError(
+                    "Expected typed list value".into(),
+                ));
+            }
+        } else if let (ValueType::List(inner), PolyValue::List(items)) = (ty, value) {
+            for item in items {
+                Self::validate_lexical_list_items(inner, item)?;
+            }
+        }
+        Ok(())
     }
 
     fn validate_scalar(ty: &ValueType, text: &str, field_name: &str) -> Result<()> {
@@ -238,7 +271,9 @@ impl XmlSerializer {
             | ScalarType::XmlGregorian(_)
             | ScalarType::Enum(_)
             | ScalarType::Pattern(_, _)
-            | ScalarType::Union(_)),
+            | ScalarType::Union(_)
+            | ScalarType::List(_)
+            | ScalarType::Restricted(_, _)),
         ) = ty
         {
             ValueConverter::parse_scalar(scalar, text.as_bytes(), field_name)?;
@@ -299,6 +334,7 @@ impl XmlSerializer {
         for (index, field) in schema.fields.iter().enumerate() {
             if let Some(value) = get_field(index, &field.name) {
                 crate::schema::validate_fixed(field, value)?;
+                Self::validate_lexical_list_items(&field.val_type, value)?;
             }
         }
 
@@ -312,7 +348,9 @@ impl XmlSerializer {
                     continue;
                 };
                 let items: Vec<&PolyValue> = match value {
-                    PolyValue::List(items) => items.iter().collect(),
+                    PolyValue::List(items) if matches!(field.val_type, ValueType::List(_)) => {
+                        items.iter().collect()
+                    }
                     PolyValue::Null => Vec::new(),
                     _ => vec![value],
                 };
@@ -384,8 +422,8 @@ impl XmlSerializer {
                         };
                         let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                         if let Some(attr_str) = Self::format_scalar_to(val, &mut buf) {
-                            Self::validate_scalar(&field.val_type, attr_str, &field.name)?;
-                            elem.push_attribute((attr_name.as_ref(), attr_str));
+                            Self::validate_scalar(&field.val_type, &attr_str, &field.name)?;
+                            elem.push_attribute((attr_name.as_ref(), attr_str.as_ref()));
                         }
                     }
                 }
@@ -397,7 +435,7 @@ impl XmlSerializer {
                         if let Some(v) = map.get(k) {
                             let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                             if let Some(attr_str) = Self::format_scalar_to(v, &mut buf) {
-                                elem.push_attribute((k.as_str(), attr_str));
+                                elem.push_attribute((k.as_str(), attr_str.as_ref()));
                             }
                         }
                     }
@@ -436,10 +474,10 @@ impl XmlSerializer {
             if let Some(val) = get_field(text_idx, &field.name) {
                 let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                 if let Some(text_content) = Self::format_scalar_to(val, &mut buf) {
-                    Self::validate_scalar(&field.val_type, text_content, &field.name)?;
+                    Self::validate_scalar(&field.val_type, &text_content, &field.name)?;
                     if !text_content.is_empty() {
                         writer
-                            .write_event(Event::Text(BytesText::new(text_content)))
+                            .write_event(Event::Text(BytesText::new(&text_content)))
                             .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                     }
                 } else if let PolyValue::List(items) = val {
@@ -447,11 +485,11 @@ impl XmlSerializer {
                         let mut item_buf = [0u8; lexical_core::BUFFER_SIZE];
                         if let Some(text_content) = Self::format_scalar_to(item, &mut item_buf) {
                             if let ValueType::List(inner) = &field.val_type {
-                                Self::validate_scalar(inner, text_content, &field.name)?;
+                                Self::validate_scalar(inner, &text_content, &field.name)?;
                             }
                             if !text_content.is_empty() {
                                 writer
-                                    .write_event(Event::Text(BytesText::new(text_content)))
+                                    .write_event(Event::Text(BytesText::new(&text_content)))
                                     .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                             }
                         }
@@ -525,12 +563,12 @@ impl XmlSerializer {
                                     "Invalid mixed content value for {kind}"
                                 )));
                             };
-                            Self::validate_scalar(&branch.val_type, text, kind)?;
+                            Self::validate_scalar(&branch.val_type, &text, kind)?;
                             writer
                                 .write_event(Event::Start(BytesStart::new(qualified.as_ref())))
                                 .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                             writer
-                                .write_event(Event::Text(BytesText::new(text)))
+                                .write_event(Event::Text(BytesText::new(&text)))
                                 .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                             writer
                                 .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
@@ -567,7 +605,7 @@ impl XmlSerializer {
                             ValueType::Scalar(_) => {
                                 let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                                 if let Some(text) = Self::format_scalar_to(val, &mut buf) {
-                                    Self::validate_scalar(&field.val_type, text, &field.name)?;
+                                    Self::validate_scalar(&field.val_type, &text, &field.name)?;
                                     let local_child = std::str::from_utf8(&field.xml_name)?;
                                     let child_tag = if let Some(ctx) = ns_ctx {
                                         ctx.qualify_element(local_child, child_element_ns)
@@ -583,7 +621,7 @@ impl XmlSerializer {
                                             PolyXmlError::SerializationError(e.to_string())
                                         })?;
                                     writer
-                                        .write_event(Event::Text(BytesText::new(text)))
+                                        .write_event(Event::Text(BytesText::new(&text)))
                                         .map_err(|e| {
                                             PolyXmlError::SerializationError(e.to_string())
                                         })?;
@@ -605,7 +643,7 @@ impl XmlSerializer {
                                                 {
                                                     Self::validate_scalar(
                                                         inner,
-                                                        text,
+                                                        &text,
                                                         &field.name,
                                                     )?;
                                                     let local_child =
@@ -630,7 +668,7 @@ impl XmlSerializer {
                                                         })?;
                                                     writer
                                                         .write_event(Event::Text(BytesText::new(
-                                                            text,
+                                                            &text,
                                                         )))
                                                         .map_err(|e| {
                                                             PolyXmlError::SerializationError(
@@ -771,7 +809,7 @@ impl XmlSerializer {
                 if let Some(v) = attrs.get(k) {
                     let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                     if let Some(s) = Self::format_scalar_to(v, &mut buf) {
-                        start.push_attribute((k.as_str(), s));
+                        start.push_attribute((k.as_str(), s.as_ref()));
                     }
                 }
             }

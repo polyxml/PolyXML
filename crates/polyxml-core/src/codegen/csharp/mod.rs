@@ -555,6 +555,29 @@ impl CSharpCodegen {
     }
 
     fn emit_simple(&self, out: &mut String, s: &SimpleTypeDef, ir: &SchemaIR, indent: &str) {
+        if let TypeRef::List(item) = &s.base_type {
+            let name = type_ident(&s.qname);
+            let ty = self.context.map_type_ref(item);
+            let kind = if self.options.use_records {
+                "record"
+            } else {
+                "class"
+            };
+            if !self.options.emit_xml_attributes {
+                writeln!(out,"{indent}public {kind} {name} {{ public List<{ty}> Value {{get;set;}}=new(); public {name}(){{}} public {name}(List<{ty}> value){{Value=value;}} }}").unwrap();
+                return;
+            }
+            writeln!(out,"{indent}public {kind} {name} {{
+{indent}    public {name}(){{}} public {name}(List<{ty}> value){{Value=value;}}
+{indent}    [XmlIgnore] public List<{ty}> Value {{get;set;}} = new();
+{indent}    [XmlText] public string XmlValue {{ get => string.Join(\" \", Value.Select(FormatItem)); set => Value = value.Split(new char[]{{' ','\\t','\\r','\\n'}},StringSplitOptions.RemoveEmptyEntries).Select(ParseItem).ToList(); }}
+{indent}    private static {ty} ParseItem(string value) {{ var parsed=({ty})new XmlSerializer(typeof({ty}),new XmlRootAttribute(\"v\")).Deserialize(new System.IO.StringReader(\"<v>\"+System.Security.SecurityElement.Escape(value)+\"</v>\"))!;if ((object)parsed is System.ComponentModel.DataAnnotations.IValidatableObject) System.ComponentModel.DataAnnotations.Validator.ValidateObject(parsed,new System.ComponentModel.DataAnnotations.ValidationContext(parsed),true);return parsed; }}
+{indent}    private static string FormatItem({ty} value) {{ if((object)value is System.ComponentModel.DataAnnotations.IValidatableObject)System.ComponentModel.DataAnnotations.Validator.ValidateObject(value,new System.ComponentModel.DataAnnotations.ValidationContext(value),true); var writer=new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture);new XmlSerializer(typeof({ty}),new XmlRootAttribute(\"v\")).Serialize(writer,value);var text=System.Xml.Linq.XDocument.Parse(writer.ToString()).Root!.Value;if(text.Length==0||text.Any(c=>c==' '||c=='\\t'||c=='\\r'||c=='\\n'))throw new System.InvalidOperationException(\"invalid list item\");return text; }}
+{indent}}}
+").unwrap();
+            return;
+        }
+
         // Named simple types may be referenced by structs and choices even
         // when they have no facets, so every one needs a declaration.
         {

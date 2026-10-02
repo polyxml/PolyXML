@@ -25,6 +25,8 @@ pub enum ScalarType {
     Enum(Vec<String>),
     Pattern(Box<ScalarType>, Vec<String>),
     Union(Vec<ScalarType>),
+    List(Box<ScalarType>),
+    Restricted(Box<ScalarType>, Box<crate::ir::RestrictionFacets>),
     Any,
 }
 
@@ -286,7 +288,12 @@ impl ModelSchema {
         ) -> ValueType {
             match tr {
                 TypeRef::Primitive(prim) => ValueType::Scalar(map_primitive(*prim)),
-                TypeRef::List(inner) => ValueType::List(Box::new(build_type(inner, ir, visited))),
+                TypeRef::List(inner) => match build_type(inner, ir, visited) {
+                    ValueType::Scalar(scalar) => {
+                        ValueType::Scalar(ScalarType::List(Box::new(scalar)))
+                    }
+                    _ => ValueType::Scalar(ScalarType::Any),
+                },
                 TypeRef::Boxed(inner) => build_type(inner, ir, visited),
                 TypeRef::Named(qname) => {
                     if let Some(type_def) = ir.types.get(qname) {
@@ -303,12 +310,12 @@ impl ModelSchema {
                             }
                             TypeDef::Simple(sim) => {
                                 let base = build_type(&sim.base_type, ir, visited);
-                                if sim.facets.patterns.is_empty() {
+                                if sim.facets.is_empty() {
                                     base
                                 } else if let ValueType::Scalar(scalar) = base {
-                                    ValueType::Scalar(ScalarType::Pattern(
+                                    ValueType::Scalar(ScalarType::Restricted(
                                         Box::new(scalar),
-                                        sim.facets.patterns.clone(),
+                                        Box::new(sim.facets.clone()),
                                     ))
                                 } else {
                                     base
@@ -709,4 +716,22 @@ pub(crate) fn validate_content(schema: &ModelSchema, tokens: &str) -> crate::err
 
 pub fn compile_content_pattern(pattern: &str) -> std::result::Result<regex::Regex, regex::Error> {
     regex::Regex::new(pattern)
+}
+
+pub fn restrict_list_items(
+    ty: &mut ValueType,
+    facets: &str,
+) -> std::result::Result<(), serde_json::Error> {
+    let facets = serde_json::from_str::<crate::ir::RestrictionFacets>(facets)?;
+    match ty {
+        ValueType::Scalar(ScalarType::List(inner)) => {
+            **inner = ScalarType::Restricted(inner.clone(), Box::new(facets));
+        }
+        ValueType::List(inner) => restrict_list_items(inner, facets_as_string(&facets).as_str())?,
+        _ => {}
+    }
+    Ok(())
+}
+fn facets_as_string(facets: &crate::ir::RestrictionFacets) -> String {
+    serde_json::to_string(facets).expect("serializable facets")
 }

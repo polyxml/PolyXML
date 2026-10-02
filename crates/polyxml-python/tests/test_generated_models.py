@@ -713,3 +713,73 @@ def test_repeated_sequence_constraints(tmp_path, backend):
     root.items = root.items[:1]
     with pytest.raises(ValueError, match="Content model constraint"):
         root.to_xml()
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_typed_lexical_lists(tmp_path, backend):
+    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/list_simple_types.xsd"
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(f"lexical_lists_{backend}", tmp_path / "list_simple_types.py")
+    for text in ["1 -2 3", "  1\t-2\n3  ", ""]:
+        root = module.Root.from_xml(f"<Root><Numbers>{text}</Numbers><Words>a b</Words></Root>")
+        assert root.numbers == ([1, -2, 3] if text else [])
+        assert root.words == ["a", "b"]
+        encoded = root.to_xml()
+        assert ET.fromstring(encoded).findtext("Numbers") == ("1 -2 3" if text else "")
+        assert module.Root.from_xml(encoded).numbers == root.numbers
+    with pytest.raises(ValueError):
+        module.Root.from_xml("<Root><Numbers>one two</Numbers><Words/></Root>")
+    root.numbers = ["bad"]
+    with pytest.raises(ValueError):
+        root.to_xml()
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_named_lexical_list_item_constraints(tmp_path, backend):
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/restricted_list_items.xsd"
+    )
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(
+        f"restricted_lists_{backend}", tmp_path / "restricted_list_items.py"
+    )
+    root = module.Root.from_xml("<Root><Numbers>0 2</Numbers><Colors>A B</Colors></Root>")
+    assert root.numbers == [0, 2]
+    module.Root.from_xml(root.to_xml())
+    for document in [
+        "<Root><Numbers>-1</Numbers><Colors>A</Colors></Root>",
+        "<Root><Numbers>2</Numbers><Colors>INVALID</Colors></Root>",
+    ]:
+        with pytest.raises(ValueError):
+            module.Root.from_xml(document)
+    root.numbers = [-1]
+    with pytest.raises(ValueError):
+        root.to_xml()

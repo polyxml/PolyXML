@@ -31,6 +31,66 @@ impl ValueConverter {
         field_name: &str,
     ) -> Result<PolyValue> {
         match scalar_type {
+            ScalarType::Restricted(base, facets) => {
+                let value = Self::parse_scalar(base, bytes, field_name)?;
+                let text = std::str::from_utf8(bytes)?;
+                let length = match &value {
+                    PolyValue::List(items) => items.len(),
+                    _ => text.chars().count(),
+                };
+                let mut valid = facets.length.is_none_or(|n| length == n)
+                    && facets.min_length.is_none_or(|n| length >= n)
+                    && facets.max_length.is_none_or(|n| length <= n);
+                for pattern in &facets.patterns {
+                    valid &= regex::Regex::new(&format!("\\A(?:{pattern})\\z"))
+                        .map(|r| r.is_match(text))
+                        .unwrap_or(false);
+                }
+                for (bound, inclusive, minimum) in [
+                    (&facets.min_inclusive, true, true),
+                    (&facets.min_exclusive, false, true),
+                    (&facets.max_inclusive, true, false),
+                    (&facets.max_exclusive, false, false),
+                ] {
+                    if let Some(bound) = bound {
+                        let ordering = if let PolyValue::Int(number) = value {
+                            bound
+                                .parse::<i128>()
+                                .ok()
+                                .map(|bound| (number as i128).cmp(&bound))
+                        } else {
+                            text.parse::<f64>()
+                                .ok()
+                                .zip(bound.parse::<f64>().ok())
+                                .and_then(|(value, bound)| value.partial_cmp(&bound))
+                        };
+                        valid &= ordering.is_some_and(|ordering| {
+                            if minimum {
+                                ordering.is_gt() || (inclusive && ordering.is_eq())
+                            } else {
+                                ordering.is_lt() || (inclusive && ordering.is_eq())
+                            }
+                        });
+                    }
+                }
+                if !valid {
+                    return Err(PolyXmlError::ScalarParseError {
+                        field: field_name.into(),
+                        expected: "restriction facets",
+                        value: text.into(),
+                    });
+                }
+                Ok(value)
+            }
+            ScalarType::List(inner) => {
+                let text = std::str::from_utf8(bytes)?;
+                let values = text
+                    .split([' ', '\t', '\r', '\n'])
+                    .filter(|token| !token.is_empty())
+                    .map(|token| Self::parse_scalar(inner, token.as_bytes(), field_name))
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(PolyValue::List(values))
+            }
             ScalarType::Union(members) => {
                 for member in members {
                     if let Ok(value) = Self::parse_scalar(member, bytes, field_name) {

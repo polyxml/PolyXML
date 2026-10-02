@@ -797,7 +797,7 @@ impl PythonCodegen {
             other => other,
         };
         let inner_type = self.context.map_type_ref(unwrapped_ref);
-        let meta_dict = self.build_field_metadata(field);
+        let meta_dict = self.build_field_metadata(field, ir);
 
         let (field_type, field_call) = match self.options.backend {
             PythonBackend::Dataclass | PythonBackend::Aot => {
@@ -981,7 +981,7 @@ impl PythonCodegen {
         }
     }
 
-    fn build_field_metadata(&self, field: &FieldDef) -> String {
+    fn build_field_metadata(&self, field: &FieldDef, ir: &SchemaIR) -> String {
         let kind_str = match field.kind {
             FieldKind::Element => "Element",
             FieldKind::Attribute => "Attribute",
@@ -1006,6 +1006,24 @@ impl PythonCodegen {
         }
         if let Some(ref default) = field.default_value {
             parts.push(format!("\"default\": {default:?}"));
+        }
+        if matches!(super::primitive_base(&field.type_ref, ir), TypeRef::List(_)) {
+            parts.push("\"tokens\": True".into());
+            if let TypeRef::List(item) = super::primitive_base(&field.type_ref, ir) {
+                if let TypeRef::Named(name) = item.as_ref() {
+                    if let Some(TypeDef::Simple(simple)) = ir.types.get(name) {
+                        if !simple.facets.is_empty() {
+                            parts.push(format!(
+                                "\"item_facets\": {:?}",
+                                serde_json::to_string(&simple.facets).unwrap()
+                            ));
+                        }
+                    }
+                }
+            }
+            if field.cardinality.is_list() {
+                parts.push("\"collection\": True".into());
+            }
         }
         if field.nillable {
             parts.push("\"nillable\": True".to_string());

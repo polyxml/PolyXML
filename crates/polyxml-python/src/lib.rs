@@ -424,6 +424,27 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            if meta
+                .as_ref()
+                .and_then(|m| m.get_item("tokens").ok())
+                .and_then(|v| v.extract::<bool>().ok())
+                .unwrap_or(false)
+            {
+                let collection = meta
+                    .as_ref()
+                    .and_then(|m| m.get_item("collection").ok())
+                    .and_then(|v| v.extract::<bool>().ok())
+                    .unwrap_or(false);
+                field_schema.val_type = lexical_list_type(field_schema.val_type, collection);
+                if let Some(facets) = meta
+                    .as_ref()
+                    .and_then(|m| m.get_item("item_facets").ok())
+                    .and_then(|v| v.extract::<String>().ok())
+                {
+                    polyxml::schema::restrict_list_items(&mut field_schema.val_type, &facets)
+                        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                }
+            }
             field_schema.fixed_value = meta
                 .as_ref()
                 .and_then(|m| m.get_item("fixed").ok())
@@ -509,6 +530,30 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            if field_obj
+                .getattr("metadata")
+                .ok()
+                .and_then(|m| m.get_item("tokens").ok())
+                .and_then(|v| v.extract::<bool>().ok())
+                .unwrap_or(false)
+            {
+                let collection = field_obj
+                    .getattr("metadata")
+                    .ok()
+                    .and_then(|m| m.get_item("collection").ok())
+                    .and_then(|v| v.extract::<bool>().ok())
+                    .unwrap_or(false);
+                field_schema.val_type = lexical_list_type(field_schema.val_type, collection);
+                if let Some(facets) = field_obj
+                    .getattr("metadata")
+                    .ok()
+                    .and_then(|m| m.get_item("item_facets").ok())
+                    .and_then(|v| v.extract::<String>().ok())
+                {
+                    polyxml::schema::restrict_list_items(&mut field_schema.val_type, &facets)
+                        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                }
+            }
             field_schema.fixed_value = field_obj
                 .getattr("metadata")
                 .ok()
@@ -814,6 +859,18 @@ fn poly_value_to_py<'py>(
             )
         }
         PolyValue::List(items) => {
+            if let ValueType::Scalar(ScalarType::List(inner)) = val_type {
+                let target = field_meta
+                    .and_then(|meta| meta.py_type.as_ref())
+                    .and_then(|ty| ty.bind(py).getattr("__args__").ok())
+                    .and_then(|args| args.get_item(0).ok())
+                    .map(|ty| unwrap_optional_type(&ty));
+                let values = items
+                    .iter()
+                    .map(|item| convert_scalar_to_py(py, item, inner, target.as_ref()))
+                    .collect::<PyResult<Vec<_>>>()?;
+                return Ok(PyList::new(py, values)?.into_any().unbind());
+            }
             if let ValueType::List(inner_type) = val_type {
                 let inner_cls = if let ValueType::Nested(ref s) = inner_type.as_ref() {
                     lookup_py_class(py, &s.name)
@@ -1275,6 +1332,9 @@ fn py_to_poly_value<'py>(
 
                 match &field.val_type {
                     ValueType::Scalar(st) => match st {
+                        ScalarType::List(inner) => {
+                            values[i] = Some(py_lexical_list_to_poly(&val, inner, &field.name)?);
+                        }
                         ScalarType::Int => {
                             let int_val: i64 = if let Ok(enum_val) = val.getattr("value") {
                                 enum_val.extract()?
@@ -1313,7 +1373,14 @@ fn py_to_poly_value<'py>(
                                 None
                             };
                             for item in list.iter() {
-                                if let ValueType::Nested(sub_schema) = inner.as_ref() {
+                                if let ValueType::Scalar(ScalarType::List(scalar)) = inner.as_ref()
+                                {
+                                    poly_items.push(py_lexical_list_to_poly(
+                                        &item,
+                                        scalar,
+                                        &field.name,
+                                    )?);
+                                } else if let ValueType::Nested(sub_schema) = inner.as_ref() {
                                     poly_items.push(py_to_poly_value(
                                         py,
                                         &item,
@@ -1365,6 +1432,12 @@ fn py_to_poly_value<'py>(
 
             match &field.val_type {
                 ValueType::Scalar(st) => match st {
+                    ScalarType::List(inner) => {
+                        map.insert(
+                            field.name.clone(),
+                            py_lexical_list_to_poly(&val, inner, &field.name)?,
+                        );
+                    }
                     ScalarType::Int => {
                         let i: i64 = if let Ok(enum_val) = val.getattr("value") {
                             enum_val.extract()?
@@ -1403,7 +1476,13 @@ fn py_to_poly_value<'py>(
                             None
                         };
                         for item in list.iter() {
-                            if let ValueType::Nested(sub_schema) = inner.as_ref() {
+                            if let ValueType::Scalar(ScalarType::List(scalar)) = inner.as_ref() {
+                                poly_items.push(py_lexical_list_to_poly(
+                                    &item,
+                                    scalar,
+                                    &field.name,
+                                )?);
+                            } else if let ValueType::Nested(sub_schema) = inner.as_ref() {
                                 poly_items.push(py_to_poly_value(
                                     py,
                                     &item,
@@ -1760,4 +1839,49 @@ fn _polyxml(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(json_to_xml, m)?)?;
     m.add_function(wrap_pyfunction!(version, m)?)?;
     Ok(())
+}
+
+fn lexical_list_type(ty: ValueType, collection: bool) -> ValueType {
+    if collection {
+        if let ValueType::List(inner) = ty {
+            return ValueType::List(Box::new(lexical_list_type(*inner, false)));
+        }
+        return ty;
+    }
+    match ty {
+        ValueType::List(inner) => match *inner {
+            ValueType::Scalar(scalar) => ValueType::Scalar(ScalarType::List(Box::new(scalar))),
+            other => ValueType::List(Box::new(other)),
+        },
+        other => other,
+    }
+}
+fn py_lexical_list_to_poly(
+    value: &Bound<'_, PyAny>,
+    scalar: &ScalarType,
+    name: &str,
+) -> PyResult<PolyValue> {
+    let mut result = Vec::new();
+    for item in value.cast::<PyList>()?.iter() {
+        let item = item.getattr("value").unwrap_or(item);
+        let text: String = if matches!(scalar, ScalarType::Bool) {
+            if item.extract::<bool>()? {
+                "true".into()
+            } else {
+                "false".into()
+            }
+        } else {
+            item.str()?.extract()?
+        };
+        if text.is_empty() || text.contains([' ', '\t', '\r', '\n']) {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "List item cannot contain XML whitespace",
+            ));
+        }
+        result.push(
+            polyxml::converters::ValueConverter::parse_scalar(scalar, text.as_bytes(), name)
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?,
+        );
+    }
+    Ok(PolyValue::List(result))
 }

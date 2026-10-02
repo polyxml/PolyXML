@@ -1207,6 +1207,17 @@ impl XsdParser {
                                 base_type = resolve_type_ref(&base, target_ns, prefixes);
                             }
                         }
+                        "list" => {
+                            if let Some(item) = get_attr_value(e, "itemType") {
+                                base_type = TypeRef::List(Box::new(resolve_type_ref(
+                                    &item, target_ns, prefixes,
+                                )));
+                            } else {
+                                return Err(SchemaError::Malformed(
+                                    "xs:list requires a supported itemType".into(),
+                                ));
+                            }
+                        }
                         "union" => {
                             union_branches = Some(parse_union_members(e, target_ns, prefixes));
                         }
@@ -1262,6 +1273,17 @@ impl XsdParser {
                         "restriction" => {
                             if let Some(base) = get_attr_value(e, "base") {
                                 base_type = resolve_type_ref(&base, target_ns, prefixes);
+                            }
+                        }
+                        "list" => {
+                            if let Some(item) = get_attr_value(e, "itemType") {
+                                base_type = TypeRef::List(Box::new(resolve_type_ref(
+                                    &item, target_ns, prefixes,
+                                )));
+                            } else {
+                                return Err(SchemaError::Malformed(
+                                    "xs:list requires a supported itemType".into(),
+                                ));
                             }
                         }
                         "union" => {

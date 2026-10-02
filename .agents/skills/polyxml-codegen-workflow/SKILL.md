@@ -718,3 +718,11 @@ codecs enforce supported element-only choices on reads and writes. Mixed
 content, model groups, all-groups, and derivations need separate handling;
 do not infer complete content-model validation from these patterns. Chameleon
 namespace adoption must rekey both model owners and particle element QNames.
+
+Named xs:list types retain TypeRef::List as their simple base; they are one
+whitespace-separated lexical value, independent of maxOccurs collections.
+Python `tokens` metadata maps annotated lists to native ScalarType::List;
+Go named slices implement text codecs, and C# wrappers expose typed Value
+lists with a text proxy. Validate each item (including named restrictions
+and enum lexical values), and reject items containing XML whitespace on
+output. Empty lists remain distinct from omitted optional elements.
