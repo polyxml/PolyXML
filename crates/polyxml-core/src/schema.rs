@@ -66,6 +66,7 @@ pub struct FieldSchema {
     pub val_type: ValueType,
     pub required: bool,
     pub default_value: Option<String>,
+    pub fixed_value: Option<String>,
 }
 
 impl FieldSchema {
@@ -83,6 +84,7 @@ impl FieldSchema {
             val_type,
             required: false,
             default_value: None,
+            fixed_value: None,
         }
     }
 
@@ -354,6 +356,7 @@ impl ModelSchema {
 
             let mut field_schema = FieldSchema::new(&f.name, f.xml_name.as_bytes(), kind, val_type);
             field_schema.default_value = f.default_value.clone();
+            field_schema.fixed_value = f.fixed_value.clone();
             if let Some(ref ns) = f.namespace {
                 field_schema = field_schema.namespace(ns);
             }
@@ -632,4 +635,47 @@ impl ModelSchemaBuilder {
             variants: Arc::new(RwLock::new(Vec::new())),
         })
     }
+}
+
+/// Validate fixed constraints in value space rather than comparing lexical spellings.
+pub(crate) fn validate_fixed(
+    field: &FieldSchema,
+    value: &crate::value::PolyValue,
+) -> crate::error::Result<()> {
+    use crate::value::PolyValue;
+    let Some(fixed) = &field.fixed_value else {
+        return Ok(());
+    };
+    fn check(
+        ty: &ValueType,
+        value: &PolyValue,
+        fixed: &str,
+        name: &str,
+    ) -> crate::error::Result<()> {
+        if matches!(value, PolyValue::Null) {
+            return Ok(());
+        }
+        match (ty, value) {
+            (ValueType::Scalar(scalar), value) => {
+                let expected = crate::converters::ValueConverter::parse_scalar(
+                    scalar,
+                    fixed.as_bytes(),
+                    name,
+                )?;
+                if *value != expected {
+                    return Err(crate::error::PolyXmlError::SchemaError(format!(
+                        "Fixed value constraint violated for {name}"
+                    )));
+                }
+            }
+            (ValueType::List(inner), PolyValue::List(items)) => {
+                for item in items {
+                    check(inner, item, fixed, name)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+    check(&field.val_type, value, fixed, &field.name)
 }

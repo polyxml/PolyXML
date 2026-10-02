@@ -1278,3 +1278,47 @@ if(present&&!writer.ToString().Contains("<Flag>false</Flag>"))throw new Exceptio
         );
     }
 }
+
+#[test]
+fn fixed_values_are_enforced_on_read_and_write() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(include_str!("../../../research/fixtures/fixed_values.xsd"))
+        .unwrap();
+    for use_records in [true, false] {
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("App.csproj"),r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>"#).unwrap();
+        fs::write(
+            temp.path().join("Models.cs"),
+            CSharpCodegen::new(CSharpOptions {
+                namespace: "Models".into(),
+                use_records,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        fs::write(temp.path().join("Program.cs"),r#"using Models;using System.Xml.Serialization;using System.ComponentModel.DataAnnotations;
+var serializer=new XmlSerializer(typeof(Root));
+foreach(var xml in new[]{"<Root><Code>0013</Code><Flag>1</Flag></Root>","<Root><Code/><Flag/></Root>"}){
+var root=(Root)serializer.Deserialize(new StringReader(xml))!;
+if(root.Code!="0013"||root.Flag!=true||root.Mode!="auto")throw new Exception("fixed defaults missing");
+var writer=new StringWriter();serializer.Serialize(writer,root);
+try{root.Code="wrong";throw new Exception("mutation accepted");}catch(ValidationException){}
+}
+foreach(var xml in new[]{"<Root><Code>wrong</Code></Root>","<Root mode='wrong'><Code>0013</Code></Root>","<Root><Code>0013</Code><Flag>false</Flag></Root>"}){
+try{serializer.Deserialize(new StringReader(xml));throw new Exception("invalid input accepted");}catch(InvalidOperationException){}
+}"#).unwrap();
+        let _lock = DOTNET_LOCK.lock().unwrap();
+        let result = dotnet_command()
+            .arg("run")
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}

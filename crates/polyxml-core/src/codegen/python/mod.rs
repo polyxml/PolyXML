@@ -993,6 +993,9 @@ impl PythonCodegen {
             parts.push(format!("\"namespace\": \"{}\"", ns));
         }
 
+        if let Some(ref fixed) = field.fixed_value {
+            parts.push(format!("\"fixed\": {fixed:?}"));
+        }
         if let Some(ref default) = field.default_value {
             parts.push(format!("\"default\": {default:?}"));
         }

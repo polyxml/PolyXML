@@ -598,3 +598,39 @@ def test_element_defaults_preserve_absence(tmp_path, backend):
         encoded = present.to_xml()
         assert ET.fromstring(encoded).findtext("Flag") == "false"
         assert module.Root.from_xml(encoded).count == 42
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_fixed_values_validate_input_and_output(tmp_path, backend):
+    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/fixed_values.xsd"
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(f"fixed_{backend}", tmp_path / "fixed_values.py")
+    for document in ["<Root><Code>0013</Code><Flag>1</Flag></Root>", "<Root><Code/><Flag/></Root>"]:
+        root = module.Root.from_xml(document)
+        assert (root.code, root.flag, root.mode) == ("0013", True, "auto")
+        assert module.Root.from_xml(root.to_xml()).code == "0013"
+    for document in [
+        "<Root><Code>wrong</Code></Root>",
+        "<Root mode='wrong'><Code>0013</Code></Root>",
+        "<Root><Code>0013</Code><Flag>false</Flag></Root>",
+    ]:
+        with pytest.raises(ValueError, match="Fixed value constraint"):
+            module.Root.from_xml(document)
+    root = module.Root.from_xml("<Root><Code>0013</Code></Root>")
+    root.code = "wrong"
+    with pytest.raises(ValueError, match="Fixed value constraint"):
+        root.to_xml()

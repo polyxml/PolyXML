@@ -73,9 +73,10 @@ impl StackFrame {
     fn finish(mut self) -> Result<PolyValue> {
         for (index, field) in self.schema.fields.iter().enumerate() {
             if field.kind == FieldKind::Attribute && self.values[index].is_none() {
-                if let (Some(default), ValueType::Scalar(scalar)) =
-                    (&field.default_value, &field.val_type)
-                {
+                if let (Some(default), ValueType::Scalar(scalar)) = (
+                    &field.default_value.as_ref().or(field.fixed_value.as_ref()),
+                    &field.val_type,
+                ) {
                     self.values[index] = Some(ValueConverter::parse_scalar(
                         scalar,
                         default.as_bytes(),
@@ -113,6 +114,11 @@ impl StackFrame {
             }
         }
 
+        for (index, field) in self.schema.fields.iter().enumerate() {
+            if let Some(value) = self.values[index].as_ref() {
+                crate::schema::validate_fixed(field, value)?;
+            }
+        }
         Ok(PolyValue::Record {
             schema: self.schema,
             values: self.values.into_vec().into_boxed_slice(),
@@ -129,6 +135,7 @@ fn parse_field_scalar(
         field
             .default_value
             .as_ref()
+            .or(field.fixed_value.as_ref())
             .map_or(text, |value| value.as_bytes())
     } else {
         text

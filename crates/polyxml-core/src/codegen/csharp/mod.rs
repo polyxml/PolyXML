@@ -877,11 +877,11 @@ impl CSharpCodegen {
         ir: &SchemaIR,
         indent: &str,
     ) -> bool {
-        let Some(default) = field.default_value.as_ref() else {
+        let Some(default) = field.default_value.as_ref().or(field.fixed_value.as_ref()) else {
             return false;
         };
         if !self.options.emit_xml_attributes
-            || field.kind != FieldKind::Element
+            || !matches!(field.kind, FieldKind::Element | FieldKind::Attribute)
             || field.cardinality.is_list()
             || matches!(field.type_ref, TypeRef::Named(ref q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_) | TypeDef::Union(_))))
         {
@@ -894,19 +894,49 @@ impl CSharpCodegen {
             .as_ref()
             .map(|ns| format!(", Namespace = {ns:?}"))
             .unwrap_or_default();
+        let parse = |text: &str| {
+            format!("({base})new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape({text}) + \"</value>\"))!")
+        };
+        if let Some(fixed) = &field.fixed_value {
+            let expected = parse(&format!("{fixed:?}"));
+            let initial = if field.cardinality.is_optional() && field.kind == FieldKind::Element {
+                "default!".to_string()
+            } else {
+                expected.clone()
+            };
+            writeln!(out, "{indent}    private {ty} _{name} = {initial};
+{indent}    [XmlIgnore] public {ty} {name} {{ get => _{name}; set {{ if (value is not null && !object.Equals(value, {expected})) throw new System.ComponentModel.DataAnnotations.ValidationException(\"Fixed value constraint violated for {name}\"); _{name} = value; }} }}").unwrap();
+        } else {
+            let initial = if field.kind == FieldKind::Attribute {
+                parse(&format!("{default:?}"))
+            } else {
+                "default!".to_string()
+            };
+            writeln!(
+                out,
+                "{indent}    [XmlIgnore] public {ty} {name} {{ get; set; }} = {initial};"
+            )
+            .unwrap();
+        }
+        let kind = if field.kind == FieldKind::Attribute {
+            "XmlAttribute"
+        } else {
+            "XmlElement"
+        };
         writeln!(
             out,
-            "{indent}    [XmlIgnore] public {ty} {name} {{ get; set; }} = default!;"
-        )
-        .unwrap();
-        writeln!(
-            out,
-            "{indent}    [XmlElement({:?}{namespace})] public string? {name}Xml {{",
+            "{indent}    [{kind}({:?}{namespace})] public string? {name}Xml {{",
             field.xml_name
         )
         .unwrap();
         writeln!(out, "{indent}        get {{ if ({name} is null) return null; var writer = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture); new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Serialize(writer, {name}); return System.Xml.Linq.XDocument.Parse(writer.ToString()).Root!.Value; }}").unwrap();
-        writeln!(out, "{indent}        set {{ if (value is null) {{ {name} = default!; return; }} var text = value.Length == 0 ? {default:?} : value; {name} = ({base})new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape(text) + \"</value>\"))!; }}
+        let text = if field.kind == FieldKind::Attribute {
+            "value".into()
+        } else {
+            format!("value.Length == 0 ? {default:?} : value")
+        };
+        let parsed = parse("text");
+        writeln!(out, "{indent}        set {{ if (value is null) {{ {name} = default!; return; }} var text = {text}; {name} = {parsed}; }}
 {indent}    }}").unwrap();
         if field.cardinality.is_optional() || field.nillable {
             writeln!(
@@ -1079,7 +1109,7 @@ impl CSharpCodegen {
         }
 
         let has_lexical_union = self.options.emit_xml_attributes && s.fields.iter().any(|f| {
-            f.default_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
+            f.default_value.is_some() || f.fixed_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
         });
 
         if self.options.use_records && has_lexical_union {

@@ -176,3 +176,9 @@ General entity references are unsupported and must raise a parse error,
 including in unknown skipped elements; never substitute the entity's name.
 Predefined entities and numeric character references remain supported.
 External entity resolution stays disabled. See `test_security`.
+
+FieldSchema carries lexical defaults and fixed values from IR/generated
+metadata. Fixed constraints compare parsed scalar values on input and before
+serialization, so boolean `1` equals fixed `true`. C# scalar XML proxies also
+enforce fixed constraints when assigning typed values. Empty elements may
+receive a fixed value; empty attributes are actual values and must validate.

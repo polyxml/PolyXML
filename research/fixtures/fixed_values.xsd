@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+ <xs:element name="Root"><xs:complexType><xs:sequence>
+  <xs:element name="Code" type="xs:string" fixed="0013"/>
+  <xs:element name="Flag" type="xs:boolean" fixed="true" minOccurs="0"/>
+ </xs:sequence><xs:attribute name="mode" type="xs:string" fixed="auto"/></xs:complexType></xs:element>
+</xs:schema>

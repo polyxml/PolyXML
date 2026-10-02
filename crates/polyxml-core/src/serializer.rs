@@ -296,6 +296,12 @@ impl XmlSerializer {
             }
         };
 
+        for (index, field) in schema.fields.iter().enumerate() {
+            if let Some(value) = get_field(index, &field.name) {
+                crate::schema::validate_fixed(field, value)?;
+            }
+        }
+
         let local_tag = std::str::from_utf8(tag_name)?;
         let qualified_tag = if let Some(ctx) = ns_ctx {
             ctx.qualify_element(local_tag, element_ns)

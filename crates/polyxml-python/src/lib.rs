@@ -417,6 +417,10 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            field_schema.fixed_value = meta
+                .as_ref()
+                .and_then(|m| m.get_item("fixed").ok())
+                .and_then(|v| v.extract::<String>().ok());
             field_schema.default_value = meta
                 .as_ref()
                 .and_then(|m| m.get_item("default").ok())
@@ -498,6 +502,11 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            field_schema.fixed_value = field_obj
+                .getattr("metadata")
+                .ok()
+                .and_then(|m| m.get_item("fixed").ok())
+                .and_then(|v| v.extract::<String>().ok());
             field_schema.default_value = field_obj
                 .getattr("metadata")
                 .ok()
