@@ -1241,3 +1241,42 @@ var empty Parameters;if _,err:=xml.Marshal(empty);err==nil{t.Fatal("invalid outp
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn repeated_sequence_groups_enforce_bounds_and_order() {
+    let ir = XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/repeated_sequence.xsd"
+        ))
+        .unwrap();
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("go.mod"),
+        "module seqconstraints\n\ngo 1.22\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(temp.path().join("models_test.go"),r#"package models
+import("encoding/xml";"testing";"strings")
+func TestSequence(t *testing.T){
+ group:=`<First>a</First><Second>b</Second>`
+ for n:=0;n<=3;n++{var root Root;err:=xml.Unmarshal([]byte(`<Root>`+strings.Repeat(group,n)+`</Root>`),&root);if n==3{if err==nil{t.Fatal("excess groups accepted")};continue};if err!=nil{t.Fatal(err)};data,err:=xml.Marshal(root);if err!=nil{t.Fatal(err)};if err:=xml.Unmarshal(data,&root);err!=nil{t.Fatal(err)}}
+ for _,content:=range []string{`<First>a</First>`,`<First>a</First><First>b</First><Second>c</Second><Second>d</Second>`,`<Other/>`}{var root Root;if err:=xml.Unmarshal([]byte(`<Root>`+content+`</Root>`),&root);err==nil{t.Fatal("invalid sequence accepted",content)}}
+ var root Root;if err:=xml.Unmarshal([]byte(`<Root>`+group+`</Root>`),&root);err!=nil{t.Fatal(err)};root.Items=root.Items[:1];if _,err:=xml.Marshal(root);err==nil{t.Fatal("incomplete output accepted")}
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(temp.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

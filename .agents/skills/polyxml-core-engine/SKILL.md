@@ -182,3 +182,8 @@ metadata. Fixed constraints compare parsed scalar values on input and before
 serialization, so boolean `1` equals fixed `true`. C# scalar XML proxies also
 enforce fixed constraints when assigning typed values. Empty elements may
 receive a fixed value; empty attributes are actual values and must validate.
+
+Element-only repeated sequences retain group cardinality in the source
+particle model. Ordered item streams preserve wire order; their codecs must
+also validate group completeness, order, and upper bounds on read/write.
+Do not validate only per-field list lengths: A,A,B,B is not (A,B),(A,B).

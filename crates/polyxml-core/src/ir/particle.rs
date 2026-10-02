@@ -22,6 +22,18 @@ impl Particle {
             _ => false,
         }
     }
+    pub fn has_repeated_sequence(&self) -> bool {
+        match self {
+            Self::Repeat { particle, max, .. } => {
+                (matches!(particle.as_ref(), Self::Sequence(_)) && max.is_none_or(|n| n > 1))
+                    || particle.has_repeated_sequence()
+            }
+            Self::Choice(items) | Self::Sequence(items) => {
+                items.iter().any(Self::has_repeated_sequence)
+            }
+            _ => false,
+        }
+    }
     pub fn adopt_namespace(&mut self, namespace: &str) {
         match self {
             Self::Element(name) => {

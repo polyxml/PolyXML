@@ -495,7 +495,7 @@ impl XsdParser {
         let qname = QName::new(target_ns, name.clone());
         if !is_mixed {
             if let Some(model) = capture_content_model(reader, target_ns, prefixes)? {
-                if model.has_choice() {
+                if model.has_choice() || model.has_repeated_sequence() {
                     regex::Regex::new(&format!("^(?:{})$", model.pattern())).map_err(|error| {
                         SchemaError::Malformed(format!("Unsupported content model: {error}"))
                     })?;

@@ -1181,6 +1181,10 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
             return;
         };
         let struct_name = type_ident(&s.qname);
+        let content_pattern = ir
+            .content_models
+            .get(&s.qname)
+            .map(|model| format!("^(?:{})$", model.pattern()));
         let item_field = &field_names[item_index];
         let union_name = type_ident(&union.qname);
         let mut seen = HashSet::new();
@@ -1190,6 +1194,23 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
             .map(|branch| self.unique_field_name(&branch.variant_name, &mut seen))
             .collect::<Vec<_>>();
 
+        if let Some(pattern) = &content_pattern {
+            writeln!(out,"func (v {struct_name}) validateContent() error {{ tokens:=\"\";for _,item:=range v.{item_field} {{").unwrap();
+            for (branch, field) in union.branches.iter().zip(&branch_fields) {
+                if branch.xml_name == "#text" {
+                    writeln!(out,"if item.{field}!=nil && strings.TrimSpace(*item.{field})!=\"\" {{return fmt.Errorf(\"unexpected text in element-only content\")}}").unwrap();
+                } else {
+                    let token = format!(
+                        "{};",
+                        QName::new(branch.namespace.clone(), branch.xml_name.clone())
+                    );
+                    writeln!(out, "if item.{field}!=nil {{tokens+={token:?}}}").unwrap();
+                }
+            }
+            writeln!(out,"}};matched,err:=regexp.MatchString({pattern:?},tokens);if err!=nil{{return err}};if !matched{{return fmt.Errorf(\"content model constraint violated\")}};return nil
+}}
+").unwrap();
+        }
         let _ = writeln!(
             out,
             "func (v *{struct_name}) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {{"
@@ -1208,12 +1229,19 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
             let mapped = self.context.map_type_ref(&branch.type_ref);
             let _ = writeln!(out, "            case {:?}:\n                var value {mapped}\n                if err := d.DecodeElement(&value, &element); err != nil {{ return err }}\n                v.{item_field} = append(v.{item_field}, {union_name}{{{branch_field}: &value}})", branch.xml_name);
         }
-        out.push_str("            default:\n                if err := d.Skip(); err != nil { return err }\n            }\n        case xml.EndElement:\n            if element.Name == start.Name { return nil }\n        }\n    }\n}\n\n");
+        if content_pattern.is_some() {
+            out.push_str("            default: return fmt.Errorf(\"unexpected content element\")\n            }\n        case xml.EndElement:\n            if element.Name == start.Name { return v.validateContent() }\n        }\n    }\n}\n\n");
+        } else {
+            out.push_str("            default:\n                if err := d.Skip(); err != nil { return err }\n            }\n        case xml.EndElement:\n            if element.Name == start.Name { return nil }\n        }\n    }\n}\n\n");
+        }
 
         let _ = writeln!(
             out,
             "func (v {struct_name}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{"
         );
+        if content_pattern.is_some() {
+            out.push_str("    if err:=v.validateContent();err!=nil{return err}\n");
+        }
         let _ = writeln!(
             out,
             "    type Alias {struct_name}\n    attrs := Alias(v)\n    attrs.{item_field} = nil"

@@ -676,3 +676,40 @@ def test_separate_choice_groups_enforce_constraints(tmp_path, backend):
     root.b_term = "conflict"
     with pytest.raises(ValueError, match="Content model constraint"):
         root.to_xml()
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_repeated_sequence_constraints(tmp_path, backend):
+    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/repeated_sequence.xsd"
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(f"sequence_bounds_{backend}", tmp_path / "repeated_sequence.py")
+    group = "<First>a</First><Second>b</Second>"
+    for count in range(3):
+        root = module.Root.from_xml("<Root>" + group * count + "</Root>")
+        assert len(module.Root.from_xml(root.to_xml()).items) == count * 2
+    for content in [
+        group * 3,
+        "<First>a</First>",
+        "<First>a</First><First>b</First><Second>c</Second><Second>d</Second>",
+        "<Other/>",
+    ]:
+        with pytest.raises(ValueError, match="Content model constraint"):
+            module.Root.from_xml("<Root>" + content + "</Root>")
+    root = module.Root.from_xml("<Root>" + group + "</Root>")
+    root.items = root.items[:1]
+    with pytest.raises(ValueError, match="Content model constraint"):
+        root.to_xml()
