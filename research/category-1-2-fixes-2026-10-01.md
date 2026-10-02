@@ -1,5 +1,8 @@
 # Category 1 and 2 implementation follow-up — 2026-10-01
 
+Historical first-batch report. The expanded backlog scope and final acceptance
+results are in [the backlog closeout](backlog-closeout-2026-10-01.md).
+
 Scope: the six compiler/type-checker issues and fourteen codec/data-loss
 issues in the pasted competitor audit. Category 3 validation/specification
 work and the category 4 streaming enhancement are excluded.

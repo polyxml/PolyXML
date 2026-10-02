@@ -193,3 +193,10 @@ Resolve source particle references transitively through substitution groups,
 exclude abstract heads/intermediate members from wire alternatives, and retain
 head occurrence constraints. Removing abstract branches alone is insufficient:
 the codec must reject an abstract-head input and a missing required member.
+
+Large-schema grammar diagnostics must track line counts incrementally; scanning
+the complete prefix for every declaration is quadratic on UBL. Self-closing
+simpleContent restriction and extension nodes both retain their base and text
+field. Unprefixed base QNames honor the schema's default namespace. Root graph
+filtering follows concrete substitution members back to their head metadata
+after abstract heads have been removed from concrete parser branches.

@@ -642,8 +642,12 @@ fn test_csharp_choice_polymorphic_hierarchy() {
     assert!(cs_code.contains("[XmlInclude(typeof(ContactChoice.Phone))]"));
     assert!(cs_code.contains("public sealed record Email("));
     assert!(cs_code.contains("public sealed record Phone("));
-    assert!(cs_code.contains("XmlElement(\"email\", typeof(ContactChoice.Email))"));
-    assert!(cs_code.contains("XmlElement(\"phone\", typeof(ContactChoice.Phone))"));
+    assert!(
+        cs_code.contains("XmlElement(\"email\", typeof(ContactChoice.Email), Namespace = \"\")")
+    );
+    assert!(
+        cs_code.contains("XmlElement(\"phone\", typeof(ContactChoice.Phone), Namespace = \"\")")
+    );
     assert!(cs_code.contains("JsonPropertyName(\"contact\")"));
 
     let temp = tempdir().unwrap();

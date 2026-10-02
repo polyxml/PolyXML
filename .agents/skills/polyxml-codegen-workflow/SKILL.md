@@ -746,3 +746,20 @@ a canonical value snapshot and discard it when the typed value changes. Use
 invariant XML conversion, reject culture-specific date strings, and validate
 generated round trips against an independent XSD engine. Do not claim support
 for the entire XSD temporal range from platform date types.
+
+UBL C# acceptance requires `python3 scripts/verify_ubl_csharp.py`: it hashes
+all 16 official XSDs, checks import closure, compiles full/root-scoped records
+and classes under .NET 8, and independently validates an Invoice round trip.
+Root wrapper names need a separate reserved-name map covering emitted types
+and enum helpers. Preserve XML QNames while disambiguating C# identifiers.
+Derived simple-content models reuse inherited text and repeated attribute
+members; duplicate properties can compile yet fail XmlSerializer reflection.
+Ordinary element metadata must include referenced namespaces. C# DateOnly,
+TimeOnly, DateTimeOffset and TimeSpan text needs XML string proxies, retaining
+parsed lexicals only while the typed value stays unchanged.
+
+Go buffered content-model codecs must preserve a parsed XMLName when marshaling
+an instance directly. Validate the buffered alias output, then encode the alias
+with its resolved start element; forwarding decoded tokens can redeclare XML
+namespaces and change output. Keep the namespaced unbounded-choice runtime
+regression in the full workspace gate.

@@ -1,0 +1,18 @@
+{
+  "common/BDNDR-CCTS_CCT_SchemaModule-1.1.xsd": "dd546e4809df86b6445589f69f0d6c9df162840ae386574ddfc1da7638103e15",
+  "common/BDNDR-UnqualifiedDataTypes-1.1.xsd": "877af391a5ebf535258b1e4333e4c2e98efb7e797bb37712578ae11368338ee3",
+  "common/UBL-CommonAggregateComponents-2.4.xsd": "a451b52e3ec76500ea646dd2df437ca0f3a8e40379c0380be44a36c2e01e796e",
+  "common/UBL-CommonBasicComponents-2.4.xsd": "bac65d96b98774471845bb6a8a60897042ef367a2d93473420757cd2fae0d857",
+  "common/UBL-CommonExtensionComponents-2.4.xsd": "af4689233c2bbf8abba37ca49f661b0632e043c685f3ca0d45ac345a47c14623",
+  "common/UBL-CommonSignatureComponents-2.4.xsd": "aaa479e80b8d1e3b588f919faed8c5eb7e7c51731ac8b61f90f8c9be5aaec881",
+  "common/UBL-ExtensionContentDataType-2.4.xsd": "d7ba9adf5147394bfac525096a90a6af936068f782950d708d49d3ffdf17166a",
+  "common/UBL-QualifiedDataTypes-2.4.xsd": "299bfe3260c5ab2e08505d82593f2c48639b90ef450083b4e5f6e034c1e49c68",
+  "common/UBL-SignatureAggregateComponents-2.4.xsd": "f5f03f4de2be89c0356cf34ee012acedeaa616c08a5c681c72361d7907c9d598",
+  "common/UBL-SignatureBasicComponents-2.4.xsd": "cb82455f5bbba12004f97a04434c087bac3c6147422786541ca492b1ed02cdb5",
+  "common/UBL-XAdES01903v132-201601-2.4.xsd": "38f8d471cb0f40e0885bbeb3af9265220355b49021b87155053f7c0885d4a65e",
+  "common/UBL-XAdES01903v141-201601-2.4.xsd": "a6650fd9bad441e0d8da30040f4cc305ffa3bb139ae4baaff258d815ce687ec7",
+  "common/UBL-xmldsig-core-schema-2.4.xsd": "5ab264fe987cb65a69103451c2ece56116d722e5191ff8b83a08a7067d5e5d1a",
+  "common/UBL-xmldsig1-schema-2.4.xsd": "fee02640fcc7be1b5b9ab47f85eecbaf6c8886a1e20a80758185e7e52664572f",
+  "common/UBL-xmldsig11-schema-2.4.xsd": "db3861e89e235e8231393410349630693e872fa77d7c20c5d78d70fa38535651",
+  "maindoc/UBL-Invoice-2.4.xsd": "0d1b79c25ac860e16be5583b63c60d8b97cc3b1a0a9f46c43111c88096bbd2fd"
+}

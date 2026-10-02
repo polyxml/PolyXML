@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+ xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+ xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2">
+ <cbc:ID>INV-2026-001</cbc:ID>
+ <cbc:IssueDate>2026-10-01</cbc:IssueDate>
+ <cbc:DocumentCurrencyCode>USD</cbc:DocumentCurrencyCode>
+ <cac:AccountingSupplierParty><cac:Party><cac:PartyName><cbc:Name>Example Supplier</cbc:Name></cac:PartyName></cac:Party></cac:AccountingSupplierParty>
+ <cac:AccountingCustomerParty><cac:Party><cac:PartyName><cbc:Name>Example Customer</cbc:Name></cac:PartyName></cac:Party></cac:AccountingCustomerParty>
+ <cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID="USD">25.00</cbc:LineExtensionAmount><cbc:PayableAmount currencyID="USD">25.00</cbc:PayableAmount></cac:LegalMonetaryTotal>
+ <cac:InvoiceLine><cbc:ID>1</cbc:ID><cbc:InvoicedQuantity unitCode="EA">2</cbc:InvoicedQuantity><cbc:LineExtensionAmount currencyID="USD">25.00</cbc:LineExtensionAmount><cac:Item><cbc:Name>Example Item</cbc:Name></cac:Item><cac:Price><cbc:PriceAmount currencyID="USD">12.50</cbc:PriceAmount></cac:Price></cac:InvoiceLine>
+</Invoice>

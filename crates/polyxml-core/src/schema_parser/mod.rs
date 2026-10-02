@@ -721,7 +721,9 @@ impl XsdParser {
                     let local = strip_prefix(e.name().into_inner());
 
                     match local {
-                        "extension" => {
+                        "extension" | "restriction"
+                            if local == "extension" || in_simple_content =>
+                        {
                             if let Some(base) = get_attr_value(e, "base") {
                                 let resolved = resolve_qname(&base, target_ns, prefixes);
                                 if resolved != qname {
@@ -2007,7 +2009,7 @@ fn resolve_qname(name: &str, target_ns: Option<&str>, prefixes: &HashMap<String,
         let ns = prefixes.get(prefix).cloned();
         QName::new(ns, local)
     } else {
-        QName::new(target_ns, name)
+        QName::new(prefixes.get("").map(String::as_str).or(target_ns), name)
     }
 }
 
@@ -2714,6 +2716,8 @@ fn validate_type_references(ir: &SchemaIR, xml: &str) -> Result<(), SchemaError>
 fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
     let mut reader = Reader::from_str(xml);
     let mut stack = Vec::<(String, HashMap<String, String>)>::new();
+    let mut line = 1;
+    let mut line_position = 0;
     loop {
         let event = reader.read_event()?;
         let (element, empty) = match event {
@@ -2737,11 +2741,12 @@ fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
             }
         }
         let local = strip_prefix(element.name().into_inner());
-        let line = xml[..reader.buffer_position() as usize]
+        let position = reader.buffer_position() as usize;
+        line += xml[line_position..position]
             .bytes()
             .filter(|b| *b == b'\n')
-            .count()
-            + 1;
+            .count();
+        line_position = position;
         let annotation = stack
             .iter()
             .any(|(name, _)| matches!(name.as_str(), "annotation" | "documentation" | "appinfo"));

@@ -3,7 +3,7 @@
 //! Emits idiomatic C# 12 records with primary constructors, standard System.Xml.Serialization
 //! attributes, polymorphic xs:choice abstract records, and IValidatableObject facet boundary checks.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as FmtWrite;
 
 use heck::{AsLowerCamelCase, AsPascalCase};
@@ -242,6 +242,35 @@ fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || to_csharp_type_name(&q.local))
 }
 
+fn root_names(ir: &SchemaIR) -> HashMap<QName, String> {
+    let mut taken: HashSet<String> = ir
+        .emitted_types()
+        .map(|def| type_ident(def.qname()))
+        .collect();
+    for def in ir.emitted_types() {
+        if matches!(def, TypeDef::Enum(_)) {
+            taken.insert(format!("{}Extensions", type_ident(def.qname())));
+        }
+    }
+    let mut names = HashMap::new();
+    for element in ir.elements.values() {
+        let base = to_csharp_type_name(&element.qname.local);
+        if matches!(&element.type_ref, TypeRef::Named(q) if *q == element.qname && type_ident(q) == base)
+        {
+            names.insert(element.qname.clone(), base);
+            continue;
+        }
+        let mut name = base.clone();
+        let mut index = 2;
+        while !taken.insert(name.clone()) {
+            name = format!("{base}Element{index}");
+            index += 1;
+        }
+        names.insert(element.qname.clone(), name);
+    }
+    names
+}
+
 fn choice_variant_name(branch: &UnionBranch) -> String {
     let name = to_csharp_type_name(&branch.variant_name);
     if matches!(
@@ -451,9 +480,10 @@ impl CSharpCodegen {
         }
 
         if !self.options.use_records && self.options.emit_root_records {
+            let names = root_names(ir);
             for elem in ir.elements.values() {
-                let name = to_csharp_type_name(&elem.qname.local);
-                if name != self.context.map_type_ref(&elem.type_ref) {
+                let name = &names[&elem.qname];
+                if *name != self.context.map_type_ref(&elem.type_ref) {
                     writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
                 }
             }
@@ -890,6 +920,60 @@ impl CSharpCodegen {
         let _ = writeln!(out, "{}    }};", indent);
     }
 
+    fn emit_temporal_proxy(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        name: &str,
+        ir: &SchemaIR,
+        indent: &str,
+    ) -> bool {
+        if !self.options.emit_xml_attributes || field.cardinality.is_list() {
+            return false;
+        }
+        let (parse, format) = match field.type_ref {
+            TypeRef::Primitive(PrimitiveType::Date) => ("DateOnly.FromDateTime(System.Xml.XmlConvert.ToDateTimeOffset(value.Insert(10, \"T00:00:00\")).DateTime)".to_string(), "{value}.ToString(\"yyyy-MM-dd\", System.Globalization.CultureInfo.InvariantCulture)"),
+            TypeRef::Primitive(PrimitiveType::DateTime) => ("System.Xml.XmlConvert.ToDateTimeOffset(value)".into(), "System.Xml.XmlConvert.ToString({value})"),
+            TypeRef::Primitive(PrimitiveType::Time) => ("TimeOnly.FromDateTime(System.Xml.XmlConvert.ToDateTimeOffset(\"2000-01-01T\" + value).DateTime)".into(), "{value}.ToString(\"HH:mm:ss.fffffff\", System.Globalization.CultureInfo.InvariantCulture)"),
+            TypeRef::Primitive(PrimitiveType::Duration) => ("System.Xml.XmlConvert.ToTimeSpan(value)".into(), "System.Xml.XmlConvert.ToString({value})"),
+            _ => return false,
+        };
+        let ty = self.map_field_type(field, ir);
+        let optional = field.cardinality.is_optional() || field.nillable;
+        let value = if optional {
+            format!("{name}.Value")
+        } else {
+            name.to_string()
+        };
+        let format = format.replace("{value}", &value);
+        let check = if optional {
+            format!("if ({name} is null) return null;")
+        } else {
+            String::new()
+        };
+        let json_name = if field.kind == FieldKind::Text {
+            "value"
+        } else {
+            &field.xml_name
+        };
+        let json = if self.options.emit_json_attributes {
+            format!("[JsonPropertyName({json_name:?})] ")
+        } else {
+            String::new()
+        };
+        let json_ignore = if self.options.emit_json_attributes {
+            "[JsonIgnore] "
+        } else {
+            ""
+        };
+        writeln!(out, "{indent}    [XmlIgnore] {json}public {ty} {name} {{ get; set; }} = default!;\n{indent}    private {ty} _{name}XmlParsed = default!;\n{indent}    private string? _{name}XmlLexical;").unwrap();
+        let attrs = self
+            .build_field_attributes(field, ir)
+            .replace("[property: ", "[");
+        writeln!(out, "{indent}    {attrs}{json_ignore}public string? {name}Xml {{\n{indent}        get {{ {check} return _{name}XmlLexical is not null && {name} == _{name}XmlParsed ? _{name}XmlLexical : {format}; }}\n{indent}        set {{ if (value is null) {{ {name} = default!; _{name}XmlLexical = null; return; }} {name} = {parse}; _{name}XmlParsed = {name}; _{name}XmlLexical = value; }}\n{indent}    }}").unwrap();
+        true
+    }
+
     fn emit_default_scalar_proxy(
         &self,
         out: &mut String,
@@ -1075,6 +1159,37 @@ impl CSharpCodegen {
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR, indent: &str) {
+        // Reuse inherited XML members. Simple-content IR includes a text
+        // placeholder for non-inheriting targets; restrictions can repeat
+        // attribute declarations already present on the generated base.
+        let mut base = s.base_type.as_ref();
+        let mut visited = HashSet::new();
+        let mut inherited = Vec::new();
+        while let Some(name) = base {
+            if !visited.insert(name.clone()) {
+                break;
+            }
+            let Some(TypeDef::Struct(parent)) = ir.types.get(name) else {
+                break;
+            };
+            inherited.extend(parent.fields.iter());
+            base = parent.base_type.as_ref();
+        }
+        let is_inherited = |field: &FieldDef| {
+            inherited.iter().any(|parent| {
+                (field.kind == FieldKind::Text && parent.kind == FieldKind::Text)
+                    || (field.kind == parent.kind
+                        && field.xml_name == parent.xml_name
+                        && field.namespace == parent.namespace
+                        && field.name == parent.name)
+            })
+        };
+        if s.fields.iter().any(is_inherited) {
+            let mut own = s.clone();
+            own.fields.retain(|field| !is_inherited(field));
+            self.emit_struct(out, &own, ir, indent);
+            return;
+        }
         let struct_name = type_ident(&s.qname);
         if let Some(ref doc) = s.documentation {
             self.emit_docstring(out, doc, indent);
@@ -1130,10 +1245,10 @@ impl CSharpCodegen {
         }
 
         let has_lexical_union = self.options.emit_xml_attributes && s.fields.iter().any(|f| {
-            f.default_value.is_some() || f.fixed_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
+            matches!(f.type_ref, TypeRef::Primitive(PrimitiveType::Date | PrimitiveType::DateTime | PrimitiveType::Time | PrimitiveType::Duration)) || f.default_value.is_some() || f.fixed_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
         });
 
-        if self.options.use_records && has_lexical_union {
+        if self.options.use_records && (has_lexical_union || s.fields.is_empty()) {
             writeln!(
                 out,
                 "{}public record {}{}\n{}{{",
@@ -1141,7 +1256,9 @@ impl CSharpCodegen {
             )
             .unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
-                if self.emit_default_scalar_proxy(out, f, name, ir, indent) {
+                if self.emit_default_scalar_proxy(out, f, name, ir, indent)
+                    || self.emit_temporal_proxy(out, f, name, ir, indent)
+                {
                     continue;
                 }
                 let ty = self.map_field_type(f, ir);
@@ -1205,7 +1322,9 @@ impl CSharpCodegen {
             .unwrap();
             writeln!(out, "{}    public {}() {{ }}", indent, struct_name).unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
-                if self.emit_default_scalar_proxy(out, f, name, ir, indent) {
+                if self.emit_default_scalar_proxy(out, f, name, ir, indent)
+                    || self.emit_temporal_proxy(out, f, name, ir, indent)
+                {
                     continue;
                 }
                 let ty = self.map_field_type(f, ir);
@@ -1575,8 +1694,11 @@ impl CSharpCodegen {
                     for branch in &u.branches {
                         let variant_name = choice_variant_name(branch);
                         parts.push(format!(
-                            "XmlElement(\"{}\", typeof({}.{}))",
-                            branch.xml_name, choice_name, variant_name
+                            "XmlElement(\"{}\", typeof({}.{}), Namespace = {:?})",
+                            branch.xml_name,
+                            choice_name,
+                            variant_name,
+                            branch.namespace.as_deref().unwrap_or("")
                         ));
                     }
                 }
@@ -1600,7 +1722,15 @@ impl CSharpCodegen {
                         } else {
                             ""
                         };
-                        parts.push(format!("XmlElement(\"{}\"{})", f.xml_name, nullable));
+                        let namespace = f
+                            .namespace
+                            .as_ref()
+                            .map(|ns| format!(", Namespace = {ns:?}"))
+                            .unwrap_or_default();
+                        parts.push(format!(
+                            "XmlElement(\"{}\"{namespace}{nullable})",
+                            f.xml_name
+                        ));
                     }
                 }
             }
@@ -1634,11 +1764,12 @@ impl CSharpCodegen {
             return;
         }
 
+        let names = root_names(ir);
         for elem in ir.elements.values() {
-            let elem_name = to_csharp_type_name(&elem.qname.local);
+            let elem_name = &names[&elem.qname];
             let target_type = self.context.map_type_ref(&elem.type_ref);
 
-            if elem_name != target_type {
+            if *elem_name != target_type {
                 if self.options.emit_xml_attributes {
                     if let Some(ref ns) = elem.qname.namespace {
                         writeln!(

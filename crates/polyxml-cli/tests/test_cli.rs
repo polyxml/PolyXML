@@ -1455,27 +1455,27 @@ fn test_cli_csharp_generation() {
             && cs_code.contains("int Id")
     );
     assert!(
-        cs_code.contains("XmlElement(\"name\")")
+        cs_code.contains("XmlElement(\"name\", Namespace = \"https://example.com/crm\")")
             && cs_code.contains("JsonPropertyName(\"name\")")
             && cs_code.contains("string Name")
     );
     assert!(
-        cs_code.contains("XmlElement(\"tier\")")
+        cs_code.contains("XmlElement(\"tier\", Namespace = \"https://example.com/crm\")")
             && cs_code.contains("JsonPropertyName(\"tier\")")
             && cs_code.contains("AccountTier Tier")
     );
     assert!(
-        cs_code.contains("XmlElement(\"balance\")")
+        cs_code.contains("XmlElement(\"balance\", Namespace = \"https://example.com/crm\")")
             && cs_code.contains("JsonPropertyName(\"balance\")")
             && cs_code.contains("decimal Balance")
     );
     assert!(
-        cs_code.contains("XmlElement(\"alias\")")
+        cs_code.contains("XmlElement(\"alias\", Namespace = \"https://example.com/crm\")")
             && cs_code.contains("JsonPropertyName(\"alias\")")
             && cs_code.contains("string? Alias")
     );
     assert!(
-        cs_code.contains("XmlElement(\"tag\")")
+        cs_code.contains("XmlElement(\"tag\", Namespace = \"https://example.com/crm\")")
             && cs_code.contains("JsonPropertyName(\"tag\")")
             && cs_code.contains("List<string>? Tag")
     );

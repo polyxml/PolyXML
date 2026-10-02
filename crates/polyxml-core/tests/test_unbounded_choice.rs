@@ -136,11 +136,15 @@ fn test_unbounded_choice_ir_and_all_targets() {
         "C# must emit ContainerChoice abstract base"
     );
     assert!(
-        cs_code.contains("XmlElement(\"itemA\", typeof(ContainerChoice.ItemA))"),
+        cs_code.contains(
+            "XmlElement(\"itemA\", typeof(ContainerChoice.ItemA), Namespace = \"urn:inventory\")"
+        ),
         "C# must emit polymorphic XmlElement attribute for itemA"
     );
     assert!(
-        cs_code.contains("XmlElement(\"itemB\", typeof(ContainerChoice.ItemB))"),
+        cs_code.contains(
+            "XmlElement(\"itemB\", typeof(ContainerChoice.ItemB), Namespace = \"urn:inventory\")"
+        ),
         "C# must emit polymorphic XmlElement attribute for itemB"
     );
     assert!(

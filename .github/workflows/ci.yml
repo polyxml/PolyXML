@@ -53,6 +53,9 @@ jobs:
       - name: Run Core & C-ABI Tests
         run: cargo test -p polyxml -p polyxml-c --verbose
 
+      - name: Verify Pinned UBL 2.4 C# Corpus
+        run: python scripts/verify_ubl_csharp.py
+
       - name: Build C-ABI Shared Library (Artifact)
         run: cargo build --release -p polyxml-c
 
