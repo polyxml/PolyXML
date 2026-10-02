@@ -174,6 +174,11 @@ impl LanguageContext for CSharpLanguageContext {
 
     fn map_primitive(&self, prim: PrimitiveType) -> &'static str {
         match prim {
+            PrimitiveType::Integer
+            | PrimitiveType::PositiveInteger
+            | PrimitiveType::NegativeInteger
+            | PrimitiveType::NonPositiveInteger
+            | PrimitiveType::NonNegativeInteger => "string",
             PrimitiveType::String
             | PrimitiveType::NormalizedString
             | PrimitiveType::Token
@@ -201,12 +206,7 @@ impl LanguageContext for CSharpLanguageContext {
             PrimitiveType::UnsignedShort => "ushort",
             PrimitiveType::Int => "int",
             PrimitiveType::UnsignedInt => "uint",
-            PrimitiveType::Long
-            | PrimitiveType::Integer
-            | PrimitiveType::NonPositiveInteger
-            | PrimitiveType::NegativeInteger
-            | PrimitiveType::NonNegativeInteger
-            | PrimitiveType::PositiveInteger => "long",
+            PrimitiveType::Long => "long",
             PrimitiveType::UnsignedLong => "ulong",
             PrimitiveType::Float => "float",
             PrimitiveType::Double => "double",
@@ -411,6 +411,18 @@ impl CSharpCodegen {
             self.emit_root_elements(&mut out, ir, indent);
         }
 
+        if out.contains("PolyxmlIntegerLexical.") {
+            writeln!(out, r#"{indent}internal static class PolyxmlIntegerLexical {{
+{indent}    internal static string Validate(string value, int kind) {{
+{indent}        value = value.Trim(' ', '\t', '\r', '\n');
+{indent}        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"\A[+-]?[0-9]+\z")) throw new FormatException("Invalid integer");
+{indent}        var sign = System.Numerics.BigInteger.Parse(value, System.Globalization.CultureInfo.InvariantCulture).Sign;
+{indent}        if ((kind == 1 && sign <= 0) || (kind == 2 && sign < 0) || (kind == -1 && sign >= 0) || (kind == -2 && sign > 0)) throw new FormatException("Integer sign constraint failed");
+{indent}        return value;
+{indent}    }}
+{indent}}}
+"#).unwrap();
+        }
         // Emit Source Generator Context if requested
         if self.options.emit_source_gen {
             self.emit_source_gen_context(&mut out, ir, indent);
@@ -585,6 +597,42 @@ impl CSharpCodegen {
     }
 
     fn emit_simple(&self, out: &mut String, s: &SimpleTypeDef, ir: &SchemaIR, indent: &str) {
+        if let TypeRef::Primitive(p) = super::primitive_base(&s.base_type, ir) {
+            if p.is_unbounded_integer() {
+                let name = type_ident(&s.qname);
+                let kind = if self.options.use_records {
+                    "record"
+                } else {
+                    "class"
+                };
+                let sign = match p {
+                    PrimitiveType::PositiveInteger => 1,
+                    PrimitiveType::NonNegativeInteger => 2,
+                    PrimitiveType::NegativeInteger => -1,
+                    PrimitiveType::NonPositiveInteger => -2,
+                    _ => 0,
+                };
+                let xml_ignore = if self.options.emit_xml_attributes {
+                    "[XmlIgnore] "
+                } else {
+                    ""
+                };
+                writeln!(out,"{indent}public {kind} {name} : System.ComponentModel.DataAnnotations.IValidatableObject {{\n{indent}    {xml_ignore}public string Value {{get;set;}} = default!;\n{indent}    public {name}(){{}} public {name}(string value){{ Value=Check(value); }}
+{indent}    private static string Check(string value) {{ var instance=new {name} {{ Value=PolyxmlIntegerLexical.Validate(value,{sign}) }}; System.ComponentModel.DataAnnotations.Validator.ValidateObject(instance,new System.ComponentModel.DataAnnotations.ValidationContext(instance),true);return instance.Value; }}").unwrap();
+                if self.options.emit_xml_attributes {
+                    writeln!(out,"{indent}    [XmlText] public string XmlValue {{get => Check(Value);set => Value=Check(value);}}").unwrap();
+                }
+                writeln!(out,"{indent}    public IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult> Validate(System.ComponentModel.DataAnnotations.ValidationContext validationContext) {{").unwrap();
+                self.emit_integer_facets(out, &s.facets, "Value", &format!("{indent}        "));
+                writeln!(
+                    out,
+                    "{indent}        yield break;\n{indent}    }}\n{indent}}}\n"
+                )
+                .unwrap();
+                return;
+            }
+        }
+
         if let TypeRef::List(item) = &s.base_type {
             let name = type_ident(&s.qname);
             let ty = self.context.map_type_ref(item);
@@ -840,6 +888,17 @@ impl CSharpCodegen {
             } else {
                 format!("candidate{}", idx)
             };
+            if let Some(p) = super::unbounded_integer(&branch.type_ref, ir) {
+                let kind = match p {
+                    PrimitiveType::PositiveInteger => 1,
+                    PrimitiveType::NonNegativeInteger => 2,
+                    PrimitiveType::NegativeInteger => -1,
+                    PrimitiveType::NonPositiveInteger => -2,
+                    _ => 0,
+                };
+                writeln!(out,"{indent}        try {{ var candidate{idx}=PolyxmlIntegerLexical.Validate(value,{kind});return new {variant}({wrap}); }}catch(FormatException){{}}").unwrap();
+                continue;
+            }
             if base_name == "string" {
                 if let Some(simple) = simple.filter(|s| !s.facets.patterns.is_empty()) {
                     let checks = simple
@@ -918,6 +977,66 @@ impl CSharpCodegen {
             indent
         );
         let _ = writeln!(out, "{}    }};", indent);
+    }
+
+    fn emit_integer_proxy(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        name: &str,
+        ir: &SchemaIR,
+        indent: &str,
+    ) -> bool {
+        let TypeRef::Primitive(p) = field.type_ref else {
+            return false;
+        };
+        if !p.is_unbounded_integer() || !self.options.emit_xml_attributes {
+            return false;
+        }
+        let kind = match p {
+            PrimitiveType::PositiveInteger => 1,
+            PrimitiveType::NonNegativeInteger => 2,
+            PrimitiveType::NegativeInteger => -1,
+            PrimitiveType::NonPositiveInteger => -2,
+            _ => 0,
+        };
+        let ty = self.map_field_type(field, ir);
+        let attrs = self
+            .build_field_attributes(field, ir)
+            .replace("[property: ", "[");
+        let json = if self.options.emit_json_attributes {
+            format!("[JsonPropertyName({:?})] ", field.xml_name)
+        } else {
+            String::new()
+        };
+        let ignore = if self.options.emit_json_attributes {
+            "[JsonIgnore] "
+        } else {
+            ""
+        };
+        let default = field
+            .default_value
+            .as_ref()
+            .or(field.fixed_value.as_ref())
+            .map(|v| format!("{v:?}"))
+            .unwrap_or("default!".into());
+        writeln!(
+            out,
+            "{indent}    [XmlIgnore] {json}public {ty} {name} {{get;set;}} = {default};"
+        )
+        .unwrap();
+        let validation = if field.cardinality.is_list() {
+            format!("{name}?.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()")
+        } else {
+            format!("{name} is null ? null : PolyxmlIntegerLexical.Validate({name},{kind})")
+        };
+        let parse = if field.cardinality.is_list() {
+            format!("value?.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()!")
+        } else {
+            format!("value is null ? default! : PolyxmlIntegerLexical.Validate(value,{kind})")
+        };
+        writeln!(out,"{indent}    {attrs}{ignore}public {ty} {name}Xml {{ get => {validation}!; set => {name} = {parse}; }}").unwrap();
+        true
     }
 
     fn emit_temporal_proxy(
@@ -999,7 +1118,20 @@ impl CSharpCodegen {
             .as_ref()
             .map(|ns| format!(", Namespace = {ns:?}"))
             .unwrap_or_default();
+        let integer_kind = match &field.type_ref {
+            TypeRef::Primitive(p) if p.is_unbounded_integer() => Some(match p {
+                PrimitiveType::PositiveInteger => 1,
+                PrimitiveType::NonNegativeInteger => 2,
+                PrimitiveType::NegativeInteger => -1,
+                PrimitiveType::NonPositiveInteger => -2,
+                _ => 0,
+            }),
+            _ => None,
+        };
         let parse = |text: &str| {
+            if let Some(kind) = integer_kind {
+                return format!("PolyxmlIntegerLexical.Validate({text},{kind})");
+            }
             format!("({base})new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape({text}) + \"</value>\"))!")
         };
         if let Some(fixed) = &field.fixed_value {
@@ -1009,8 +1141,13 @@ impl CSharpCodegen {
             } else {
                 expected.clone()
             };
+            let equal = if integer_kind.is_some() {
+                format!("System.Numerics.BigInteger.Parse(value,System.Globalization.CultureInfo.InvariantCulture)==System.Numerics.BigInteger.Parse({expected},System.Globalization.CultureInfo.InvariantCulture)")
+            } else {
+                format!("object.Equals(value, {expected})")
+            };
             writeln!(out, "{indent}    private {ty} _{name} = {initial};
-{indent}    [XmlIgnore] public {ty} {name} {{ get => _{name}; set {{ if (value is not null && !object.Equals(value, {expected})) throw new System.ComponentModel.DataAnnotations.ValidationException(\"Fixed value constraint violated for {name}\"); _{name} = value; }} }}").unwrap();
+{indent}    [XmlIgnore] public {ty} {name} {{ get => _{name}; set {{ if (value is not null && !({equal})) throw new System.ComponentModel.DataAnnotations.ValidationException(\"Fixed value constraint violated for {name}\"); _{name} = value; }} }}").unwrap();
         } else {
             let initial = if field.kind == FieldKind::Attribute {
                 parse(&format!("{default:?}"))
@@ -1034,7 +1171,11 @@ impl CSharpCodegen {
             field.xml_name
         )
         .unwrap();
-        writeln!(out, "{indent}        get {{ if ({name} is null) return null; var writer = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture); new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Serialize(writer, {name}); return System.Xml.Linq.XDocument.Parse(writer.ToString()).Root!.Value; }}").unwrap();
+        if let Some(kind) = integer_kind {
+            writeln!(out,"{indent}        get {{ if ({name} is null) return null; return PolyxmlIntegerLexical.Validate({name},{kind}); }}").unwrap();
+        } else {
+            writeln!(out, "{indent}        get {{ if ({name} is null) return null; var writer = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture); new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Serialize(writer, {name}); return System.Xml.Linq.XDocument.Parse(writer.ToString()).Root!.Value; }}").unwrap();
+        }
         let text = if field.kind == FieldKind::Attribute {
             "value".into()
         } else {
@@ -1245,7 +1386,7 @@ impl CSharpCodegen {
         }
 
         let has_lexical_union = self.options.emit_xml_attributes && s.fields.iter().any(|f| {
-            matches!(f.type_ref, TypeRef::Primitive(PrimitiveType::Date | PrimitiveType::DateTime | PrimitiveType::Time | PrimitiveType::Duration)) || f.default_value.is_some() || f.fixed_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
+            matches!(f.type_ref, TypeRef::Primitive(p) if p.is_unbounded_integer()) || matches!(f.type_ref, TypeRef::Primitive(PrimitiveType::Date | PrimitiveType::DateTime | PrimitiveType::Time | PrimitiveType::Duration)) || f.default_value.is_some() || f.fixed_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
         });
 
         if self.options.use_records && (has_lexical_union || s.fields.is_empty()) {
@@ -1257,6 +1398,7 @@ impl CSharpCodegen {
             .unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
                 if self.emit_default_scalar_proxy(out, f, name, ir, indent)
+                    || self.emit_integer_proxy(out, f, name, ir, indent)
                     || self.emit_temporal_proxy(out, f, name, ir, indent)
                 {
                     continue;
@@ -1323,6 +1465,7 @@ impl CSharpCodegen {
             writeln!(out, "{}    public {}() {{ }}", indent, struct_name).unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
                 if self.emit_default_scalar_proxy(out, f, name, ir, indent)
+                    || self.emit_integer_proxy(out, f, name, ir, indent)
                     || self.emit_temporal_proxy(out, f, name, ir, indent)
                 {
                     continue;
@@ -1553,15 +1696,38 @@ impl CSharpCodegen {
                 if is_opt {
                     writeln!(out, "{}        if ({} is not null)", indent, prop_name).unwrap();
                     writeln!(out, "{}        {{", indent).unwrap();
-                    self.emit_facet_checks(
-                        out,
-                        facets,
-                        prop_name,
-                        &format!("{}            ", indent),
-                    );
+                    if super::unbounded_integer(&f.type_ref, ir).is_some() {
+                        self.emit_integer_facets(
+                            out,
+                            facets,
+                            prop_name,
+                            &format!("{indent}            "),
+                        );
+                    } else {
+                        self.emit_facet_checks(
+                            out,
+                            facets,
+                            prop_name,
+                            &format!("{indent}            "),
+                        );
+                    }
                     writeln!(out, "{}        }}", indent).unwrap();
                 } else {
-                    self.emit_facet_checks(out, facets, prop_name, &format!("{}        ", indent));
+                    if super::unbounded_integer(&f.type_ref, ir).is_some() {
+                        self.emit_integer_facets(
+                            out,
+                            facets,
+                            prop_name,
+                            &format!("{indent}        "),
+                        );
+                    } else {
+                        self.emit_facet_checks(
+                            out,
+                            facets,
+                            prop_name,
+                            &format!("{indent}        "),
+                        );
+                    }
                 }
                 has_checks = true;
             }
@@ -1570,6 +1736,28 @@ impl CSharpCodegen {
         let _ = has_checks;
         writeln!(out, "{}        yield break;", indent).unwrap();
         writeln!(out, "{}    }}", indent).unwrap();
+    }
+
+    fn emit_integer_facets(
+        &self,
+        out: &mut String,
+        facets: &RestrictionFacets,
+        target: &str,
+        indent: &str,
+    ) {
+        for pattern in &facets.patterns {
+            writeln!(out,"{indent}if(!System.Text.RegularExpressions.Regex.IsMatch({target},{:?})) yield return new System.ComponentModel.DataAnnotations.ValidationResult(\"Integer pattern violated\");",format!(r"\A(?:{pattern})\z")).unwrap();
+        }
+        for (bound, op) in [
+            (&facets.min_inclusive, "<"),
+            (&facets.max_inclusive, ">"),
+            (&facets.min_exclusive, "<="),
+            (&facets.max_exclusive, ">="),
+        ] {
+            if let Some(bound) = bound {
+                writeln!(out,"{indent}if (System.Numerics.BigInteger.Parse({target},System.Globalization.CultureInfo.InvariantCulture) {op} System.Numerics.BigInteger.Parse({bound:?},System.Globalization.CultureInfo.InvariantCulture)) yield return new System.ComponentModel.DataAnnotations.ValidationResult(\"Integer bound violated\");").unwrap();
+            }
+        }
     }
 
     fn emit_facet_checks(

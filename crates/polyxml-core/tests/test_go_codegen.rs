@@ -1410,3 +1410,42 @@ var root Portfolio;if err:=xml.Unmarshal([]byte(`<Portfolio xmlns="urn:audit:sub
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn unbounded_integer_xml_preserves_digits() {
+    let ir = XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/wave5/unbounded_integer.xsd"
+        ))
+        .unwrap();
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module integers\n\ngo 1.22\n").unwrap();
+    fs::write(
+        dir.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(dir.path().join("models_test.go"),r#"package models
+import("encoding/xml";"testing")
+func TestIntegers(t *testing.T) {
+ for _,digits:=range []string{"1234567890123456789012345678901234567890","9223372036854775807","9223372036854775808","-9223372036854775808","-9223372036854775809","-1234567890123456789012345678901234567890","+000123"} {
+  document:="<Root><Value>"+digits+"</Value></Root>";var root Root
+  if err:=xml.Unmarshal([]byte(document),&root);err!=nil{t.Fatal(err)}
+  output,err:=xml.Marshal(root);if err!=nil{t.Fatal(err)};if string(output)!=document{t.Fatalf("digits changed: %s",output)}
+ }
+ for _,bad:=range []string{"1.0","1e30","+","1 2"}{var root Root;if err:=xml.Unmarshal([]byte("<Root><Value>"+bad+"</Value></Root>"),&root);err==nil{t.Fatal("accepted invalid integer")}}
+ root:=Root{Value:PolyxmlInteger("1.0")};if _,err:=xml.Marshal(root);err==nil{t.Fatal("wrote invalid integer")}
+ var positive PolyxmlPositiveInteger;if err:=positive.UnmarshalText([]byte("0"));err==nil{t.Fatal("accepted zero positive integer")}
+}"#).unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

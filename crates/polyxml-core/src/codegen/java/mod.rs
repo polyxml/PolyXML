@@ -92,6 +92,11 @@ impl LanguageContext for JavaLanguageContext {
 
     fn map_primitive(&self, prim: PrimitiveType) -> &'static str {
         match prim {
+            PrimitiveType::Integer
+            | PrimitiveType::PositiveInteger
+            | PrimitiveType::NegativeInteger
+            | PrimitiveType::NonPositiveInteger
+            | PrimitiveType::NonNegativeInteger => "java.math.BigInteger",
             PrimitiveType::Boolean => "boolean",
             PrimitiveType::Float => "float",
             PrimitiveType::Double => "double",
@@ -99,13 +104,7 @@ impl LanguageContext for JavaLanguageContext {
             PrimitiveType::Byte => "byte",
             PrimitiveType::Short => "short",
             PrimitiveType::Int => "int",
-            PrimitiveType::Integer
-            | PrimitiveType::Long
-            | PrimitiveType::PositiveInteger
-            | PrimitiveType::NegativeInteger
-            | PrimitiveType::NonPositiveInteger
-            | PrimitiveType::NonNegativeInteger
-            | PrimitiveType::UnsignedLong => "long",
+            PrimitiveType::Long | PrimitiveType::UnsignedLong => "long",
             PrimitiveType::UnsignedByte
             | PrimitiveType::UnsignedShort
             | PrimitiveType::UnsignedInt => "int",
@@ -159,6 +158,7 @@ impl JavaLanguageContext {
     pub fn boxed_type(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => match prim {
+                p if p.is_unbounded_integer() => "java.math.BigInteger".into(),
                 PrimitiveType::Boolean => "Boolean".to_string(),
                 PrimitiveType::Float => "Float".to_string(),
                 PrimitiveType::Double => "Double".to_string(),
@@ -931,6 +931,25 @@ impl JavaCodegen {
             return checks;
         }
 
+        if matches!(type_ref, TypeRef::Primitive(p) if p.is_unbounded_integer()) {
+            for (bound, op) in [
+                (&facets.min_inclusive, "<"),
+                (&facets.max_inclusive, ">"),
+                (&facets.min_exclusive, "<="),
+                (&facets.max_exclusive, ">="),
+            ] {
+                if let Some(bound) = bound {
+                    let target = if is_optional { "v" } else { var_name };
+                    let check=format!("if ({target}.compareTo(new java.math.BigInteger({bound:?})) {op} 0) throw new IllegalArgumentException(\"Integer bound violated\");");
+                    checks.push(if is_optional {
+                        format!("{var_name}.ifPresent(v -> {{ {check} }});")
+                    } else {
+                        check
+                    });
+                }
+            }
+            return checks;
+        }
         let is_string = match type_ref {
             TypeRef::Primitive(prim) => matches!(
                 prim,

@@ -112,18 +112,18 @@ impl LanguageContext for CppLanguageContext {
 
     fn map_primitive(&self, prim: PrimitiveType) -> &'static str {
         match prim {
+            PrimitiveType::Integer
+            | PrimitiveType::PositiveInteger
+            | PrimitiveType::NegativeInteger
+            | PrimitiveType::NonPositiveInteger
+            | PrimitiveType::NonNegativeInteger => "std::string",
             PrimitiveType::Boolean => "bool",
             PrimitiveType::Float => "float",
             PrimitiveType::Double | PrimitiveType::Decimal => "double",
             PrimitiveType::Byte => "std::int8_t",
             PrimitiveType::Short => "std::int16_t",
             PrimitiveType::Int => "std::int32_t",
-            PrimitiveType::Integer
-            | PrimitiveType::Long
-            | PrimitiveType::PositiveInteger
-            | PrimitiveType::NegativeInteger
-            | PrimitiveType::NonPositiveInteger
-            | PrimitiveType::NonNegativeInteger => "std::int64_t",
+            PrimitiveType::Long => "std::int64_t",
             PrimitiveType::UnsignedByte => "std::uint8_t",
             PrimitiveType::UnsignedShort => "std::uint16_t",
             PrimitiveType::UnsignedInt => "std::uint32_t",
@@ -656,6 +656,43 @@ concept XmlModel = requires(T a) {{
     }
 
     fn emit_types(&self, out: &mut String, ir: &SchemaIR) {
+        if ir.emitted_types().any(|def| match def {
+            TypeDef::Struct(s) => s
+                .fields
+                .iter()
+                .any(|f| super::unbounded_integer(&f.type_ref, ir).is_some()),
+            TypeDef::Simple(s) => super::unbounded_integer(&s.base_type, ir).is_some(),
+            TypeDef::Union(u) => u
+                .branches
+                .iter()
+                .any(|b| super::unbounded_integer(&b.type_ref, ir).is_some()),
+            _ => false,
+        }) {
+            out.push_str(r#"
+inline std::string_view polyxml_integer_trim(std::string_view text) noexcept {
+    const auto first=text.find_first_not_of(" \t\r\n"); if(first==std::string_view::npos)return {};
+    return text.substr(first,text.find_last_not_of(" \t\r\n")-first+1);
+}
+inline bool polyxml_integer_valid(std::string_view text,int kind) noexcept {
+    text=polyxml_integer_trim(text);bool negative=false;
+    if(!text.empty()&&(text.front()=='+'||text.front()=='-')){negative=text.front()=='-';text.remove_prefix(1);}
+    if(text.empty())return false;bool nonzero=false;
+    for(char c:text){if(c<'0'||c>'9')return false;nonzero|=c!='0';}
+    int sign=nonzero?(negative?-1:1):0;
+    return !((kind==1&&sign<=0)||(kind==2&&sign<0)||(kind==-1&&sign>=0)||(kind==-2&&sign>0));
+}
+inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexcept {
+    a=polyxml_integer_trim(a);b=polyxml_integer_trim(b);
+    bool an=!a.empty()&&a.front()=='-',bn=!b.empty()&&b.front()=='-';
+    if(!a.empty()&&(a.front()=='+'||a.front()=='-'))a.remove_prefix(1);
+    if(!b.empty()&&(b.front()=='+'||b.front()=='-'))b.remove_prefix(1);
+    while(!a.empty()&&a.front()=='0')a.remove_prefix(1);
+    while(!b.empty()&&b.front()=='0')b.remove_prefix(1);
+    an=an&&!a.empty();bn=bn&&!b.empty();if(an!=bn)return an?-1:1;
+    int cmp=a.size()<b.size()?-1:a.size()>b.size()?1:a.compare(b);return an?-cmp:cmp;
+}
+"#);
+        }
         let sorted_qnames = self.topological_sort_types(ir);
 
         // Aliases must follow their base aliases, which may sort later by name.
@@ -961,6 +998,7 @@ concept XmlModel = requires(T a) {{
             // Value field
             let init = match &f.default_value {
                 Some(v) => match f.type_ref {
+                    TypeRef::Primitive(p) if p.is_unbounded_integer() => format!(" = {v:?}"),
                     TypeRef::Primitive(PrimitiveType::Boolean) => {
                         format!(" = {}", v.to_lowercase())
                     }
@@ -977,6 +1015,7 @@ concept XmlModel = requires(T a) {{
                     _ => " = {}".to_string(),
                 },
                 None => match f.type_ref {
+                    TypeRef::Primitive(p) if p.is_unbounded_integer() => " = {}".into(),
                     TypeRef::Primitive(PrimitiveType::Boolean) => " = false".to_string(),
                     TypeRef::Primitive(PrimitiveType::Float) => " = 0.0f".to_string(),
                     TypeRef::Primitive(PrimitiveType::Double)
@@ -1012,6 +1051,41 @@ concept XmlModel = requires(T a) {{
 
         let mut has_checks = false;
         for (f, field_name) in s.fields.iter().zip(field_names) {
+            if let Some(p) = super::unbounded_integer(&f.type_ref, ir) {
+                let kind = match p {
+                    PrimitiveType::PositiveInteger => 1,
+                    PrimitiveType::NonNegativeInteger => 2,
+                    PrimitiveType::NegativeInteger => -1,
+                    PrimitiveType::NonPositiveInteger => -2,
+                    _ => 0,
+                };
+                let (target, close) = if f.cardinality.is_list() || f.type_ref.is_list() {
+                    writeln!(out, "        for(const auto& value : {field_name}) {{").unwrap();
+                    ("value".to_string(), true)
+                } else if f.cardinality.is_optional() || f.nillable {
+                    writeln!(out, "        if({field_name}.has_value()){{").unwrap();
+                    (format!("*{field_name}"), true)
+                } else {
+                    (field_name.clone(), false)
+                };
+                writeln!(
+                    out,
+                    "        if(!polyxml_integer_valid({target},{kind}))return false;"
+                )
+                .unwrap();
+                if let Some(facets) = &f.facets {
+                    self.emit_integer_facets(out, facets, &target);
+                }
+                if let TypeRef::Named(name) = &f.type_ref {
+                    if let Some(TypeDef::Simple(simple)) = ir.types.get(name) {
+                        self.emit_integer_facets(out, &simple.facets, &target);
+                    }
+                }
+                if close {
+                    out.push_str("        }\n");
+                }
+                continue;
+            }
             if let Some(simple) = super::patterned_simple(&f.type_ref, ir) {
                 let field = field_name.clone();
                 let name = type_ident(&simple.qname);
@@ -1063,6 +1137,23 @@ concept XmlModel = requires(T a) {{
         writeln!(out, "        return true;").unwrap();
 
         writeln!(out, "    }}").unwrap();
+    }
+
+    fn emit_integer_facets(&self, out: &mut String, facets: &RestrictionFacets, target: &str) {
+        for (bound, op) in [
+            (&facets.min_inclusive, "<"),
+            (&facets.max_inclusive, ">"),
+            (&facets.min_exclusive, "<="),
+            (&facets.max_exclusive, ">="),
+        ] {
+            if let Some(bound) = bound {
+                writeln!(
+                    out,
+                    "        if(polyxml_integer_compare({target},{bound:?}) {op} 0)return false;"
+                )
+                .unwrap();
+            }
+        }
     }
 
     fn emit_facet_checks(

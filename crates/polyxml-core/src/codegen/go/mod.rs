@@ -82,18 +82,24 @@ impl LanguageContext for GoLanguageContext {
 
     fn map_primitive(&self, prim: PrimitiveType) -> &'static str {
         match prim {
+            PrimitiveType::Integer
+            | PrimitiveType::PositiveInteger
+            | PrimitiveType::NegativeInteger
+            | PrimitiveType::NonPositiveInteger
+            | PrimitiveType::NonNegativeInteger => match prim {
+                PrimitiveType::Integer => "PolyxmlInteger",
+                PrimitiveType::PositiveInteger => "PolyxmlPositiveInteger",
+                PrimitiveType::NegativeInteger => "PolyxmlNegativeInteger",
+                PrimitiveType::NonPositiveInteger => "PolyxmlNonPositiveInteger",
+                _ => "PolyxmlNonNegativeInteger",
+            },
             PrimitiveType::Boolean => "bool",
             PrimitiveType::Float => "float32",
             PrimitiveType::Double | PrimitiveType::Decimal => "float64",
             PrimitiveType::Byte => "int8",
             PrimitiveType::Short => "int16",
             PrimitiveType::Int => "int32",
-            PrimitiveType::Integer
-            | PrimitiveType::Long
-            | PrimitiveType::PositiveInteger
-            | PrimitiveType::NegativeInteger
-            | PrimitiveType::NonPositiveInteger
-            | PrimitiveType::NonNegativeInteger => "int64",
+            PrimitiveType::Long => "int64",
             PrimitiveType::UnsignedByte => "uint8",
             PrimitiveType::UnsignedShort => "uint16",
             PrimitiveType::UnsignedInt => "uint32",
@@ -370,6 +376,14 @@ impl GoCodegen {
             self.emit_temporal_types(&mut body);
         }
         self.emit_root_aliases(&mut body, ir);
+        if body.contains("PolyxmlInteger")
+            || body.contains("PolyxmlPositiveInteger")
+            || body.contains("PolyxmlNegativeInteger")
+            || body.contains("PolyxmlNonPositiveInteger")
+            || body.contains("PolyxmlNonNegativeInteger")
+        {
+            self.emit_integer_types(&mut body);
+        }
 
         if self.options.emit_xml_tags && !ir.content_models.is_empty() {
             self.emit_content_helpers(&mut body);
@@ -399,6 +413,9 @@ impl GoCodegen {
         writeln!(out, "package {}\n", pkg).unwrap();
 
         let mut imports = Vec::new();
+        if body.contains("big.") {
+            imports.push("\"math/big\"");
+        }
         if body.contains("xml.") {
             imports.push("\"encoding/xml\"");
         }
@@ -506,6 +523,32 @@ impl GoCodegen {
         }
     }
 
+    fn emit_integer_types(&self, out: &mut String) {
+        out.push_str(r#"
+func polyxmlInteger(text string, kind int) (string, error) {
+    text = strings.Trim(text, " \t\r\n")
+    digits := text
+    if len(digits)>0 && (digits[0]=='+' || digits[0]=='-') { digits=digits[1:] }
+    if len(digits)==0 { return "", fmt.Errorf("invalid integer") }
+    for _, c := range digits { if c<'0' || c>'9' { return "", fmt.Errorf("invalid integer") } }
+    value, ok := new(big.Int).SetString(text,10)
+    if !ok { return "", fmt.Errorf("invalid integer") }
+    sign := value.Sign()
+    if (kind==1 && sign<=0) || (kind==2 && sign<0) || (kind==-1 && sign>=0) || (kind==-2 && sign>0) { return "", fmt.Errorf("integer sign constraint failed") }
+    return text,nil
+}
+"#);
+        for (name, kind) in [
+            ("PolyxmlInteger", 0),
+            ("PolyxmlPositiveInteger", 1),
+            ("PolyxmlNonNegativeInteger", 2),
+            ("PolyxmlNegativeInteger", -1),
+            ("PolyxmlNonPositiveInteger", -2),
+        ] {
+            writeln!(out,"type {name} string\nfunc(v *{name}) UnmarshalText(text []byte) error {{ value,err:=polyxmlInteger(string(text),{kind}); if err!=nil{{return err}};*v={name}(value);return nil }}\nfunc(v {name}) MarshalText()([]byte,error){{value,err:=polyxmlInteger(string(v),{kind});return []byte(value),err}}\n").unwrap();
+        }
+    }
+
     fn emit_simple_type(&self, out: &mut String, simple: &SimpleTypeDef, ir: &SchemaIR) {
         if let Some(ref doc) = simple.documentation {
             for line in doc.lines() {
@@ -549,6 +592,12 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
                 }
             }
             out.push_str("    return nil\n}\n\n");
+            return;
+        }
+        if super::unbounded_integer(&simple.base_type, ir).is_some() {
+            writeln!(out, "func(v {type_name}) Validate() error {{").unwrap();
+            self.emit_integer_facets(out, &simple.facets, "string(v)", "    ");
+            writeln!(out,"    _,err:={base_type}(v).MarshalText();return err\n}}\nfunc(v *{type_name}) UnmarshalText(text []byte)error{{var base {base_type};if err:=base.UnmarshalText(text);err!=nil{{return err}};value:={type_name}(base);if err:=value.Validate();err!=nil{{return err}};*v=value;return nil}}\nfunc(v {type_name}) MarshalText()([]byte,error){{if err:=v.Validate();err!=nil{{return nil,err}};return {base_type}(v).MarshalText()}}\n").unwrap();
             return;
         }
         if matches!(
@@ -894,6 +943,10 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
                 }
             }
             let base = super::primitive_base(&branch.type_ref, ir);
+            if matches!(base, TypeRef::Primitive(p) if p.is_unbounded_integer()) {
+                writeln!(out,"    var integer{field} {mapped}; if err:=integer{field}.UnmarshalText([]byte(value));err==nil{{c.{field}=&integer{field};return nil}}").unwrap();
+                continue;
+            }
             let numeric = match base {
                 TypeRef::Primitive(
                     PrimitiveType::Int
@@ -1462,15 +1515,33 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
             if let Some(ref facets) = f.facets {
                 if is_opt {
                     writeln!(out, "    if s.{} != nil {{", field_name).unwrap();
-                    self.emit_facet_checks(
-                        out,
-                        facets,
-                        &format!("(*s.{})", field_name),
-                        "        ",
-                    );
+                    if super::unbounded_integer(&f.type_ref, ir).is_some() {
+                        self.emit_integer_facets(
+                            out,
+                            facets,
+                            &format!("string(*s.{field_name})"),
+                            "        ",
+                        );
+                    } else {
+                        self.emit_facet_checks(
+                            out,
+                            facets,
+                            &format!("(*s.{})", field_name),
+                            "        ",
+                        );
+                    }
                     writeln!(out, "    }}").unwrap();
                 } else {
-                    self.emit_facet_checks(out, facets, &format!("s.{}", field_name), "    ");
+                    if super::unbounded_integer(&f.type_ref, ir).is_some() {
+                        self.emit_integer_facets(
+                            out,
+                            facets,
+                            &format!("string(s.{field_name})"),
+                            "    ",
+                        );
+                    } else {
+                        self.emit_facet_checks(out, facets, &format!("s.{}", field_name), "    ");
+                    }
                 }
                 has_checks = true;
             }
@@ -1737,6 +1808,31 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
             .unwrap();
         }
         writeln!(out, "}}\n").unwrap();
+    }
+
+    fn emit_integer_facets(
+        &self,
+        out: &mut String,
+        facets: &RestrictionFacets,
+        target: &str,
+        indent: &str,
+    ) {
+        for pattern in &facets.patterns {
+            writeln!(out,"{indent}if matched,err:=regexp.MatchString({:?},{target});err!=nil||!matched{{return fmt.Errorf(\"integer pattern violated\")}}",format!("^(?:{pattern})$")).unwrap();
+        }
+        for (i, (bound, op)) in [
+            (&facets.min_inclusive, "<"),
+            (&facets.max_inclusive, ">"),
+            (&facets.min_exclusive, "<="),
+            (&facets.max_exclusive, ">="),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if let Some(bound) = bound {
+                writeln!(out,"{indent}value{i},ok{i}:=new(big.Int).SetString({target},10);bound{i},boundOk{i}:=new(big.Int).SetString({bound:?},10);if !ok{i}||!boundOk{i}||value{i}.Cmp(bound{i}) {op} 0{{return fmt.Errorf(\"integer bound violated\")}}").unwrap();
+            }
+        }
     }
 
     fn emit_facet_checks(

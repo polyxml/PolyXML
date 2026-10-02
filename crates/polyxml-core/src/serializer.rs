@@ -267,7 +267,8 @@ impl XmlSerializer {
 
     fn validate_scalar(ty: &ValueType, text: &str, field_name: &str) -> Result<()> {
         if let ValueType::Scalar(
-            scalar @ (ScalarType::XmlDate
+            scalar @ (ScalarType::Integer(_)
+            | ScalarType::XmlDate
             | ScalarType::XmlGregorian(_)
             | ScalarType::Enum(_)
             | ScalarType::Pattern(_, _)

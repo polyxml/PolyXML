@@ -200,3 +200,8 @@ simpleContent restriction and extension nodes both retain their base and text
 field. Unprefixed base QNames honor the schema's default namespace. Root graph
 filtering follows concrete substitution members back to their head metadata
 after abstract heads have been removed from concrete parser branches.
+
+`xs:integer` and its four sign-derived builtins are unbounded. Core model schemas
+use `ScalarType::Integer(kind)` with lexical `PolyValue::String` storage; never
+narrow these through i64/f64. Compare integer restriction bounds and fixed values
+in the exact sign/magnitude value space. Keep bounded integer builtins distinct.

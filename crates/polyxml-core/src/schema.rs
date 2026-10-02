@@ -14,6 +14,7 @@ pub enum FieldKind {
 pub enum ScalarType {
     String,
     Int,
+    Integer(crate::ir::PrimitiveType),
     Float,
     Bool,
     Decimal,
@@ -263,19 +264,19 @@ impl ModelSchema {
                 | PrimitiveType::GYear
                 | PrimitiveType::GYearMonth
                 | PrimitiveType::GMonthDay => ScalarType::XmlGregorian(prim),
-                PrimitiveType::Int
-                | PrimitiveType::Integer
+                PrimitiveType::Integer
                 | PrimitiveType::NonPositiveInteger
                 | PrimitiveType::NegativeInteger
+                | PrimitiveType::NonNegativeInteger
+                | PrimitiveType::PositiveInteger => ScalarType::Integer(prim),
+                PrimitiveType::Int
                 | PrimitiveType::Long
                 | PrimitiveType::Short
                 | PrimitiveType::Byte
-                | PrimitiveType::NonNegativeInteger
                 | PrimitiveType::UnsignedLong
                 | PrimitiveType::UnsignedInt
                 | PrimitiveType::UnsignedShort
-                | PrimitiveType::UnsignedByte
-                | PrimitiveType::PositiveInteger => ScalarType::Int,
+                | PrimitiveType::UnsignedByte => ScalarType::Int,
                 PrimitiveType::Base64Binary | PrimitiveType::HexBinary => ScalarType::String,
                 _ => ScalarType::String,
             }
@@ -684,7 +685,26 @@ pub(crate) fn validate_fixed(
                     fixed.as_bytes(),
                     name,
                 )?;
-                if *value != expected {
+                fn integer(scalar: &ScalarType) -> bool {
+                    match scalar {
+                        ScalarType::Integer(_) => true,
+                        ScalarType::Restricted(base, _) | ScalarType::Pattern(base, _) => {
+                            integer(base)
+                        }
+                        _ => false,
+                    }
+                }
+                let equal = if integer(scalar) {
+                    match (value, &expected) {
+                        (PolyValue::String(a), PolyValue::String(b)) => {
+                            crate::integer::compare(a, b) == Some(std::cmp::Ordering::Equal)
+                        }
+                        _ => false,
+                    }
+                } else {
+                    *value == expected
+                };
+                if !equal {
                     return Err(crate::error::PolyXmlError::SchemaError(format!(
                         "Fixed value constraint violated for {name}"
                     )));

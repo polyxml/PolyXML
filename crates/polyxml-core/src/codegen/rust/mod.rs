@@ -88,6 +88,17 @@ impl LanguageContext for RustLanguageContext {
 
     fn map_primitive(&self, prim: PrimitiveType) -> &'static str {
         match prim {
+            PrimitiveType::Integer
+            | PrimitiveType::PositiveInteger
+            | PrimitiveType::NegativeInteger
+            | PrimitiveType::NonPositiveInteger
+            | PrimitiveType::NonNegativeInteger => {
+                if self.zero_copy {
+                    "Cow<'a, str>"
+                } else {
+                    "String"
+                }
+            }
             PrimitiveType::String
             | PrimitiveType::NormalizedString
             | PrimitiveType::Token
@@ -126,17 +137,12 @@ impl LanguageContext for RustLanguageContext {
             PrimitiveType::Decimal | PrimitiveType::Double => "f64",
             PrimitiveType::Float => "f32",
 
-            PrimitiveType::Integer
-            | PrimitiveType::Long
-            | PrimitiveType::NonPositiveInteger
-            | PrimitiveType::NegativeInteger => "i64",
+            PrimitiveType::Long => "i64",
             PrimitiveType::Int => "i32",
             PrimitiveType::Short => "i16",
             PrimitiveType::Byte => "i8",
 
-            PrimitiveType::PositiveInteger
-            | PrimitiveType::NonNegativeInteger
-            | PrimitiveType::UnsignedLong => "u64",
+            PrimitiveType::UnsignedLong => "u64",
             PrimitiveType::UnsignedInt => "u32",
             PrimitiveType::UnsignedShort => "u16",
             PrimitiveType::UnsignedByte => "u8",
@@ -463,7 +469,12 @@ impl RustCodegen {
         fn primitive_has_lifetime(prim: PrimitiveType) -> bool {
             matches!(
                 prim,
-                PrimitiveType::String
+                PrimitiveType::Integer
+                    | PrimitiveType::PositiveInteger
+                    | PrimitiveType::NegativeInteger
+                    | PrimitiveType::NonPositiveInteger
+                    | PrimitiveType::NonNegativeInteger
+                    | PrimitiveType::String
                     | PrimitiveType::NormalizedString
                     | PrimitiveType::Token
                     | PrimitiveType::Language
@@ -1182,6 +1193,9 @@ impl RustCodegen {
     }
 
     fn field_is_string(&self, type_ref: &TypeRef, ir: &SchemaIR) -> bool {
+        if super::unbounded_integer(type_ref, ir).is_some() {
+            return true;
+        }
         let ty = Self::unwrap_type_ref(type_ref);
         let base = primitive_base(ty, ir);
         match base {
@@ -1225,15 +1239,10 @@ impl RustCodegen {
         match base {
             TypeRef::Primitive(prim) => match prim {
                 PrimitiveType::Int => Some("i32"),
-                PrimitiveType::Integer
-                | PrimitiveType::Long
-                | PrimitiveType::NonPositiveInteger
-                | PrimitiveType::NegativeInteger => Some("i64"),
+                PrimitiveType::Long => Some("i64"),
                 PrimitiveType::Short => Some("i16"),
                 PrimitiveType::Byte => Some("i8"),
-                PrimitiveType::PositiveInteger
-                | PrimitiveType::NonNegativeInteger
-                | PrimitiveType::UnsignedLong => Some("u64"),
+                PrimitiveType::UnsignedLong => Some("u64"),
                 PrimitiveType::UnsignedInt => Some("u32"),
                 PrimitiveType::UnsignedShort => Some("u16"),
                 PrimitiveType::UnsignedByte => Some("u8"),
@@ -1292,7 +1301,7 @@ impl RustCodegen {
     ) {
         let has_patterns = flatten_fields(s, ir)
             .into_iter()
-            .any(|f| super::patterned_simple(&f.type_ref, ir).is_some());
+            .any(|f| super::patterned_simple(&f.type_ref, ir).is_some() || matches!(primitive_base(Self::unwrap_type_ref(&f.type_ref), ir), TypeRef::Primitive(p) if p.is_unbounded_integer()));
         let struct_name = type_ident(&s.qname);
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
@@ -1819,7 +1828,9 @@ impl RustCodegen {
             out.push_str("    pub fn validate_patterns(&self) -> Result<()> {\n");
             for meta in &field_metas {
                 let f = &meta.field;
-                if super::patterned_simple(&f.type_ref, ir).is_none() {
+                if super::patterned_simple(&f.type_ref, ir).is_none()
+                    && !matches!(primitive_base(Self::unwrap_type_ref(&f.type_ref), ir), TypeRef::Primitive(p) if p.is_unbounded_integer())
+                {
                     continue;
                 }
                 if f.cardinality.is_list() || f.type_ref.is_list() {
@@ -1883,7 +1894,39 @@ impl RustCodegen {
         out.push_str("}\n");
     }
 
+    fn emit_integer_bounds(
+        &self,
+        out: &mut String,
+        facets: &crate::ir::RestrictionFacets,
+        value: &str,
+        name: &str,
+    ) {
+        let option = |bound: &Option<String>| {
+            bound
+                .as_ref()
+                .map(|s| format!("Some({s:?})"))
+                .unwrap_or("None".into())
+        };
+        writeln!(out,"        if !polyxml::integer::within_bounds({value}, {}, {}, {}, {}) {{return Err(PolyXmlError::FacetViolation {{field:{name:?}.into(),expected:\"integer bounds\".into(),actual:({value}).to_string()}});}}",option(&facets.min_inclusive),option(&facets.max_inclusive),option(&facets.min_exclusive),option(&facets.max_exclusive)).unwrap();
+    }
+
     fn emit_pattern_check(&self, out: &mut String, field: &FieldDef, value: &str, ir: &SchemaIR) {
+        if let TypeRef::Primitive(p) = primitive_base(Self::unwrap_type_ref(&field.type_ref), ir) {
+            if p.is_unbounded_integer() {
+                let _ = writeln!(out, "        if !polyxml::integer::validate({value},polyxml::ir::PrimitiveType::{p:?}) {{return Err(PolyXmlError::ScalarParseError {{field:{:?}.into(),expected:\"XML Schema integer\",value:({value}).to_string()}});}}", field.name);
+            }
+        }
+
+        if super::unbounded_integer(&field.type_ref, ir).is_some() {
+            if let Some(facets) = &field.facets {
+                self.emit_integer_bounds(out, facets, value, &field.name);
+            }
+            if let TypeRef::Named(name) = Self::unwrap_type_ref(&field.type_ref) {
+                if let Some(TypeDef::Simple(simple)) = ir.types.get(name) {
+                    self.emit_integer_bounds(out, &simple.facets, value, &field.name);
+                }
+            }
+        }
         if let Some(simple) = super::patterned_simple(&field.type_ref, ir) {
             let _ = writeln!(out, "        validate_{}_patterns({}).map_err(|message| PolyXmlError::FacetViolation {{ field: {:?}.into(), expected: message.into(), actual: ({}).to_string() }})?;", type_ident(&simple.qname), value, field.name, value);
         }
@@ -1898,7 +1941,7 @@ impl RustCodegen {
             );
             out.push_str("                        Cow::Owned(s) => Cow::Owned(s),\n");
             out.push_str("                    };\n");
-            self.emit_facet_checks(out, field, "val");
+            self.emit_facet_checks(out, field, "val", ir);
             self.emit_pattern_check(out, field, "&val", ir);
             if self.options.zero_copy {
                 let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
@@ -1916,7 +1959,7 @@ impl RustCodegen {
                 "                    let val = s.parse::<{}>().map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
                 num, field.name, num
             );
-            self.emit_facet_checks(out, field, "val");
+            self.emit_facet_checks(out, field, "val", ir);
             let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
         } else if self.field_is_bool(&field.type_ref, ir) {
             out.push_str("                    let s = attr.value.as_ref().trim();\n");
@@ -1950,7 +1993,7 @@ impl RustCodegen {
                 "                        let text = read_element_text(reader, \"{}\")?;",
                 field.xml_name
             );
-            self.emit_facet_checks(out, field, "text");
+            self.emit_facet_checks(out, field, "text", ir);
             self.emit_pattern_check(out, field, "&text", ir);
             if is_list {
                 let _ = writeln!(out, "                        var_{}.push(text);", rust_name);
@@ -1973,7 +2016,7 @@ impl RustCodegen {
                 "                        let val = s.parse::<{}>().map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
                 num, field.name, num
             );
-            self.emit_facet_checks(out, field, "val");
+            self.emit_facet_checks(out, field, "val", ir);
             if is_list {
                 let _ = writeln!(out, "                        var_{}.push(val);", rust_name);
             } else {
@@ -2131,7 +2174,7 @@ impl RustCodegen {
         let read = "        let text = read_element_text(reader, start.local_name().as_ref())?;\n";
         if self.field_is_string(&field.type_ref, ir) {
             out.push_str(read);
-            self.emit_facet_checks(out, field, "text");
+            self.emit_facet_checks(out, field, "text", ir);
             self.emit_pattern_check(out, field, "&text", ir);
             let _ = writeln!(out, "        var_{} = Some(text);", rust_name);
         } else if let Some(num) = self.field_numeric_type(&field.type_ref, ir) {
@@ -2142,7 +2185,7 @@ impl RustCodegen {
                 "        let val = s.parse::<{}>().map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
                 num, field.name, num
             );
-            self.emit_facet_checks(out, field, "val");
+            self.emit_facet_checks(out, field, "val", ir);
             let _ = writeln!(out, "        var_{} = Some(val);", rust_name);
         } else if self.field_is_bool(&field.type_ref, ir) {
             out.push_str(read);
@@ -2216,8 +2259,13 @@ impl RustCodegen {
         }
     }
 
-    fn emit_facet_checks(&self, out: &mut String, field: &FieldDef, val_var: &str) {
+    fn emit_facet_checks(&self, out: &mut String, field: &FieldDef, val_var: &str, ir: &SchemaIR) {
         if let Some(ref facets) = field.facets {
+            if super::unbounded_integer(&field.type_ref, ir).is_some() {
+                self.emit_integer_bounds(out, facets, val_var, &field.name);
+                return;
+            }
+
             if let Some(min_len) = facets.min_length {
                 let _ = writeln!(
                     out,
@@ -2758,7 +2806,9 @@ impl RustCodegen {
                     variant
                 );
             } else if self.field_is_string(&branch.type_ref, ir) {
-                if let Some(simple) = super::patterned_simple(&branch.type_ref, ir) {
+                if let Some(p) = super::unbounded_integer(&branch.type_ref, ir) {
+                    writeln!(out,"        if polyxml::integer::validate(s,polyxml::ir::PrimitiveType::{p:?}) {{ return Ok(Self::{variant}(text)); }}").unwrap();
+                } else if let Some(simple) = super::patterned_simple(&branch.type_ref, ir) {
                     let _ = writeln!(out, "        if validate_{}_patterns(s).is_ok() {{ return Ok(Self::{}(text)); }}", type_ident(&simple.qname), variant);
                 } else if matches!(
                     super::primitive_base(&branch.type_ref, ir),

@@ -91,21 +91,21 @@ impl LanguageContext for TypeScriptLanguageContext {
 
     fn map_primitive(&self, prim: PrimitiveType) -> &'static str {
         match prim {
+            PrimitiveType::Integer
+            | PrimitiveType::PositiveInteger
+            | PrimitiveType::NegativeInteger
+            | PrimitiveType::NonPositiveInteger
+            | PrimitiveType::NonNegativeInteger => "string",
             PrimitiveType::Boolean => "boolean",
             PrimitiveType::Float | PrimitiveType::Double | PrimitiveType::Decimal => "number",
             PrimitiveType::Byte
             | PrimitiveType::Short
             | PrimitiveType::Int
-            | PrimitiveType::Integer
             | PrimitiveType::Long
             | PrimitiveType::UnsignedByte
             | PrimitiveType::UnsignedShort
             | PrimitiveType::UnsignedInt
-            | PrimitiveType::UnsignedLong
-            | PrimitiveType::PositiveInteger
-            | PrimitiveType::NegativeInteger
-            | PrimitiveType::NonPositiveInteger
-            | PrimitiveType::NonNegativeInteger => "number",
+            | PrimitiveType::UnsignedLong => "number",
             PrimitiveType::String
             | PrimitiveType::NormalizedString
             | PrimitiveType::Token
@@ -242,6 +242,12 @@ impl TypeScriptCodegen {
             self.emit_root_aliases(&mut out, ir);
         }
 
+        if out.contains("FormatRegistry.Set") {
+            out = out.replace(
+                "import { Type, Static }",
+                "import { Type, Static, FormatRegistry }",
+            );
+        }
         out
     }
 
@@ -769,6 +775,15 @@ impl TypeScriptCodegen {
     fn zod_expr_for_type(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => match prim {
+                PrimitiveType::Integer => "z.string().regex(/^[+-]?[0-9]+$/)".into(),
+                PrimitiveType::PositiveInteger => "z.string().regex(/^\\+?0*[1-9][0-9]*$/)".into(),
+                PrimitiveType::NegativeInteger => "z.string().regex(/^-0*[1-9][0-9]*$/)".into(),
+                PrimitiveType::NonNegativeInteger => {
+                    "z.string().regex(/^(?:\\+?[0-9]+|-0+)$/)".into()
+                }
+                PrimitiveType::NonPositiveInteger => {
+                    "z.string().regex(/^(?:-[0-9]+|\\+?0+)$/)".into()
+                }
                 PrimitiveType::Boolean => "z.boolean()".into(),
                 PrimitiveType::Float | PrimitiveType::Double | PrimitiveType::Decimal => {
                     "z.number()".into()
@@ -776,16 +791,11 @@ impl TypeScriptCodegen {
                 PrimitiveType::Byte
                 | PrimitiveType::Short
                 | PrimitiveType::Int
-                | PrimitiveType::Integer
                 | PrimitiveType::Long
                 | PrimitiveType::UnsignedByte
                 | PrimitiveType::UnsignedShort
                 | PrimitiveType::UnsignedInt
-                | PrimitiveType::UnsignedLong
-                | PrimitiveType::PositiveInteger
-                | PrimitiveType::NegativeInteger
-                | PrimitiveType::NonPositiveInteger
-                | PrimitiveType::NonNegativeInteger => "z.number().int()".into(),
+                | PrimitiveType::UnsignedLong => "z.number().int()".into(),
                 PrimitiveType::String
                 | PrimitiveType::NormalizedString
                 | PrimitiveType::Token
@@ -827,6 +837,36 @@ impl TypeScriptCodegen {
         facets: &RestrictionFacets,
         type_ref: &TypeRef,
     ) {
+        if matches!(type_ref, TypeRef::Primitive(p) if p.is_unbounded_integer()) {
+            let mut checks = Vec::new();
+            for (bound, op) in [
+                (&facets.min_inclusive, ">="),
+                (&facets.max_inclusive, "<="),
+                (&facets.min_exclusive, ">"),
+                (&facets.max_exclusive, "<"),
+            ] {
+                if let Some(bound) = bound {
+                    checks.push(format!("BigInt(value) {op} BigInt({bound:?})"));
+                }
+            }
+            for pattern in &facets.patterns {
+                checks.push(format!(
+                    "new RegExp({:?}).test(value)",
+                    format!("^(?:{pattern})(?![\\s\\S])")
+                ));
+            }
+            if !checks.is_empty() {
+                let check = format!(
+                    "(value: string) => {{ try {{ return {}; }} catch {{ return false; }} }}",
+                    checks.join(" && ")
+                );
+                zod_expr.push_str(&format!(
+                    ".refine({check}, \"Integer restriction violated\")"
+                ));
+            }
+            return;
+        }
+
         let is_string = match type_ref {
             TypeRef::Primitive(prim) => matches!(
                 prim,
@@ -917,6 +957,35 @@ impl TypeScriptCodegen {
         facets: &RestrictionFacets,
         type_ref: &TypeRef,
     ) {
+        if matches!(type_ref, TypeRef::Primitive(p) if p.is_unbounded_integer()) {
+            let mut checks = Vec::new();
+            for (bound, op) in [
+                (&facets.min_inclusive, ">="),
+                (&facets.max_inclusive, "<="),
+                (&facets.min_exclusive, ">"),
+                (&facets.max_exclusive, "<"),
+            ] {
+                if let Some(bound) = bound {
+                    checks.push(format!("BigInt(value) {op} BigInt({bound:?})"));
+                }
+            }
+            for pattern in &facets.patterns {
+                checks.push(format!(
+                    "new RegExp({:?}).test(value)",
+                    format!("^(?:{pattern})(?![\\s\\S])")
+                ));
+            }
+            if !checks.is_empty() {
+                let check = format!(
+                    "(value: string) => {{ try {{ return {}; }} catch {{ return false; }} }}",
+                    checks.join(" && ")
+                );
+                *expr =
+                    format!("v.pipe({expr}, v.check({check}, \"Integer restriction violated\"))");
+            }
+            return;
+        }
+
         let is_string = match type_ref {
             TypeRef::Primitive(prim) => matches!(
                 prim,
@@ -995,6 +1064,35 @@ impl TypeScriptCodegen {
         facets: &RestrictionFacets,
         type_ref: &TypeRef,
     ) {
+        if matches!(type_ref, TypeRef::Primitive(p) if p.is_unbounded_integer()) {
+            let mut checks = Vec::new();
+            for (bound, op) in [
+                (&facets.min_inclusive, ">="),
+                (&facets.max_inclusive, "<="),
+                (&facets.min_exclusive, ">"),
+                (&facets.max_exclusive, "<"),
+            ] {
+                if let Some(bound) = bound {
+                    checks.push(format!("BigInt(value) {op} BigInt({bound:?})"));
+                }
+            }
+            for pattern in &facets.patterns {
+                checks.push(format!(
+                    "new RegExp({:?}).test(value)",
+                    format!("^(?:{pattern})(?![\\s\\S])")
+                ));
+            }
+            if !checks.is_empty() {
+                let check = format!(
+                    "(value: string) => {{ try {{ return {}; }} catch {{ return false; }} }}",
+                    checks.join(" && ")
+                );
+                let format = format!("polyxml-integer-{}", serde_json::to_string(facets).unwrap());
+                *expr=format!("(() => {{ const format = {format:?}; FormatRegistry.Set(format, {check}); return Type.Intersect([{expr}, Type.String({{ format }})]); }})()");
+            }
+            return;
+        }
+
         let is_string = match type_ref {
             TypeRef::Primitive(prim) => matches!(
                 prim,
@@ -1180,6 +1278,19 @@ impl TypeScriptCodegen {
     fn valibot_expr_for_type(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => match prim {
+                PrimitiveType::Integer => "v.pipe(v.string(), v.regex(/^[+-]?[0-9]+$/))".into(),
+                PrimitiveType::PositiveInteger => {
+                    "v.pipe(v.string(), v.regex(/^\\+?0*[1-9][0-9]*$/))".into()
+                }
+                PrimitiveType::NegativeInteger => {
+                    "v.pipe(v.string(), v.regex(/^-0*[1-9][0-9]*$/))".into()
+                }
+                PrimitiveType::NonNegativeInteger => {
+                    "v.pipe(v.string(), v.regex(/^(?:\\+?[0-9]+|-0+)$/))".into()
+                }
+                PrimitiveType::NonPositiveInteger => {
+                    "v.pipe(v.string(), v.regex(/^(?:-[0-9]+|\\+?0+)$/))".into()
+                }
                 PrimitiveType::Boolean => "v.boolean()".into(),
                 PrimitiveType::Float | PrimitiveType::Double | PrimitiveType::Decimal => {
                     "v.number()".into()
@@ -1187,16 +1298,11 @@ impl TypeScriptCodegen {
                 PrimitiveType::Byte
                 | PrimitiveType::Short
                 | PrimitiveType::Int
-                | PrimitiveType::Integer
                 | PrimitiveType::Long
                 | PrimitiveType::UnsignedByte
                 | PrimitiveType::UnsignedShort
                 | PrimitiveType::UnsignedInt
-                | PrimitiveType::UnsignedLong
-                | PrimitiveType::PositiveInteger
-                | PrimitiveType::NegativeInteger
-                | PrimitiveType::NonPositiveInteger
-                | PrimitiveType::NonNegativeInteger => "v.pipe(v.number(), v.integer())".into(),
+                | PrimitiveType::UnsignedLong => "v.pipe(v.number(), v.integer())".into(),
                 PrimitiveType::String
                 | PrimitiveType::NormalizedString
                 | PrimitiveType::Token
@@ -1297,6 +1403,19 @@ impl TypeScriptCodegen {
     fn typebox_expr_for_type(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => match prim {
+                PrimitiveType::Integer => "Type.String({ pattern: \"^[+-]?[0-9]+$\" })".into(),
+                PrimitiveType::PositiveInteger => {
+                    "Type.String({ pattern: \"^\\\\+?0*[1-9][0-9]*$\" })".into()
+                }
+                PrimitiveType::NegativeInteger => {
+                    "Type.String({ pattern: \"^-0*[1-9][0-9]*$\" })".into()
+                }
+                PrimitiveType::NonNegativeInteger => {
+                    "Type.String({ pattern: \"^(?:\\\\+?[0-9]+|-0+)$\" })".into()
+                }
+                PrimitiveType::NonPositiveInteger => {
+                    "Type.String({ pattern: \"^(?:-[0-9]+|\\\\+?0+)$\" })".into()
+                }
                 PrimitiveType::Boolean => "Type.Boolean()".into(),
                 PrimitiveType::Float | PrimitiveType::Double | PrimitiveType::Decimal => {
                     "Type.Number()".into()
@@ -1304,16 +1423,11 @@ impl TypeScriptCodegen {
                 PrimitiveType::Byte
                 | PrimitiveType::Short
                 | PrimitiveType::Int
-                | PrimitiveType::Integer
                 | PrimitiveType::Long
                 | PrimitiveType::UnsignedByte
                 | PrimitiveType::UnsignedShort
                 | PrimitiveType::UnsignedInt
-                | PrimitiveType::UnsignedLong
-                | PrimitiveType::PositiveInteger
-                | PrimitiveType::NegativeInteger
-                | PrimitiveType::NonPositiveInteger
-                | PrimitiveType::NonNegativeInteger => "Type.Integer()".into(),
+                | PrimitiveType::UnsignedLong => "Type.Integer()".into(),
                 PrimitiveType::String
                 | PrimitiveType::NormalizedString
                 | PrimitiveType::Token

@@ -130,6 +130,14 @@ impl JavaCodegen {
         String value = reader.getAttributeValue("http://www.w3.org/2001/XMLSchema-instance", "nil");
         return "true".equals(value) || "1".equals(value);
     }}
+    private static java.math.BigInteger integerValue(String value, int kind) {{
+        value = value.trim();
+        if (!value.matches("[+-]?[0-9]+")) throw new IllegalArgumentException("Invalid XML integer");
+        var integer = new java.math.BigInteger(value);
+        int sign = integer.signum();
+        if ((kind==1 && sign<=0) || (kind==2 && sign<0) || (kind==-1 && sign>=0) || (kind==-2 && sign>0)) throw new IllegalArgumentException("Integer sign constraint failed");
+        return integer;
+    }}
     private static boolean booleanValue(String value) {{
         return switch (value.trim()) {{
             case "true", "1" -> true;
@@ -550,6 +558,16 @@ impl JavaCodegen {
                 _ => "null".into(),
             },
             TypeRef::Primitive(p) => match p {
+                p if p.is_unbounded_integer() => {
+                    let kind = match p {
+                        PrimitiveType::PositiveInteger => 1,
+                        PrimitiveType::NonNegativeInteger => 2,
+                        PrimitiveType::NegativeInteger => -1,
+                        PrimitiveType::NonPositiveInteger => -2,
+                        _ => 0,
+                    };
+                    format!("integerValue({raw},{kind})")
+                }
                 PrimitiveType::Boolean => format!("booleanValue({raw})"),
                 PrimitiveType::Float => format!("Float.parseFloat(floatingValue({raw}))"),
                 PrimitiveType::Double => format!("Double.parseDouble(floatingValue({raw}))"),
@@ -583,6 +601,10 @@ impl JavaCodegen {
                 Some(TypeDef::Enum(_))=>format!("{value}.getValue()"),
                 Some(TypeDef::Simple(s))=>self.format_scalar(if s.facets.patterns.is_empty() { &s.base_type } else { crate::codegen::primitive_base(&s.base_type, ir) },&format!("{value}.{}",if self.options.use_records {"value()"}else{"getValue()"}),ir),
                 _=>format!("String.valueOf({value})"),
+            },
+            TypeRef::Primitive(p) if p.is_unbounded_integer()=>{
+                let kind=match p { PrimitiveType::PositiveInteger=>1,PrimitiveType::NonNegativeInteger=>2,PrimitiveType::NegativeInteger=>-1,PrimitiveType::NonPositiveInteger=>-2,_=>0 };
+                format!("integerValue(String.valueOf({value}),{kind}).toString()")
             },
             TypeRef::Primitive(PrimitiveType::Base64Binary)=>format!("java.util.Base64.getEncoder().encodeToString({value})"),
             TypeRef::Primitive(PrimitiveType::HexBinary)=>format!("java.util.HexFormat.of().formatHex({value})"),

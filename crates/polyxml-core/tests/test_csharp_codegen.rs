@@ -1353,3 +1353,45 @@ try{serializer.Deserialize(new StringReader(xml));throw new Exception("invalid i
         );
     }
 }
+
+#[test]
+fn unbounded_integer_xml_preserves_digits() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/wave5/unbounded_integer.xsd"
+        ))
+        .unwrap();
+    for records in [true, false] {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("App.csproj"),r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>"#).unwrap();
+        fs::write(
+            dir.path().join("Models.cs"),
+            CSharpCodegen::new(CSharpOptions {
+                use_records: records,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        fs::write(dir.path().join("Program.cs"),r#"using System.Xml.Serialization;using System.Xml.Linq;using Generated;
+var serializer=new XmlSerializer(typeof(Root));
+foreach(var digits in new[]{"1234567890123456789012345678901234567890","9223372036854775807","9223372036854775808","-9223372036854775808","-9223372036854775809","-1234567890123456789012345678901234567890","+000123"}){
+ var root=(Root)serializer.Deserialize(new StringReader("<Root><Value>"+digits+"</Value></Root>"))!;
+ var writer=new StringWriter();serializer.Serialize(writer,root);if(XDocument.Parse(writer.ToString()).Root!.Element("Value")!.Value!=digits)throw new Exception("digits changed");
+}
+foreach(var bad in new[]{"1.0","1e30","+","1 2"}){bool failed=false;try{serializer.Deserialize(new StringReader("<Root><Value>"+bad+"</Value></Root>"));}catch(InvalidOperationException){failed=true;}if(!failed)throw new Exception("accepted invalid integer");}
+var invalid=new Root{Value="1.0"};try{serializer.Serialize(new StringWriter(),invalid);throw new Exception("wrote invalid integer");}catch(InvalidOperationException){}
+"#).unwrap();
+        let result = dotnet_command()
+            .args(["run"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}

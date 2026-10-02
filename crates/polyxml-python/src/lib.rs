@@ -424,6 +424,14 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            if let Some(integer) = meta
+                .as_ref()
+                .and_then(|m| m.get_item("integer").ok())
+                .and_then(|v| v.extract::<String>().ok())
+            {
+                integer_value_type(&mut field_schema.val_type, &integer)?;
+            }
+
             if meta
                 .as_ref()
                 .and_then(|m| m.get_item("tokens").ok())
@@ -530,6 +538,15 @@ fn extract_schema_from_class<'py>(
             });
 
             let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            if let Some(integer) = field_obj
+                .getattr("metadata")
+                .ok()
+                .and_then(|m| m.get_item("integer").ok())
+                .and_then(|v| v.extract::<String>().ok())
+            {
+                integer_value_type(&mut field_schema.val_type, &integer)?;
+            }
+
             if field_obj
                 .getattr("metadata")
                 .ok()
@@ -743,7 +760,7 @@ fn get_or_create_schema<'py>(cls: &Bound<'py, PyType>) -> PyResult<(Arc<ModelSch
 fn convert_scalar_to_py<'py>(
     py: Python<'py>,
     val: &PolyValue,
-    _scalar_type: &ScalarType,
+    scalar_type: &ScalarType,
     py_type_opt: Option<&Bound<'py, PyAny>>,
 ) -> PyResult<PyObject> {
     match val {
@@ -761,6 +778,22 @@ fn convert_scalar_to_py<'py>(
         }
         PolyValue::Float(f) => f.into_py_any(py),
         PolyValue::String(s) => {
+            fn integer_scalar(ty: &ScalarType) -> bool {
+                match ty {
+                    ScalarType::Integer(_) => true,
+                    ScalarType::Restricted(inner, _) | ScalarType::Pattern(inner, _) => {
+                        integer_scalar(inner)
+                    }
+                    _ => false,
+                }
+            }
+            if integer_scalar(scalar_type) {
+                return Ok(py
+                    .import("builtins")?
+                    .getattr("int")?
+                    .call1((s.as_str(),))?
+                    .unbind());
+            }
             if let Some(target_type) = py_type_opt {
                 if is_enum_class(py, target_type) {
                     if let Ok(enum_val) = target_type.call1((s.as_str(),)) {
@@ -1884,4 +1917,29 @@ fn py_lexical_list_to_poly(
         );
     }
     Ok(PolyValue::List(result))
+}
+
+fn integer_value_type(ty: &mut ValueType, name: &str) -> PyResult<()> {
+    use polyxml::ir::PrimitiveType;
+    let kind = match name {
+        "Integer" => PrimitiveType::Integer,
+        "PositiveInteger" => PrimitiveType::PositiveInteger,
+        "NonNegativeInteger" => PrimitiveType::NonNegativeInteger,
+        "NegativeInteger" => PrimitiveType::NegativeInteger,
+        "NonPositiveInteger" => PrimitiveType::NonPositiveInteger,
+        _ => {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "unknown integer kind",
+            ))
+        }
+    };
+    fn apply(ty: &mut ValueType, kind: PrimitiveType) {
+        match ty {
+            ValueType::List(inner) => apply(inner, kind),
+            ValueType::Scalar(ScalarType::List(inner)) => **inner = ScalarType::Integer(kind),
+            _ => *ty = ValueType::Scalar(ScalarType::Integer(kind)),
+        }
+    }
+    apply(ty, kind);
+    Ok(())
 }

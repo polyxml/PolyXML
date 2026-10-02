@@ -98,3 +98,9 @@ Run `uv sync --extra dev` and `uv run --extra dev pytest --cov=polyxml --cov-bra
 virtual environments. Selecting the root `.venv` first can omit `msgspec` and cause
 collection failures even though it is already declared in the package's `dev` extra.
 `uv sync` also rebuilds the editable ABI3 extension as needed.
+
+Generated unbounded integer fields carry integer-kind metadata. Native schemas
+must select lexical integer conversion instead of the handwritten-model i64
+converter, then construct Python int from the complete decimal string. Apply
+metadata to dataclasses and Pydantic, including list items; int annotations alone
+do not distinguish xs:integer from fixed-width integer types.

@@ -761,3 +761,17 @@ pub(crate) fn flatten_fields<'a>(s: &'a StructDef, ir: &'a SchemaIR) -> Vec<&'a 
     groups.reverse();
     groups.into_iter().flatten().collect()
 }
+
+pub(crate) fn unbounded_integer(
+    ty: &crate::ir::TypeRef,
+    ir: &crate::ir::SchemaIR,
+) -> Option<crate::ir::PrimitiveType> {
+    use crate::ir::TypeRef;
+    match ty {
+        TypeRef::List(inner) | TypeRef::Boxed(inner) => unbounded_integer(inner, ir),
+        _ => match primitive_base(ty, ir) {
+            TypeRef::Primitive(p) if p.is_unbounded_integer() => Some(*p),
+            _ => None,
+        },
+    }
+}

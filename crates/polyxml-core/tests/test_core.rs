@@ -303,3 +303,92 @@ fn test_roundtrip_serialization_with_indentation() {
         deserialize(&serialized, Arc::clone(&parent_schema)).expect("Failed to re-deserialize");
     assert_eq!(val, val_re);
 }
+
+#[test]
+fn unbounded_integers_round_trip_and_compare_exact_bounds() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(include_str!(
+            "../../../research/fixtures/wave5/unbounded_integer.xsd"
+        ))
+        .unwrap();
+    let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();
+    for digits in [
+        "1234567890123456789012345678901234567890",
+        "9223372036854775807",
+        "9223372036854775808",
+        "-9223372036854775808",
+        "-9223372036854775809",
+        "-1234567890123456789012345678901234567890",
+        "+000123",
+    ] {
+        let xml = format!("<Root><Value>{digits}</Value></Root>");
+        let value = deserialize(xml.as_bytes(), Arc::clone(&schema)).unwrap();
+        let output = serialize("Root", &value, &schema, None).unwrap();
+        assert_eq!(String::from_utf8(output).unwrap(), xml);
+    }
+    for bad in ["1.0", "1e30", "", "+", "1 2", "١"] {
+        assert!(deserialize(
+            format!("<Root><Value>{bad}</Value></Root>").as_bytes(),
+            Arc::clone(&schema)
+        )
+        .is_err());
+    }
+    use polyxml::converters::ValueConverter;
+    let bound = "1234567890123456789012345678901234567890";
+    let scalar = ScalarType::Restricted(
+        Box::new(ScalarType::Integer(PrimitiveType::Integer)),
+        Box::new(polyxml::ir::RestrictionFacets {
+            min_inclusive: Some(bound.into()),
+            max_inclusive: Some(bound.into()),
+            ..Default::default()
+        }),
+    );
+    assert!(ValueConverter::parse_scalar(&scalar, bound.as_bytes(), "value").is_ok());
+    for outside in [
+        "1234567890123456789012345678901234567889",
+        "1234567890123456789012345678901234567891",
+    ] {
+        assert!(ValueConverter::parse_scalar(&scalar, outside.as_bytes(), "value").is_err());
+    }
+    for (kind, good, bad) in [
+        (PrimitiveType::PositiveInteger, "1", "0"),
+        (PrimitiveType::NonNegativeInteger, "-0", "-1"),
+        (PrimitiveType::NegativeInteger, "-1", "-0"),
+        (PrimitiveType::NonPositiveInteger, "+0", "1"),
+    ] {
+        assert!(
+            ValueConverter::parse_scalar(&ScalarType::Integer(kind), good.as_bytes(), "value")
+                .is_ok()
+        );
+        assert!(
+            ValueConverter::parse_scalar(&ScalarType::Integer(kind), bad.as_bytes(), "value")
+                .is_err()
+        );
+    }
+    assert!(
+        ValueConverter::parse_scalar(&ScalarType::Int, b"9223372036854775808", "bounded").is_err()
+    );
+}
+
+#[test]
+fn integer_mappings_keep_fixed_width_builtins() {
+    use polyxml::codegen::{
+        cpp::CppLanguageContext, csharp::CSharpLanguageContext, go::GoLanguageContext,
+        java::JavaLanguageContext, python::PythonLanguageContext, rust::RustLanguageContext,
+        typescript::TypeScriptLanguageContext, LanguageContext,
+    };
+    let rust = RustLanguageContext::new(false);
+    let contexts: [(&dyn LanguageContext, &str, &str); 7] = [
+        (&rust, "String", "i64"),
+        (&GoLanguageContext, "PolyxmlInteger", "int64"),
+        (&CSharpLanguageContext, "string", "long"),
+        (&JavaLanguageContext, "java.math.BigInteger", "long"),
+        (&CppLanguageContext, "std::string", "std::int64_t"),
+        (&TypeScriptLanguageContext, "string", "number"),
+        (&PythonLanguageContext, "int", "int"),
+    ];
+    for (context, unbounded, bounded) in contexts {
+        assert_eq!(context.map_primitive(PrimitiveType::Integer), unbounded);
+        assert_eq!(context.map_primitive(PrimitiveType::Long), bounded);
+    }
+}

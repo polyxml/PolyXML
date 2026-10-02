@@ -991,6 +991,16 @@ impl PythonCodegen {
         };
 
         let mut parts = Vec::new();
+        let mut integer_base = super::primitive_base(&field.type_ref, ir);
+        if let TypeRef::List(item) = integer_base {
+            integer_base = super::primitive_base(item, ir);
+        }
+        if let TypeRef::Primitive(p) = integer_base {
+            if p.is_unbounded_integer() {
+                parts.push(format!("\"integer\": {:?}", format!("{p:?}")));
+            }
+        }
+
         parts.push(format!("\"type\": \"{}\"", kind_str));
         parts.push(format!("\"name\": \"{}\"", field.xml_name));
         if self.options.emit_json_metadata {
@@ -1033,6 +1043,11 @@ impl PythonCodegen {
     }
 
     fn format_default_value(&self, val: &str, type_ref: &TypeRef, ir: &SchemaIR) -> String {
+        if matches!(super::primitive_base(type_ref, ir), TypeRef::Primitive(p) if p.is_unbounded_integer())
+        {
+            return format!("int({val:?})");
+        }
+
         let base = super::primitive_base(type_ref, ir);
         match base {
             TypeRef::Primitive(PrimitiveType::Boolean) => match val.trim() {

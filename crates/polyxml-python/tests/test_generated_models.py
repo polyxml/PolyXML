@@ -902,3 +902,43 @@ def test_abstract_substitution_head_is_rejected(tmp_path, backend):
     root.items = []
     with pytest.raises(ValueError, match="Content model constraint"):
         root.to_xml()
+
+
+@pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
+def test_unbounded_integer_round_trip(tmp_path, backend):
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "research/fixtures/wave5/unbounded_integer.xsd"
+    )
+    subprocess.run(
+        [
+            str(_get_polyxml_bin()),
+            "generate",
+            str(schema),
+            "--lang",
+            "python",
+            "--backend",
+            backend,
+            "--out",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    module = _load_module_from_file(
+        f"unbounded_integer_{backend}", tmp_path / "unbounded_integer.py"
+    )
+    for digits in [
+        "1234567890123456789012345678901234567890",
+        "9223372036854775807",
+        "9223372036854775808",
+        "-9223372036854775808",
+        "-9223372036854775809",
+        "-1234567890123456789012345678901234567890",
+    ]:
+        root = module.Root.from_xml(f"<Root><Value>{digits}</Value></Root>")
+        assert type(root.value) is int
+        assert root.value == int(digits)
+        assert ET.fromstring(root.to_xml()).findtext("Value") == digits
+    with pytest.raises(ValueError):
+        module.Root.from_xml("<Root><Value>1.0</Value></Root>")

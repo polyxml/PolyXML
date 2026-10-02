@@ -107,6 +107,17 @@ pub enum PrimitiveType {
 }
 
 impl PrimitiveType {
+    pub fn is_unbounded_integer(self) -> bool {
+        matches!(
+            self,
+            Self::Integer
+                | Self::PositiveInteger
+                | Self::NonNegativeInteger
+                | Self::NegativeInteger
+                | Self::NonPositiveInteger
+        )
+    }
+
     pub fn from_xsd_name(name: &str) -> Option<Self> {
         let local = name
             .strip_prefix("xs:")

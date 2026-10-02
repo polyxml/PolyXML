@@ -763,3 +763,13 @@ an instance directly. Validate the buffered alias output, then encode the alias
 with its resolved start element; forwarding decoded tokens can redeclare XML
 namespaces and change output. Keep the namespaced unbounded-choice runtime
 regression in the full workspace gate.
+
+Integer mapping changes require `scripts/verify_unbounded_integer.py` (run with
+`uv run --with lxml python`) after building the CLI and reinstalling Python.
+It compiles/runs all seven targets and independently validates XML from available
+codecs. C++/TypeScript checks cover storage and schema validation, not XML codecs.
+Unbounded integers use lexical strings in Rust/C++/C#/TypeScript, Go text-codec
+string wrappers, Java BigInteger, and Python int. Update Rust lexical dispatch
+and lifetime inference together; changing only its primitive mapping can emit
+`Cow::decode_xml`. Go defined aliases need their own text methods. C# strings
+need XML proxies to enforce integer lexical grammar on both read and write.

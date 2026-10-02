@@ -1,6 +1,7 @@
 pub mod codegen;
 pub mod converters;
 pub mod error;
+pub mod integer;
 pub mod ir;
 pub mod json;
 pub mod parser;

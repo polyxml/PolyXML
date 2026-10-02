@@ -58,6 +58,8 @@ impl ValueConverter {
                                 .parse::<i128>()
                                 .ok()
                                 .map(|bound| (number as i128).cmp(&bound))
+                        } else if scalar_is_integer(base) {
+                            crate::integer::compare(text, bound)
                         } else {
                             text.parse::<f64>()
                                 .ok()
@@ -135,6 +137,17 @@ impl ValueConverter {
             ScalarType::String => {
                 let s = std::str::from_utf8(bytes)?;
                 Ok(PolyValue::String(s.to_string()))
+            }
+            ScalarType::Integer(primitive) => {
+                let text = std::str::from_utf8(bytes)?.trim_matches([' ', '\t', '\r', '\n']);
+                if !crate::integer::validate(text, *primitive) {
+                    return Err(PolyXmlError::ScalarParseError {
+                        field: field_name.into(),
+                        expected: "XML Schema integer",
+                        value: text.into(),
+                    });
+                }
+                Ok(PolyValue::String(text.into()))
             }
             ScalarType::Int => {
                 let trimmed = trim_bytes(bytes);
@@ -336,4 +349,12 @@ fn valid_year(value: &[u8]) -> bool {
     digits.len() >= 4
         && digits.iter().all(u8::is_ascii_digit)
         && (digits.len() == 4 || digits[0] != b'0')
+}
+
+fn scalar_is_integer(scalar: &ScalarType) -> bool {
+    match scalar {
+        ScalarType::Integer(_) => true,
+        ScalarType::Restricted(base, _) | ScalarType::Pattern(base, _) => scalar_is_integer(base),
+        _ => false,
+    }
 }
