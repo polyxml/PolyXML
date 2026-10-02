@@ -1,0 +1,155 @@
+{
+  "commit": "b513361468ab143269495a29346a61e80edd84f0",
+  "working_tree": "",
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "AMD Ryzen 5 4500 6-Core Processor",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "profile": "debug (RSS only; no throughput claim)",
+  "schema": "tests/fixtures/incremental/items.xsd",
+  "samples": [
+    {
+      "owned": false,
+      "items": 1000,
+      "repeat": 0,
+      "peak_rss_kib": 2604,
+      "output_bytes": 73923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 1000,
+      "repeat": 1,
+      "peak_rss_kib": 2628,
+      "output_bytes": 73923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 1000,
+      "repeat": 2,
+      "peak_rss_kib": 2576,
+      "output_bytes": 73923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 100000,
+      "repeat": 0,
+      "peak_rss_kib": 2528,
+      "output_bytes": 7588923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 100000,
+      "repeat": 1,
+      "peak_rss_kib": 2604,
+      "output_bytes": 7588923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 100000,
+      "repeat": 2,
+      "peak_rss_kib": 2564,
+      "output_bytes": 7588923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 1000000,
+      "repeat": 0,
+      "peak_rss_kib": 2436,
+      "output_bytes": 76888923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 1000000,
+      "repeat": 1,
+      "peak_rss_kib": 2436,
+      "output_bytes": 76888923,
+      "xsd_valid": true
+    },
+    {
+      "owned": false,
+      "items": 1000000,
+      "repeat": 2,
+      "peak_rss_kib": 2564,
+      "output_bytes": 76888923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 1000,
+      "repeat": 0,
+      "peak_rss_kib": 2564,
+      "output_bytes": 73923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 1000,
+      "repeat": 1,
+      "peak_rss_kib": 2592,
+      "output_bytes": 73923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 1000,
+      "repeat": 2,
+      "peak_rss_kib": 2552,
+      "output_bytes": 73923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 100000,
+      "repeat": 0,
+      "peak_rss_kib": 2560,
+      "output_bytes": 7588923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 100000,
+      "repeat": 1,
+      "peak_rss_kib": 2612,
+      "output_bytes": 7588923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 100000,
+      "repeat": 2,
+      "peak_rss_kib": 2564,
+      "output_bytes": 7588923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 1000000,
+      "repeat": 0,
+      "peak_rss_kib": 2500,
+      "output_bytes": 76888923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 1000000,
+      "repeat": 1,
+      "peak_rss_kib": 2692,
+      "output_bytes": 76888923,
+      "xsd_valid": true
+    },
+    {
+      "owned": true,
+      "items": 1000000,
+      "repeat": 2,
+      "peak_rss_kib": 2552,
+      "output_bytes": 76888923,
+      "xsd_valid": true
+    }
+  ]
+}
