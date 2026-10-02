@@ -256,6 +256,24 @@ fn particle(node: &Node, ns: Option<&str>, qualified: bool) -> Option<Model> {
     Some(repeat(node, model))
 }
 impl Document {
+    /// Whether a named type has plain sequence content in one element namespace.
+    /// Source QNames retain local `form` and `elementFormDefault` distinctions.
+    pub(crate) fn uniform_sequence(
+        &self,
+        name: &QName,
+        namespace: &Option<String>,
+    ) -> Option<bool> {
+        fn uniform(model: &Model, namespace: &Option<String>) -> bool {
+            match model {
+                Model::Element(q, _) => &q.namespace == namespace,
+                Model::Sequence(parts) => parts.iter().all(|p| uniform(p, namespace)),
+                Model::Repeat(part, _, _) => uniform(part, namespace),
+                _ => false,
+            }
+        }
+        self.named.get(name).map(|model| uniform(model, namespace))
+    }
+
     pub fn parse(xml: &str) -> Result<Self, SchemaError> {
         let mut reader = Reader::from_str(xml);
         let root = loop {
