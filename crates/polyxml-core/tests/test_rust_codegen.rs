@@ -1087,7 +1087,7 @@ fn test_rust_phf_dispatch_union_groups_branch_tags() {
         is_mixed: false,
         fields: vec![FieldDef::new(
             "method",
-            "method",
+            "",
             FieldKind::Element,
             TypeRef::Named(QName::local("PaymentMethod")),
         )],
@@ -1359,6 +1359,65 @@ fn main() {
         assert!(
             output.status.success(),
             "zero_copy={zero_copy}: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+
+#[test]
+fn named_choice_wrappers_round_trip_without_unreachable_dispatch() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="Position"><xs:choice><xs:element name="Percentage" type="xs:double"/><xs:element name="NumberOfSteps" type="xs:unsignedInt"/><xs:element name="Label" type="xs:string"/></xs:choice></xs:complexType>
+      <xs:complexType name="Sweep"><xs:sequence><xs:element name="StartingPosition" type="Position"/><xs:element name="StepIncrement" type="Position"/><xs:element name="Optional" type="Position" minOccurs="0"/><xs:element name="Repeated" type="Position" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let core = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    for (zero_copy, phf) in [(true, false), (false, false), (true, true)] {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"), format!("[package]\nname=\"binary-lexical-test\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[dependencies]\npolyxml={{path={core:?}}}\nquick-xml={{version=\"0.42\",features=[\"serialize\"]}}\nserde={{version=\"1\",features=[\"derive\"]}}\nserde_json=\"1\"\nregex=\"1\"\nphf={{version=\"0.14.0\",features=[\"macros\"]}}\n")).unwrap();
+        let code = RustCodegen::new(RustOptions {
+            zero_copy,
+            phf,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        std::fs::write(dir.path().join("src/models.rs"), code).unwrap();
+        std::fs::write(dir.path().join("src/main.rs"), r#"mod models;
+use models::*;
+fn main() {
+ let xml="<Sweep><StartingPosition><Percentage>25</Percentage></StartingPosition><StepIncrement><NumberOfSteps>3</NumberOfSteps></StepIncrement><Optional><Label>focus</Label></Optional><Repeated><Percentage>2</Percentage></Repeated><Repeated><NumberOfSteps>4</NumberOfSteps></Repeated></Sweep>";
+ let value=Sweep::from_xml(xml).unwrap();
+ assert!(matches!(value.starting_position, Position::Percentage(25.0)));
+ assert!(matches!(value.step_increment, Position::NumberOfSteps(3)));
+ assert_eq!(value.repeated.len(),2);
+ assert_eq!(value.to_xml_string().unwrap(),xml);
+ let xml="<Sweep><StartingPosition><Label/></StartingPosition><StepIncrement><NumberOfSteps>3</NumberOfSteps></StepIncrement></Sweep>";
+ let value=Sweep::from_xml(xml).unwrap();
+ assert!(matches!(&value.starting_position,Position::Label(text) if text.is_empty()));
+ assert!(value.optional.is_none());
+ let round_trip=value.to_xml_string().unwrap(); assert!(round_trip.contains("<StartingPosition><Label></Label></StartingPosition>"));
+ for inner in ["", "<Percentage>1</Percentage><NumberOfSteps>2</NumberOfSteps>", "<Unknown/>"] {
+ let xml=format!("<Sweep><StartingPosition>{inner}</StartingPosition><StepIncrement><NumberOfSteps>3</NumberOfSteps></StepIncrement></Sweep>");
+ assert!(Sweep::from_xml(&xml).is_err(),"accepted {xml}");
+ }
+ assert!(Sweep::from_xml("<Sweep><StartingPosition/><StepIncrement><NumberOfSteps>3</NumberOfSteps></StepIncrement></Sweep>").is_err());
+}
+"#).unwrap();
+        let output = std::process::Command::new("cargo")
+            .args(["run", "--quiet", "--offline"])
+            .env("RUSTFLAGS", "-D unreachable-patterns")
+            .env(
+                "CARGO_TARGET_DIR",
+                core.join("../../target/binary-lexical-tests"),
+            )
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "zero_copy={zero_copy}, phf={phf}: {}\n{}",
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );

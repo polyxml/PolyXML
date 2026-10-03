@@ -855,3 +855,21 @@ owned namespace after substitutions become visible. Such helpers (identified
 by their #text branch) may use a unique namespace owner; ambiguous namespaces
 and ordinary imported declarations still need explicit owners. Unused imported
 helpers are pruned before this step. Test multi-schema modules and ambiguity.
+
+## Generated warning triage: choices and inherited names
+
+Rust tagged-union fields with an empty XML name represent inline choices;
+fields with a nonempty XML name represent an element wrapping a choice.
+Dispatch named wrappers by the field name and preserve their outer element on
+writes. Reading a wrapper must consume its end and accept exactly one branch.
+Cover required, optional, repeated, empty-string branches, invalid alternatives,
+owned/borrowed strings and PHF dispatch, with unreachable-pattern warnings
+promoted to errors in a generated consumer. UCI's repeated Percentage and
+NumberOfSteps warnings exposed incorrect flattening of named wrappers.
+
+C# reserves generated property names from every ancestor before naming new
+members. NeTEx's inherited nameOfClass attribute and NameOfClass element are
+distinct XML members despite their identical normalized C# identifier. Suffix
+the derived identifier while retaining XML metadata; adding new or suppressing
+CS0108 does not establish correct serialization. Check record/class builds,
+base-reference access, XML and JSON round trips, and multi-level collisions.

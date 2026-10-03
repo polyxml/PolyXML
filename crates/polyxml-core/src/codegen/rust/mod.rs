@@ -1333,7 +1333,10 @@ impl RustCodegen {
                 if field.kind != FieldKind::Element {
                     continue;
                 }
-                let tags: Vec<String> = match self.resolve_union_def(&field.type_ref, ir) {
+                let tags: Vec<String> = match self
+                    .resolve_union_def(&field.type_ref, ir)
+                    .filter(|_| field.xml_name.is_empty())
+                {
                     Some(u) => u
                         .branches
                         .iter()
@@ -1495,7 +1498,10 @@ impl RustCodegen {
             }
 
             for meta in &elem_fields {
-                if let Some(union_def) = self.resolve_union_def(&meta.field.type_ref, ir) {
+                if let Some(union_def) = self
+                    .resolve_union_def(&meta.field.type_ref, ir)
+                    .filter(|_| meta.field.xml_name.is_empty())
+                {
                     let branch_tags: Vec<_> = union_def
                         .branches
                         .iter()
@@ -1575,7 +1581,10 @@ impl RustCodegen {
                 );
             }
             for meta in &elem_fields {
-                if let Some(union_def) = self.resolve_union_def(&meta.field.type_ref, ir) {
+                if let Some(union_def) = self
+                    .resolve_union_def(&meta.field.type_ref, ir)
+                    .filter(|_| meta.field.xml_name.is_empty())
+                {
                     let branch_tags: Vec<_> = union_def
                         .branches
                         .iter()
@@ -2069,10 +2078,14 @@ impl RustCodegen {
         } else {
             let target_type = self.format_rust_type_ref(&field.type_ref, types_with_lifetime);
             let target_clean = target_type.split('<').next().unwrap_or(&target_type);
+            let decode = if self.resolve_union_def(&field.type_ref, ir).is_some() {
+                "decode_xml_wrapped"
+            } else {
+                "decode_xml"
+            };
             let _ = writeln!(
                 out,
-                "                        let val = {}::decode_xml(reader, &e)?;",
-                target_clean
+                "                        let val = {target_clean}::{decode}(reader, &e)?;"
             );
             let final_val = if is_boxed { "Box::new(val)" } else { "val" };
             if is_list {
@@ -2102,6 +2115,10 @@ impl RustCodegen {
         let is_list = field.cardinality.is_list() || field.type_ref.is_list();
         let is_boxed = field.is_cycle_cut || field.type_ref.is_boxed();
 
+        if self.resolve_union_def(&field.type_ref, ir).is_some() {
+            let _ = writeln!(out, "                        return Err(PolyXmlError::SchemaError(\"Missing choice in {}\".into()));", field.xml_name);
+            return;
+        }
         if self.field_is_string(&field.type_ref, ir) {
             self.emit_pattern_check(out, field, "\"\"", ir);
             if self.options.zero_copy {
@@ -2399,7 +2416,15 @@ impl RustCodegen {
                     field.xml_name
                 );
             } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
-                let _ = writeln!(out, "            item.encode_xml(writer, None)?;",);
+                if field.xml_name.is_empty() {
+                    let _ = writeln!(out, "            item.encode_xml(writer, None)?;");
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "            item.encode_xml_wrapped(writer, {:?})?;",
+                        field.xml_name
+                    );
+                }
             } else {
                 let _ = writeln!(
                     out,
@@ -2451,7 +2476,15 @@ impl RustCodegen {
                     field.xml_name
                 );
             } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
-                let _ = writeln!(out, "            val.encode_xml(writer, None)?;",);
+                if field.xml_name.is_empty() {
+                    let _ = writeln!(out, "            val.encode_xml(writer, None)?;");
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "            val.encode_xml_wrapped(writer, {:?})?;",
+                        field.xml_name
+                    );
+                }
             } else {
                 let _ = writeln!(
                     out,
@@ -2506,7 +2539,15 @@ impl RustCodegen {
                     field.xml_name
                 );
             } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
-                let _ = writeln!(out, "        self.{}.encode_xml(writer, None)?;", rust_name);
+                if field.xml_name.is_empty() {
+                    let _ = writeln!(out, "        self.{}.encode_xml(writer, None)?;", rust_name);
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "        self.{}.encode_xml_wrapped(writer, {:?})?;",
+                        rust_name, field.xml_name
+                    );
+                }
             } else {
                 let _ = writeln!(
                     out,
@@ -2539,6 +2580,35 @@ impl RustCodegen {
 
         out.push('\n');
         let _ = writeln!(out, "{} {{", impl_header);
+
+        let reader_lifetime = if needs_lifetime { "'a" } else { "'_" };
+        let _ = writeln!(out, "    pub fn decode_xml_wrapped(reader: &mut Reader<&{reader_lifetime} [u8]>, start: &BytesStart<'_>) -> Result<Self> {{");
+        out.push_str(r#"        let mut value = None;
+        loop {
+            match reader.read_event()? {
+                Event::Start(e) => {
+                    if value.is_some() { return Err(PolyXmlError::SchemaError("Multiple choice alternatives".into())); }
+                    value = Some(Self::decode_xml(reader, &e)?);
+                }
+                Event::Empty(e) => {
+                    if value.is_some() { return Err(PolyXmlError::SchemaError("Multiple choice alternatives".into())); }
+                    let mut empty_reader = Reader::from_str("");
+                    value = Some(Self::decode_xml(&mut empty_reader, &e)?);
+                }
+                Event::End(e) if e.name() == start.name() => break,
+                Event::Eof => return Err(PolyXmlError::SchemaError("Unclosed choice wrapper".into())),
+                _ => {}
+            }
+        }
+        value.ok_or_else(|| PolyXmlError::SchemaError("Missing choice alternative".into()))
+    }
+    pub fn encode_xml_wrapped<W: std::io::Write>(&self, writer: &mut Writer<W>, tag: &str) -> Result<()> {
+        writer.write_event(Event::Start(BytesStart::new(tag)))?;
+        self.encode_xml(writer, None)?;
+        writer.write_event(Event::End(BytesEnd::new(tag)))?;
+        Ok(())
+    }
+"#);
 
         let from_xml_sig = if needs_lifetime {
             "pub fn from_xml(xml: &'a str) -> Result<Self>"

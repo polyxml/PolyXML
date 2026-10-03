@@ -125,3 +125,46 @@ if(json.Contains("TypeXml"))throw new Exception("XML proxy leaked to JSON: "+jso
         );
     }
 }
+
+#[test]
+fn inherited_attribute_and_distinct_element_keep_separate_property_names() {
+    let ir = XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="Entity"><xs:attribute name="nameOfClass" type="xs:string"/></xs:complexType>
+      <xs:complexType name="Assignment"><xs:complexContent><xs:extension base="Entity"><xs:sequence><xs:element name="NameOfClass" type="xs:string" minOccurs="0"/></xs:sequence></xs:extension></xs:complexContent></xs:complexType>
+      <xs:complexType name="SpecialAssignment"><xs:complexContent><xs:extension base="Assignment"><xs:sequence><xs:element name="name_of_class" type="xs:string" minOccurs="0"/></xs:sequence></xs:extension></xs:complexContent></xs:complexType>
+    </xs:schema>"#).unwrap();
+    for use_records in [true, false] {
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("App.csproj"), r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><WarningsAsErrors>CS0108;CS8866;CS0657;CS8907</WarningsAsErrors></PropertyGroup></Project>"#).unwrap();
+        fs::write(
+            temp.path().join("Models.cs"),
+            CSharpCodegen::new(CSharpOptions {
+                namespace: "Models".into(),
+                use_records,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        fs::write(temp.path().join("Program.cs"), r#"using System.Xml.Serialization;using System.Xml.Linq;using Models;
+var serializer=new XmlSerializer(typeof(SpecialAssignment));
+var value=(SpecialAssignment)serializer.Deserialize(new StringReader("<SpecialAssignment nameOfClass='attribute'><NameOfClass>element</NameOfClass><name_of_class>grandchild</name_of_class></SpecialAssignment>"))!;
+if(((Entity)value).NameOfClass!="attribute"||value.NameOfClass2!="element"||value.NameOfClass3!="grandchild")throw new Exception("inherited values lost");
+var writer=new StringWriter();serializer.Serialize(writer,value);var xml=XDocument.Parse(writer.ToString()).Root!;
+if((string?)xml.Attribute("nameOfClass")!="attribute"||(string?)xml.Element("NameOfClass")!="element"||(string?)xml.Element("name_of_class")!="grandchild")throw new Exception(writer.ToString());
+var json=System.Text.Json.JsonSerializer.Serialize(value);if(!json.Contains("attribute")||!json.Contains("element")||!json.Contains("grandchild"))throw new Exception(json);
+"#).unwrap();
+        let result = Command::new("dotnet")
+            .args(["run", "--disable-build-servers"])
+            .env("DOTNET_CLI_USE_MSBUILD_SERVER", "0")
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "records={use_records}: {}{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}

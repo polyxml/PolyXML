@@ -1426,7 +1426,10 @@ impl CSharpCodegen {
             format!(" : {}", base_clause.join(", "))
         };
 
-        let mut seen_props = HashSet::new();
+        // Reserve the actual generated names on every ancestor. Distinct
+        // XML members (e.g. nameOfClass attribute and NameOfClass element)
+        // can normalize to the same C# identifier.
+        let mut seen_props = self.inherited_property_names(s, ir, &mut HashSet::new());
         let prop_names: Vec<String> = s
             .fields
             .iter()
@@ -1676,6 +1679,51 @@ impl CSharpCodegen {
         }
 
         writeln!(out, "{}}}\n", indent).unwrap();
+    }
+
+    fn inherited_property_names(
+        &self,
+        s: &StructDef,
+        ir: &SchemaIR,
+        visited: &mut HashSet<QName>,
+    ) -> HashSet<String> {
+        let Some(base) = s.base_type.as_ref() else {
+            return HashSet::new();
+        };
+        if !visited.insert(base.clone()) {
+            return HashSet::new();
+        }
+        let Some(TypeDef::Struct(parent)) = ir.types.get(base) else {
+            return HashSet::new();
+        };
+        let mut names = self.inherited_property_names(parent, ir, visited);
+        let mut ancestor_fields = Vec::new();
+        let mut next = parent.base_type.as_ref();
+        let mut seen = HashSet::new();
+        while let Some(qname) = next {
+            if !seen.insert(qname.clone()) {
+                break;
+            }
+            let Some(TypeDef::Struct(ancestor)) = ir.types.get(qname) else {
+                break;
+            };
+            ancestor_fields.extend(ancestor.fields.iter());
+            next = ancestor.base_type.as_ref();
+        }
+        let enclosing = type_ident(&parent.qname);
+        for field in &parent.fields {
+            let inherited = ancestor_fields.iter().any(|f| {
+                (field.kind == FieldKind::Text && f.kind == FieldKind::Text)
+                    || (field.kind == f.kind
+                        && field.xml_name == f.xml_name
+                        && field.namespace == f.namespace
+                        && field.name == f.name)
+            });
+            if !inherited {
+                self.unique_property_name(&field.name, &mut names, Some(&enclosing));
+            }
+        }
+        names
     }
 
     fn unique_property_name(
