@@ -97,3 +97,10 @@ metadata, every Criterion sample and verification logs under a dated
 `docs/benchmarks/data/` directory. Link the resulting report from the benchmark
 index. Include experiments that failed to improve performance, and state what
 remains slower than the historical baseline.
+
+`cache_boundaries.rs` is a second alternate harness for the cache's working-set
+boundary: 1, 16, 17 and 64 distinct patterns, eight occurrences per pattern.
+Reads cycle pattern keys to force FIFO misses above capacity. Writes visit each
+field's eight occurrences consecutively, so they can still reuse each compiled
+regex locally even when the full schema exceeds capacity. Run it with the same
+`--harness` option and retain both cases; field order affects reuse.
