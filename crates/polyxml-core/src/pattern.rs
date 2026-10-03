@@ -1,5 +1,6 @@
 //! Bounded process-wide reuse of anchored XML scalar patterns.
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
+use std::hash::BuildHasher;
 use std::sync::{Arc, OnceLock, RwLock};
 
 const MAX_ENTRIES: usize = 16;
@@ -30,17 +31,26 @@ impl CompiledPattern {
 #[derive(Default)]
 struct PatternCache {
     entries: HashMap<String, CompiledPattern>,
-    order: VecDeque<String>,
+    keys: Vec<String>,
+    eviction_nonce: u64,
 }
 
 impl PatternCache {
     fn insert(&mut self, pattern: &str, compiled: CompiledPattern) {
         if self.entries.len() == MAX_ENTRIES {
-            if let Some(oldest) = self.order.pop_front() {
-                self.entries.remove(&oldest);
-            }
+            // FIFO misses on every access when a cycle exceeds capacity by one.
+            // Salt the victim selection with each eviction to break that cycle,
+            // using the existing randomized hasher without another dependency.
+            self.eviction_nonce = self.eviction_nonce.wrapping_add(1);
+            let victim = self
+                .entries
+                .hasher()
+                .hash_one((pattern, self.eviction_nonce)) as usize
+                % MAX_ENTRIES;
+            let displaced = self.keys.swap_remove(victim);
+            self.entries.remove(&displaced);
         }
-        self.order.push_back(pattern.into());
+        self.keys.push(pattern.into());
         self.entries.insert(pattern.into(), compiled);
     }
 }
@@ -90,10 +100,31 @@ mod tests {
             cache.insert(&pattern, CompiledPattern::compile(&pattern));
         }
         assert_eq!(cache.entries.len(), MAX_ENTRIES);
-        assert_eq!(cache.order.len(), MAX_ENTRIES);
-        assert!(!cache.entries.contains_key("["));
-        assert!(cache.entries["VALUE0"].matches("VALUE0"));
-        assert!(!cache.entries["VALUE0"].matches("VALUE00"));
+        assert_eq!(cache.keys.len(), MAX_ENTRIES);
+        assert!(cache.entries["VALUE15"].matches("VALUE15"));
+        assert!(!cache.entries["VALUE15"].matches("VALUE150"));
+    }
+
+    #[test]
+    fn cyclic_working_set_above_capacity_keeps_reusing_entries() {
+        let mut cache = PatternCache::default();
+        let patterns: Vec<_> = (0..MAX_ENTRIES + 1).map(|i| format!("VALUE{i}")).collect();
+        let operations = patterns.len() * 512;
+        let mut misses = 0;
+        for pattern in patterns.iter().cycle().take(operations) {
+            if !cache.entries.contains_key(pattern) {
+                misses += 1;
+                cache.insert(pattern, CompiledPattern::compile(pattern));
+            }
+            assert!(cache.entries[pattern].matches(pattern));
+            assert!(cache.entries.len() <= MAX_ENTRIES);
+        }
+        // A generous bound checks reuse rather than one random eviction order.
+        // FIFO would miss on every operation after the initial fill.
+        assert!(
+            misses < operations / 2,
+            "misses={misses}, operations={operations}"
+        );
     }
 
     #[test]
