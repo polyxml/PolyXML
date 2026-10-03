@@ -1,0 +1,59 @@
+diff --git a/crates/polyxml-core/src/parser.rs b/crates/polyxml-core/src/parser.rs
+index afc027e..5f2a8e0 100644
+--- a/crates/polyxml-core/src/parser.rs
++++ b/crates/polyxml-core/src/parser.rs
+@@ -470,7 +470,7 @@ impl XmlDeserializer {
+                     let local_name = e.local_name();
+                     let is_nil = is_nil_element(e);
+ 
+-                    let current_schema = Arc::clone(&stack.last().unwrap().schema);
++                    let current_schema = &stack.last().unwrap().schema;
+                     if let Some(&field_idx) = current_schema
+                         .element_map
+                         .get(local_name.as_ref().as_bytes())
+@@ -549,10 +549,11 @@ impl XmlDeserializer {
+                         {
+                             let branch = &mixed.branches[branch_index];
+                             if is_nil {
++                                let kind = branch.variant_name.clone();
+                                 stack
+                                     .last_mut()
+                                     .unwrap()
+-                                    .push_mixed_item(&branch.variant_name, PolyValue::Null);
++                                    .push_mixed_item(kind, PolyValue::Null);
+                                 unknown_depth = 1;
+                             } else {
+                                 match &branch.val_type {
+@@ -654,7 +655,7 @@ impl XmlDeserializer {
+                     let scope = namespace_scope(namespace_stack.last().unwrap(), e);
+                     let is_nil = is_nil_element(e);
+ 
+-                    let current_schema = Arc::clone(&stack.last().unwrap().schema);
++                    let current_schema = &stack.last().unwrap().schema;
+                     if let Some(&field_idx) = current_schema
+                         .element_map
+                         .get(local_name.as_ref().as_bytes())
+@@ -732,10 +733,8 @@ impl XmlDeserializer {
+                                     ValueType::List(_) => PolyValue::Null,
+                                 }
+                             };
+-                            stack
+-                                .last_mut()
+-                                .unwrap()
+-                                .push_mixed_item(&branch.variant_name, value);
++                            let kind = branch.variant_name.clone();
++                            stack.last_mut().unwrap().push_mixed_item(kind, value);
+                         }
+                     } else if let Some(any_idx) = current_schema.any_element_field {
+                         let (ns, local) = resolve_element_qname(e, &scope);
+@@ -771,8 +770,9 @@ impl XmlDeserializer {
+                             obj.insert("text".to_string(), PolyValue::String(String::new()));
+                             obj.insert("children".to_string(), PolyValue::List(Vec::new()));
+                             let poly_obj = PolyValue::Object(obj);
++                            let repeated = matches!(any_field.val_type, ValueType::List(_));
+                             let parent_frame = stack.last_mut().unwrap();
+-                            if matches!(any_field.val_type, ValueType::List(_)) {
++                            if repeated {
+                                 parent_frame.push_list_item(any_idx, poly_obj);
+                             } else {
+                                 parent_frame.values[any_idx] = Some(poly_obj);

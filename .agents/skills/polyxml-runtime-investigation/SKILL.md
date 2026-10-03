@@ -23,6 +23,10 @@ separate from the schema-driven `PolyValue` runtime.
   synchronize and rebuild an editable binding. After preparing its environment,
   use `uv run --no-sync` for companion runs. If a build overlaps timing, retain
   and mark that attempt as contaminated, then repeat it.
+  Use revision-owned CLI/native-binding build targets too: a shared debug
+  directory can retain another worktree's same-named top-level artifact despite
+  a fresh Cargo result. Probe a fixture that distinguishes the revisions and
+  record artifact hashes before using companion results as a comparison.
 - Run heavy work serially, with one Cargo worker and the repository memory cap.
   Short comparisons screen hypotheses. Repeat retained improvements with longer
   measurements, alternating revision order and preserving every raw sample.
