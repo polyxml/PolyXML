@@ -5,6 +5,7 @@ pub mod integer;
 pub mod ir;
 pub mod json;
 pub mod parser;
+mod pattern;
 pub mod schema;
 pub mod schema_parser;
 pub mod serializer;

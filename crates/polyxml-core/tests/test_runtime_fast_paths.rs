@@ -125,3 +125,51 @@ fn indexed_scalar_state_preserves_enum_pattern_and_split_text() {
     assert!(deserialize(b"<Root><State>Ready</State></Root>", Arc::clone(&schema)).is_err());
     assert!(deserialize(b"<Root><State>Done</State></Root>", schema).is_ok());
 }
+
+#[test]
+fn cached_patterns_keep_raw_restriction_and_trimmed_pattern_semantics() {
+    use polyxml::converters::ValueConverter;
+    use polyxml::ir::RestrictionFacets;
+    let pattern = ScalarType::Pattern(Box::new(ScalarType::String), vec!["[A-Z]+".into()]);
+    let restriction = ScalarType::Restricted(
+        Box::new(ScalarType::String),
+        Box::new(RestrictionFacets {
+            patterns: vec!["[A-Z]+".into()],
+            ..Default::default()
+        }),
+    );
+    for _ in 0..3 {
+        assert_eq!(
+            ValueConverter::parse_scalar(&pattern, b" AB ", "code").unwrap(),
+            PolyValue::String(" AB ".into())
+        );
+        assert!(ValueConverter::parse_scalar(&restriction, b" AB ", "code").is_err());
+        assert!(ValueConverter::parse_scalar(&restriction, b"AB", "code").is_ok());
+        assert!(ValueConverter::parse_scalar(&pattern, b"AB\nX", "code").is_err());
+        let invalid = ScalarType::Pattern(Box::new(ScalarType::String), vec!["[".into()]);
+        assert!(ValueConverter::parse_scalar(&invalid, b"AB", "code").is_err());
+    }
+    let mut schema = ModelSchema::builder("Root")
+        .field(FieldSchema::new(
+            "code",
+            b"Code",
+            FieldKind::Element,
+            ValueType::Scalar(pattern),
+        ))
+        .build();
+    assert!(deserialize(b"<Root><Code>AB</Code></Root>", Arc::clone(&schema)).is_ok());
+    Arc::get_mut(&mut schema).unwrap().fields[0].val_type = ValueType::Scalar(ScalarType::Pattern(
+        Box::new(ScalarType::String),
+        vec!["[0-9]+".into()],
+    ));
+    assert!(deserialize(b"<Root><Code>AB</Code></Root>", Arc::clone(&schema)).is_err());
+    let value = deserialize(b"<Root><Code>12</Code></Root>", Arc::clone(&schema)).unwrap();
+    serialize("Root", &value, &schema, None).unwrap();
+    assert!(serialize(
+        "Root",
+        &object("code", PolyValue::String("AB".into())),
+        &schema,
+        None
+    )
+    .is_err());
+}

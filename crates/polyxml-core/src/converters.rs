@@ -42,9 +42,7 @@ impl ValueConverter {
                     && facets.min_length.is_none_or(|n| length >= n)
                     && facets.max_length.is_none_or(|n| length <= n);
                 for pattern in &facets.patterns {
-                    valid &= regex::Regex::new(&format!("\\A(?:{pattern})\\z"))
-                        .map(|r| r.is_match(text))
-                        .unwrap_or(false);
+                    valid &= crate::pattern::matches(pattern, text);
                 }
                 for (bound, inclusive, minimum) in [
                     (&facets.min_inclusive, true, true),
@@ -120,11 +118,7 @@ impl ValueConverter {
             ScalarType::Pattern(base, patterns) => {
                 let value = std::str::from_utf8(trim_bytes(bytes))?;
                 for pattern in patterns {
-                    let anchored = format!(r"\A(?:{pattern})\z");
-                    if !regex::Regex::new(&anchored)
-                        .map(|compiled| compiled.is_match(value))
-                        .unwrap_or(false)
-                    {
+                    if !crate::pattern::matches(pattern, value) {
                         return Err(PolyXmlError::ScalarParseError {
                             field: field_name.to_string(),
                             expected: "pattern",
