@@ -171,21 +171,23 @@ fn is_nil_element(e: &BytesStart) -> bool {
 
 /// Extend inherited namespace bindings for this element. Elements without
 /// declarations share the existing map.
-fn namespace_scope(parent: &NamespaceScope, e: &BytesStart) -> NamespaceScope {
+fn namespace_scope(parent: &NamespaceScope, e: &BytesStart) -> Result<NamespaceScope> {
     let mut scope = None;
     for attr in e.attributes().flatten() {
         let key = attr.key.as_ref();
         if key == "xmlns" {
-            scope
-                .get_or_insert_with(|| (**parent).clone())
-                .insert(String::new(), attr.value.as_ref().to_string());
+            scope.get_or_insert_with(|| (**parent).clone()).insert(
+                String::new(),
+                quick_xml::escape::unescape(attr.value.as_ref())?.into_owned(),
+            );
         } else if let Some(prefix) = key.strip_prefix("xmlns:") {
-            scope
-                .get_or_insert_with(|| (**parent).clone())
-                .insert(prefix.to_string(), attr.value.as_ref().to_string());
+            scope.get_or_insert_with(|| (**parent).clone()).insert(
+                prefix.to_string(),
+                quick_xml::escape::unescape(attr.value.as_ref())?.into_owned(),
+            );
         }
     }
-    scope.map(Arc::new).unwrap_or_else(|| Arc::clone(parent))
+    Ok(scope.map(Arc::new).unwrap_or_else(|| Arc::clone(parent)))
 }
 
 /// Raw unescaped value of the type attribute in the XML Schema Instance
@@ -342,7 +344,7 @@ pub const DEFAULT_MAX_DEPTH: usize = 256;
 impl XmlDeserializer {
     fn check_root(start: &BytesStart, schema: &ModelSchema) -> Result<()> {
         if schema.strict_root {
-            let scope = namespace_scope(&Arc::new(HashMap::new()), start);
+            let scope = namespace_scope(&Arc::new(HashMap::new()), start)?;
             let (ns, local) = resolve_element_qname(start, &scope);
             if local.as_bytes() != schema.xml_name
                 || ns.as_deref().filter(|s| !s.is_empty())
@@ -384,7 +386,7 @@ impl XmlDeserializer {
                 }
                 Ok(Event::Empty(ref e)) => {
                     Self::check_root(e, &root_schema)?;
-                    let scope = namespace_scope(&Arc::new(HashMap::new()), e);
+                    let scope = namespace_scope(&Arc::new(HashMap::new()), e)?;
                     let schema = resolve_record_schema(&root_schema, e, &scope)?;
                     let mut frame = StackFrame::new(schema);
                     Self::parse_attributes(e, &mut frame)?;
@@ -415,7 +417,7 @@ impl XmlDeserializer {
         inherited_scope: &NamespaceScope,
     ) -> Result<PolyValue> {
         let mut stack: Vec<StackFrame> = Vec::with_capacity(16);
-        let mut namespace_stack = vec![namespace_scope(inherited_scope, root_start)];
+        let mut namespace_stack = vec![namespace_scope(inherited_scope, root_start)?];
         let root_schema =
             resolve_record_schema(&root_schema, root_start, namespace_stack.last().unwrap())?;
         let mut root_frame = StackFrame::new(root_schema);
@@ -431,7 +433,7 @@ impl XmlDeserializer {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
-                    namespace_stack.push(namespace_scope(namespace_stack.last().unwrap(), e));
+                    namespace_stack.push(namespace_scope(namespace_stack.last().unwrap(), e)?);
                     if unknown_depth > 0 {
                         unknown_depth += 1;
                         continue;
@@ -626,11 +628,11 @@ impl XmlDeserializer {
                         continue;
                     }
                     if any_stack.is_empty() {
-                        let scope = namespace_scope(namespace_stack.last().unwrap(), e);
+                        let scope = namespace_scope(namespace_stack.last().unwrap(), e)?;
                         record_content_token(stack.last_mut().unwrap(), e, &scope);
                     }
                     if !any_stack.is_empty() {
-                        let scope = namespace_scope(namespace_stack.last().unwrap(), e);
+                        let scope = namespace_scope(namespace_stack.last().unwrap(), e)?;
                         let (ns, local) = resolve_element_qname(e, &scope);
                         let qname = if let Some(uri) = ns {
                             format!("{{{}}}{}", uri, local)
@@ -651,7 +653,7 @@ impl XmlDeserializer {
                         continue;
                     }
                     let local_name = e.local_name();
-                    let scope = namespace_scope(namespace_stack.last().unwrap(), e);
+                    let scope = namespace_scope(namespace_stack.last().unwrap(), e)?;
                     let is_nil = is_nil_element(e);
 
                     let current_schema = Arc::clone(&stack.last().unwrap().schema);
@@ -1085,7 +1087,7 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
                         .last()
                         .cloned()
                         .unwrap_or_else(|| Arc::new(HashMap::new()));
-                    self.namespace_stack.push(namespace_scope(&inherited, e));
+                    self.namespace_stack.push(namespace_scope(&inherited, e)?);
                 }
                 Ok(Event::Empty(ref e)) => {
                     let local = e.local_name();
@@ -1097,7 +1099,7 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
                             .last()
                             .cloned()
                             .unwrap_or_else(|| Arc::new(HashMap::new()));
-                        let scope = namespace_scope(&inherited, e);
+                        let scope = namespace_scope(&inherited, e)?;
                         let schema = resolve_record_schema(&self.schema, e, &scope)?;
                         let mut frame = StackFrame::new(schema);
                         XmlDeserializer::parse_attributes(e, &mut frame)?;

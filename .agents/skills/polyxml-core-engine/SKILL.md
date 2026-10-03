@@ -274,3 +274,11 @@ retain whitespace-token rejection, escaping and empty-list behavior.
 
 For measured changes, use
 [polyxml-runtime-investigation](../polyxml-runtime-investigation/SKILL.md).
+
+Namespace declarations are XML attribute values too: unescape predefined and
+numeric references exactly once before storing their URI in NamespaceScope.
+Propagate failures through document entry, nested Start/Empty handling and
+XmlItemStream inheritance. Compare decoded URIs for strict-root and xsi:type
+matching; escaped source text is not the namespace name. Preserve inherited
+already-decoded bindings and test a literal amp-entity spelling against double
+decoding.
