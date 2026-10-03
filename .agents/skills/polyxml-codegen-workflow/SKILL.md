@@ -815,3 +815,9 @@ Jackson 3 sorts properties alphabetically by default. Emit `@JsonPropertyOrder`
 from flattened schema fields for its struct models, including inherited fields,
 or valid reads can produce XSD-invalid XML on writes. The Spring fixture checks
 returned XML against the source XSD independently using the JDK validator.
+
+C# positional record properties named Equals/GetHashCode/ToString collide with
+synthesized methods (UCI QueryPET's Equals field exposed CS8866). Suffix their
+identifiers with Value before applying per-struct uniqueness; preserve original
+XML names. The particle wire round-trip test covers these names and an explicit
+EqualsValue collision in both record and mutable-class modes.
