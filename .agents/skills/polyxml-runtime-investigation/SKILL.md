@@ -23,10 +23,15 @@ separate from the schema-driven `PolyValue` runtime.
   synchronize and rebuild an editable binding. After preparing its environment,
   use `uv run --no-sync` for companion runs. If a build overlaps timing, retain
   and mark that attempt as contaminated, then repeat it.
-  Use revision-owned CLI/native-binding build targets too: a shared debug
-  directory can retain another worktree's same-named top-level artifact despite
-  a fresh Cargo result. Probe a fixture that distinguishes the revisions and
-  record artifact hashes before using companion results as a comparison.
+  Use worktree-owned workspace build targets for tests, CLI and native bindings.
+  A shared debug target can retain an unchanged test executable linked to an
+  earlier worktree implementation, as well as stale top-level CLI aliases.
+  Even a Cargo compile message does not prove every executable was relinked.
+  Verify discriminating fixtures or symbols when switching revisions; discard
+  mismatched preflights and rerun in an isolated target. Standalone comparison
+  consumers use separate baseline/current targets, explicit dependency paths
+  and Cargo-reported hashed executable artifacts; keep them separate from
+  workspace build caches and retain artifact provenance.
 - Preflight the exact PATH used by the quality gate as well as timing tools.
   A locally installed TypeScript compiler needs its node_modules/.bin on PATH;
   having Node available does not make tsc available. Record missing-tool failures

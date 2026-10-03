@@ -69,6 +69,41 @@ Checking whether a fixed value exists before looking up a parsed value produced
 -0.90%, +0.55% and +0.19% on the three read payloads in a short screen.
 This was neutral and was not selected.
 
+## Attribute fast path (`83706b3`)
+
+Skip nil/namespace attribute iteration when a tag has no attributes, and skip
+model attribute processing when its schema has neither attribute fields nor an
+attribute wildcard. Existing mixed, wildcard, depth, fixed-value and xsi:type
+focused tests pass. Both short process pairs improved reads by 1.6–3.5%.
+
+The longer three-pair comparison (100 samples, 3-second warmup, 5-second
+measurement) gives this complete binary tradeoff:
+
+| Consumer | Candidate time change |
+| --- | ---: |
+| Catalog read, 1,000 items | -1.55% |
+| Catalog read, 10,000 items | -1.74% |
+| Sensor read | -2.72% |
+| Catalog write, 1,000 items | +2.03% |
+| Catalog write, 10,000 items | +2.03% |
+| Sensor write | +1.83% |
+
+All three pairs improved reads and slowed writes. Serializer source is unchanged,
+but that does not prove unchanged binary performance. Keep the entire tradeoff;
+do not publish only the favorable reads. A combined registry/attribute prototype
+is pending, since separately measured changes need not combine additively.
+
+## Workspace artifact safeguard
+
+A shared debug workspace target also reused a previously linked mixed-nil test
+executable after switching to the isolated-loop worktree. Its symbols lacked
+the new helper and its tests rejected nil values, even though Cargo reported a
+core compile. The exact same source passes in a fresh, worktree-owned target
+whose executable contains the helper. The rejected preflight and isolated retry
+are retained. Use dedicated workspace targets for tests as well as CLIs/bindings.
+Standalone timing consumers use separate targets and explicit source dependency
+paths; the nil consumer's compiled symbol confirms the nil helper is present.
+
 ## Limits
 
 These are single-host WSL2 results, not concurrent throughput or peak-memory
