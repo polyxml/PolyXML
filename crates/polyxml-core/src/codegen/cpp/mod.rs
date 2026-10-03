@@ -1009,7 +1009,9 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             // Value field
             let init = match &f.default_value {
                 Some(v) => match f.type_ref {
-                    TypeRef::Primitive(p) if p.is_unbounded_integer() => format!(" = {v:?}"),
+                    TypeRef::Primitive(p) if p.is_unbounded_integer() => {
+                        format!(" = {}", super::cpp_string_literal(v))
+                    }
                     TypeRef::Primitive(PrimitiveType::Boolean) => {
                         format!(" = {}", v.to_lowercase())
                     }
@@ -1019,7 +1021,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                     TypeRef::Primitive(PrimitiveType::String)
                     | TypeRef::Primitive(PrimitiveType::Token)
                     | TypeRef::Primitive(PrimitiveType::NormalizedString) => {
-                        format!(" = \"{}\"", v.replace('\\', "\\\\").replace('"', "\\\""))
+                        format!(" = {}", super::cpp_string_literal(v))
                     }
                     TypeRef::Primitive(_) => format!(" = {}", v),
                     TypeRef::Named(_) => format!(" = {}", v),

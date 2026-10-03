@@ -36,6 +36,14 @@ C++ uses fixed-width octal escapes for ASCII controls. Execute
 `test_enum_literal_codegen` with all seven toolchains to verify exact runtime
 values and Rust Serde round trips, not just whether generated files exist.
 
+Schema defaults and fixed values need the same literal escaping as enums.
+Python metadata must not use Rust Debug escapes, and C++ defaults need C++
+control-character escapes. C# defaults parsed through an internal XML element
+must encode carriage returns as `&#13;` after escaping XML markup; otherwise XML
+line-ending normalization changes the lexical value. Execute generated consumers
+against independent UTF-8 expected data, including backslash-u text, referenced
+whitespace, Unicode line separators, empty-element defaults and fixed rejection.
+
 ## C# runtime availability for smoke checks
 
 The C# execution fixtures target `net8.0`. An installed .NET 10 SDK/runtime
