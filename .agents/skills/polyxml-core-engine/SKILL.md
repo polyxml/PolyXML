@@ -272,5 +272,12 @@ lexical-list obligations before traversing repeated values. Ordinary nested
 records validate their own fields. Lexical lists append tokens to one string;
 retain whitespace-token rejection, escaping and empty-list behavior.
 
+An explicit null in the ordered mixed item stream is a present nil element,
+including for nested branches. Serialize it with a local instance namespace
+binding; avoid shadowing the element QName's prefix. Keep empty strings distinct
+from nulls and preserve item order. Mixed branch schemas do not retain nillable
+constraints, and the dynamic reader remains permissive; this round-trip behavior
+does not establish nillability validation or ordinary optional-field nil output.
+
 For measured changes, use
 [polyxml-runtime-investigation](../polyxml-runtime-investigation/SKILL.md).

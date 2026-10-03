@@ -575,6 +575,26 @@ impl XmlSerializer {
                     } else {
                         Cow::Borrowed(local_name)
                     };
+                    // A tagged null is a present nil element, unlike an absent
+                    // ordinary field. Bind the instance prefix locally so nil
+                    // also works without a root namespace context. Do not
+                    // shadow the prefix used by the element's own QName.
+                    if content.is_null() && !matches!(branch.val_type, ValueType::List(_)) {
+                        let prefix = if qualified.starts_with("xsi:") {
+                            "xsi1"
+                        } else {
+                            "xsi"
+                        };
+                        let mut element = BytesStart::new(qualified.as_ref());
+                        let declaration = format!("xmlns:{prefix}");
+                        let attribute = format!("{prefix}:nil");
+                        element.push_attribute((declaration.as_str(), XSI_NS));
+                        element.push_attribute((attribute.as_str(), "true"));
+                        writer
+                            .write_event(Event::Empty(element))
+                            .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                        continue;
+                    }
                     match &branch.val_type {
                         ValueType::Scalar(_) => {
                             let mut buf = [0u8; lexical_core::BUFFER_SIZE];
