@@ -1,3 +1,10 @@
+## [0.34.6](https://github.com/polyxml/PolyXML/compare/v0.34.5...v0.34.6) (2026-10-03)
+
+
+### Bug Fixes
+
+* **rust:** preserve distinct JSON values with duplicate XML field names ([8b183ac](https://github.com/polyxml/PolyXML/commit/8b183aca90c7de63bbd8842b76018700d53a152a))
+
 ## [0.34.5](https://github.com/polyxml/PolyXML/compare/v0.34.4...v0.34.5) (2026-10-03)
 
 
