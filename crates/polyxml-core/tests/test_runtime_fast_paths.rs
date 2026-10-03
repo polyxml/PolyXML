@@ -173,3 +173,47 @@ fn cached_patterns_keep_raw_restriction_and_trimmed_pattern_semantics() {
     )
     .is_err());
 }
+
+#[test]
+fn lexical_list_formatting_preserves_escaping_empty_lists_and_long_numbers() {
+    let schema = ModelSchema::builder("Root")
+        .field(FieldSchema::new(
+            "words",
+            b"Words",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::List(Box::new(ScalarType::String))),
+        ))
+        .field(FieldSchema::new(
+            "numbers",
+            b"Numbers",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::List(Box::new(ScalarType::Int))),
+        ))
+        .build();
+    for words in [
+        vec![],
+        vec![
+            PolyValue::String("<&".into()),
+            PolyValue::String("\"'".into()),
+        ],
+    ] {
+        let value = PolyValue::Object(HashMap::from([
+            ("words".into(), PolyValue::List(words)),
+            (
+                "numbers".into(),
+                PolyValue::List(vec![
+                    PolyValue::Int(i64::MIN),
+                    PolyValue::Int(0),
+                    PolyValue::Int(i64::MAX),
+                ]),
+            ),
+        ]));
+        for indent in [None, Some(2)] {
+            let output = serialize("Root", &value, &schema, indent).unwrap();
+            assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());
+            assert!(String::from_utf8(output)
+                .unwrap()
+                .contains("-9223372036854775808 0 9223372036854775807"));
+        }
+    }
+}

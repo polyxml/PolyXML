@@ -213,6 +213,7 @@ impl XmlSerializer {
         Ok(buffer.into_inner())
     }
 
+    #[inline]
     fn format_scalar_to<'a>(
         val: &'a PolyValue,
         buf: &'a mut [u8; lexical_core::BUFFER_SIZE],
@@ -227,17 +228,23 @@ impl XmlSerializer {
                 let bytes = lexical_core::write(*f, buf);
                 std::str::from_utf8(bytes).ok().map(Cow::Borrowed)
             }
-            PolyValue::List(items) => {
-                let mut parts = Vec::with_capacity(items.len());
-                for item in items {
-                    let mut buffer = [0u8; lexical_core::BUFFER_SIZE];
-                    parts.push(Self::format_scalar_to(item, &mut buffer)?.into_owned());
-                }
-                Some(Cow::Owned(parts.join(" ")))
-            }
+            PolyValue::List(items) => Self::format_lexical_list(items).map(Cow::Owned),
             PolyValue::Bool(b) => Some(Cow::Borrowed(if *b { "true" } else { "false" })),
             _ => None,
         }
+    }
+
+    fn format_lexical_list(items: &[PolyValue]) -> Option<String> {
+        let mut text = String::new();
+        for (index, item) in items.iter().enumerate() {
+            let mut buffer = [0u8; lexical_core::BUFFER_SIZE];
+            let part = Self::format_scalar_to(item, &mut buffer)?;
+            if index > 0 {
+                text.push(' ');
+            }
+            text.push_str(&part);
+        }
+        Some(text)
     }
 
     #[inline]
