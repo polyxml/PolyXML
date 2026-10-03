@@ -23,6 +23,14 @@
     "sha256": "a1517c48c784c62cc4c9326bb4e2869b4ad461c9264e5c0c375870d860fffa4d",
     "bytes": 4820
   },
+  "quality-gate-missing-tsc.txt": {
+    "sha256": "94ec8f6088a9f4b9321dee4d8a3498eec4e52be0bdbaab8b7d080c83d02a931f",
+    "bytes": 10510
+  },
+  "quality-gate.txt": {
+    "sha256": "d4aa026ec0307f81a049e2c82ade47cc6014e2f0ed54de2016185a6eab7bc618",
+    "bytes": 35973
+  },
   "read-fixed-guard.patch": {
     "sha256": "aef25aeb15c598d76da91aefa4405c1ae36c6390e7ec1bca4000818d9ba00c9d",
     "bytes": 701
