@@ -240,6 +240,14 @@ impl XmlSerializer {
         }
     }
 
+    fn has_lexical_list(ty: &ValueType) -> bool {
+        match ty {
+            ValueType::Scalar(ScalarType::List(_)) => true,
+            ValueType::List(inner) => Self::has_lexical_list(inner),
+            _ => false,
+        }
+    }
+
     fn validate_lexical_list_items(ty: &ValueType, value: &PolyValue) -> Result<()> {
         if let ValueType::Scalar(ScalarType::List(_)) = ty {
             if let PolyValue::List(items) = value {
@@ -258,8 +266,10 @@ impl XmlSerializer {
                 ));
             }
         } else if let (ValueType::List(inner), PolyValue::List(items)) = (ty, value) {
-            for item in items {
-                Self::validate_lexical_list_items(inner, item)?;
+            if Self::has_lexical_list(inner) {
+                for item in items {
+                    Self::validate_lexical_list_items(inner, item)?;
+                }
             }
         }
         Ok(())

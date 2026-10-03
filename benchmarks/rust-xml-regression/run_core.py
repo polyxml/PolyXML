@@ -19,6 +19,10 @@ def main():
     parser.add_argument("--baseline", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--rounds", type=int, default=2)
+    parser.add_argument("--samples", type=int, default=100)
+    parser.add_argument("--warmup", type=float, default=3)
+    parser.add_argument("--measurement", type=float, default=5)
+    parser.add_argument("--filter", default="")
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("--rounds must be positive")
@@ -83,10 +87,11 @@ def main():
         json.dumps(
             {
                 "revisions": revisions,
-                "sample_size": 100,
-                "warmup_seconds": 3,
-                "measurement_seconds": 5,
+                "sample_size": args.samples,
+                "warmup_seconds": args.warmup,
+                "measurement_seconds": args.measurement,
                 "rounds": args.rounds,
+                "filter": args.filter,
                 "order": "alternate baseline/current per round",
                 "os": platform.platform(),
                 "cpu": Path("/proc/cpuinfo")
@@ -112,11 +117,12 @@ def main():
                         "--bench",
                         "--noplot",
                         "--sample-size",
-                        "100",
+                        str(args.samples),
                         "--warm-up-time",
-                        "3",
+                        str(args.warmup),
                         "--measurement-time",
-                        "5",
+                        str(args.measurement),
+                        *([args.filter] if args.filter else []),
                     ],
                     cwd=crate,
                     env=env,
