@@ -1,4 +1,6 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode};
+use criterion::{
+    criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode, Throughput,
+};
 use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
 use polyxml::{deserialize, serialize};
 use std::{hint::black_box, sync::Arc};
@@ -46,6 +48,7 @@ fn benchmarks(c: &mut Criterion) {
         for patterns in [1, 16, 17, 64] {
             let (schema, xml) = fixture(patterns);
             let value = deserialize(&xml, Arc::clone(&schema)).unwrap();
+            group.throughput(Throughput::Bytes(xml.len() as u64));
             group.bench_with_input(
                 BenchmarkId::new("active_patterns", patterns),
                 &patterns,
