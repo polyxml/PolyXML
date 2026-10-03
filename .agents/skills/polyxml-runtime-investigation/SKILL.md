@@ -35,6 +35,10 @@ separate from the schema-driven `PolyValue` runtime.
 - Preserve validation, errors, split Text/CData/GeneralRef handling, nil reads,
   nesting and metadata mutation semantics. Borrow scalar metadata from the schema
   owned by a frame instead of cloning rich scalar definitions per element.
+  Profile empty `xsi:type` registry checks too: a shared flag maintained by the
+  registration setter can avoid locks without caching mutable field metadata.
+  Compare an empty registry with actual populated dispatch using `variants.rs`;
+  do not assume a plain-record gain also proves polymorphic throughput.
 - Include the 17-pattern cycle when changing eviction: a 16-entry FIFO has
   systematic misses, while salted victim selection preserves reuse at the same
   capacity. Confirm hot cases too; pressure improvements alone do not establish

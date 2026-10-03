@@ -113,3 +113,9 @@ For the generated sensor control, run the XML/Serde regression runner and use
 its output directory. This computes each process's median of seven timing
 samples, then the median across processes; it retains the process deltas. The
 statistic differs from the Criterion process means above.
+
+`variants.rs` compares 1,000 ordinary nested items with 1,000 items selected by
+namespaced `xsi:type`. It verifies every scalar payload and the concrete schema,
+then checks the XML round trip before measuring. Use the alternate `--harness`
+argument to check both empty-registry and populated-dispatch paths when changing
+registry synchronization.
