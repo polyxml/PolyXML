@@ -1,3 +1,10 @@
+## [0.34.1](https://github.com/polyxml/PolyXML/compare/v0.34.0...v0.34.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **csharp:** avoid record equality method property collisions ([a25aa49](https://github.com/polyxml/PolyXML/commit/a25aa4939b6b962ad0fa2df16e94ccd339c06817))
+
 # [0.34.0](https://github.com/polyxml/PolyXML/compare/v0.33.12...v0.34.0) (2026-10-02)
 
 
