@@ -1,3 +1,10 @@
+## [0.34.2](https://github.com/polyxml/PolyXML/compare/v0.34.1...v0.34.2) (2026-10-03)
+
+
+### Bug Fixes
+
+* compile large corpus modules and deduplicate UPA source models ([031ab53](https://github.com/polyxml/PolyXML/commit/031ab535f122880d0afb6ae27abdef4ac5a4c999))
+
 ## [0.34.1](https://github.com/polyxml/PolyXML/compare/v0.34.0...v0.34.1) (2026-10-03)
 
 
