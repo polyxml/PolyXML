@@ -1,6 +1,6 @@
 # Rust Tag Dispatch: `match` vs `HashMap` vs `phf`
 
-> Status: benchmark results below are produced on a Linux x86-64 host with a
+> Status: lookup benchmark results below are produced on a Linux x86-64 host with a
 > functional PMU (`perf_event_paranoid = 2`). Commands are reproducible with
 > stock tooling; see [Reproducing](#reproducing).
 
@@ -82,7 +82,8 @@ The default `match` decoder remained faster at both sizes and in both orders.
 These dense all-fields documents do not establish a crossover for larger,
 sparser, or unknown-tag workloads. No automatic threshold is justified by
 this experiment; `phf` remains explicit opt-in. The 600/1500-element
-compile-time and binary-size work remains deferred in #55. Allocation and
+[numeric-consumer compile-time and binary-size results](#large-tier-numeric-consumers-october-2026)
+are now available; they do not measure decoder throughput. Allocation and
 hardware counters were not captured for this end-to-end run; see the
 [match-first raw output](data/2026-09-26/rust-phf-match-first.txt) and
 [phf-first raw output](data/2026-09-26/rust-phf-phf-first.txt).
@@ -209,25 +210,6 @@ file; section sizes via `size`/`size -A` on the example binary:
 | `phf` | 2.53–2.55 s | 2.75 s | 2 591 728 | 367 912 | 271 928 | 1 640 |
 | **Δ** | +0.02 s (noise) | +0.2 s one-time | **+1 088 (+0.04 %)** | **+144 (+0.04 %)** | +320 | −1 408 |
 
-**Large tiers (600 / 1500 elements): not measured — deferred to
-#55.** The encounter, for the record:
-
-* Compiling the generated consumer crate at **600 *and* 1500 elements —
-  both the `match` *and* the `phf` variant — exceeds ~3.2 GiB for a single
-  `rustc`** (observed in-cgroup anon-RSS at the OOM kill: 3.19–3.21 GiB,
-  right at the cap of 60 % of 5.4 GiB available on the 7.7 GiB reference
-  host). Uncapped attempts swap-thrashed the host into freezing (two WSL
-  restarts) before `scripts/memcap.sh` existed; every capped attempt since
-  was kernel-OOM-killed *inside its own cgroup* with the host untouched —
-  by design.
-* Because the memory blow-up hits **both variants at the same tier**, it
-  scales with field count (type-checking/monomorphizing the 600- and
-  1500-field `decode_xml` paths), **not** with `match`-arm count — so no
-  `match`-vs-`phf` compile-memory conclusion can be drawn from it either
-  way. Re-establishing the compile-time and `.text`/`.rodata` growth curves
-  at these tiers needs a host where one `rustc` may safely use ≥ 4 GiB and
-  is tracked in #55.
-
 Interpretation (small schema):
 
 * **`phf` dispatch is effectively free at build scale**: +0.04 % `.text`,
@@ -236,7 +218,99 @@ Interpretation (small schema):
   a one-time ~0.2 s to compile the `phf` dependency.
 * This matches the runtime story: the table itself is tiny — what differs
   between the strategies is *how each lookup walks it*, not how much code
-  or data gets emitted for a typical schema.
+  or data gets emitted for that small historical consumer.
+
+### Large-tier numeric consumers (October 2026)
+
+The [standalone consumer runner](https://github.com/polyxml/PolyXML/tree/main/benchmarks/rust-phf-compile)
+uses the same deterministic enterprise tags as the lookup fixture generator,
+with one required `xs:unsignedInt` field per tag. Each executable reads its
+XML input at runtime, decodes every field, writes XML with the explicit root
+name, and asserts byte equality. Both codecs remain reachable. These numbers
+apply to this numeric-field workload; historical small-schema results used a
+different consumer and toolchain and are not directly comparable.
+
+Host: Intel Core i5-11600K, Ubuntu 26.04.1 / WSL2, rustc 1.99.0 (LLVM 23.1.1).
+[Windows has 32 GiB physical RAM](data/2026-10-02/rust-phf-compile-numeric/windows-memory.json); WSL sees 15.5 GiB, with about 13.7 GiB
+initially available. Builds run sequentially with one Cargo worker under
+`scripts/memcap.sh`, deliberately set to 70% available RAM (about 9.5 GiB),
+with swap disabled. This leaves roughly 4 GiB available outside the cap.
+
+Cold builds use a fresh Cargo target for each variant; downloads and
+resolution happen before timing, and OS page caches are not flushed. The
+three rebuilds touch only generated `src/record.rs`. Default Cargo release
+settings apply. Wall times include scope setup; match runs before phf, so
+small cold-time differences can reflect order and caches. Exact dependency
+locks and every raw sample are retained with the
+[run metadata](data/2026-10-02/rust-phf-compile-numeric/results.json),
+[600 match log](data/2026-10-02/rust-phf-compile-numeric/600-match.log),
+[600 phf log](data/2026-10-02/rust-phf-compile-numeric/600-phf.log),
+[1500 match log](data/2026-10-02/rust-phf-compile-numeric/1500-match.log), and
+[1500 phf log](data/2026-10-02/rust-phf-compile-numeric/1500-phf.log).
+
+| Fields | Variant | Cold build | Generated-file rebuilds (3) | Max RSS across builds |
+| :--- | :--- | ---: | ---: | ---: |
+| 600 | match | 134.53 s | 69.79–70.50 s | 1,647 MiB |
+| 600 | phf | 121.85 s | 57.12–57.66 s | 1,555 MiB |
+| 1500 | match | 933.35 s | 850.93–873.39 s | 6,720 MiB |
+| 1500 | phf | 814.00 s | 736.81–761.13 s | 6,815 MiB |
+
+Section sizes below are bytes from `size -A`; ELF bytes is the on-disk file
+size. Both are retained in the same
+[raw results](data/2026-10-02/rust-phf-compile-numeric/results.json).
+`.data.rel.ro` is included because pointer-bearing phf entries occupy
+relocation-backed read-only storage in these position-independent binaries;
+`.rodata` alone does not capture all table storage.
+
+| Fields | Variant | ELF bytes | `.text` | `.rodata` | `.data.rel.ro` | `.rela.dyn` | `.data` | `.bss` |
+| :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 600 | match | 1,809,096 | 902,115 | 92,972 | 9,688 | 20,040 | 2,656 | 224 |
+| 600 | phf | 1,788,208 | 861,123 | 84,916 | 24,256 | 34,608 | 2,656 | 224 |
+| 1500 | match | 3,199,568 | 1,794,611 | 185,908 | 9,688 | 20,040 | 2,656 | 224 |
+| 1500 | phf | 3,179,200 | 1,717,379 | 173,188 | 45,856 | 56,208 | 2,656 | 224 |
+
+At 600 numeric fields, phf's median rebuild is about 18% shorter (57.49 s
+versus 70.16 s) and its `.text` is 40,992 bytes smaller (4.5%). Combined
+`.rodata` + `.data.rel.ro` grows by 6,512 bytes. At 1500 fields, the median
+rebuild is about 12% shorter (748.77 s versus 851.51 s), `.text` shrinks by
+77,232 bytes (4.3%), and combined read-only storage grows by 23,448 bytes
+(12% of those sections, 1.3% of match's `.text`). `.data` and `.bss` are
+unchanged at both tiers. Pointer-bearing entries also increase `.rela.dyn`
+relocation metadata by 14,568 / 36,168 bytes. Including that metadata and ELF
+headers/symbols, the complete files are 20,888 bytes smaller at 600 fields
+(1.2%) and 20,368 bytes smaller at 1500 (0.6%). All four consumers passed the
+complete XML round trip.
+
+The additional read-only storage remains small in absolute terms relative to
+the generated code, while compile time improves in this workload. The
+historical small-schema size delta does not describe these larger consumers.
+These results provide no build-cost reason to raise the lookup-only
+recommendation, but they cannot establish an end-to-end decoding crossover or
+justify automatic phf selection. Keep the recommendation conditional and
+opt-in; field types and toolchain affect compile costs. Peak RSS across all
+builds was about 6.7 GiB and WSL swap use remained zero.
+
+### String-field attempts and limits
+
+The initial required-string-field 600 match consumer exceeded a 5,597-MiB
+cap (40% available RAM). The kernel recorded rustc anon-RSS of 5,704,504 KiB
+at the **cgroup** OOM kill. No successful compile time or binary size came
+from that attempt; see the
+[metadata](data/2026-10-02/rust-phf-compile/results.json),
+[build log](data/2026-10-02/rust-phf-compile/600-match.log),
+[cgroup outcome](data/2026-10-02/rust-phf-compile/600-match-cgroup.txt), and
+[kernel evidence](data/2026-10-02/rust-phf-compile/600-match-oom.txt).
+
+A deliberate 70% retry passed that memory barrier with a cgroup peak of about
+6.1 GiB. The generated string consumer spent over 20 minutes compiling, so
+that attempt was deliberately cancelled before switching the study to numeric
+fields. It was **not** OOM-killed. See the
+[cancelled attempt](data/2026-10-02/rust-phf-compile-70pct/results.json),
+[cgroup measurements](data/2026-10-02/rust-phf-compile-70pct/cancelled-string-cgroup.json),
+and [scope log](data/2026-10-02/rust-phf-compile-70pct/cancelled-string-cgroup.txt).
+WSL swap use remained zero. The runner can reproduce the string workload
+with `--field-type string`; numeric results should not be generalized to
+string-heavy schemas. Large string-field compile cost remains unmeasured.
 
 ## Lookup-only threshold recommendation
 
@@ -289,12 +363,10 @@ scripts/perf_stat.sh -- "$BIN" --bench 'tag_dispatch/large_600/phf_hit'
 # 3. Regenerate tag fixtures (deterministic seed)
 python3 scripts/gen_tag_dispatch_fixtures.py
 
-# 4. Generated-crate compile time / size comparison: build the same consumer
-#    crate twice (default output vs --feature phf + phf dep), timed after
-#    touching only the generated file; inspect with `size` (.text/.rodata).
-#    Run each build through scripts/memcap.sh: at 600 and 1500 elements
-#    EVERY variant's rustc needs >=3.2 GiB and will be OOM-killed at the
-#    default cap (by design — the host must stay responsive). Those tiers
-#    are deferred to #55; the small-schema numbers above are
-#    the ones measured within the cap.
+# 4. Sequential generated-consumer compile time / size comparison.
+#    Requires a systemd user manager; forces cgroup caps, swap off, one worker.
+#    Stops on failure and retains raw output. Use a fresh output directory.
+#    Numeric tiers completed (#55). This 70% cap assumes about 13.7 GiB
+#    available RAM; retain a substantial reserve and never retry uncapped.
+POLYXML_MEMCAP_PCT=70 python3 benchmarks/rust-phf-compile/run.py --output /tmp/phf-compile-results
 ```

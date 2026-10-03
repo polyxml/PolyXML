@@ -1,0 +1,27 @@
+{
+  "revision": "a36000e5c4c7721708849497a7d836d785af64f1",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+  "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz",
+  "meminfo": "MemTotal:       16272864 kB\nMemFree:        13498044 kB\nMemAvailable:   14352192 kB\nBuffers:            9048 kB\nCached:          1017572 kB\nSwapCached:            0 kB\nActive:           217504 kB\nInactive:        2036796 kB\nActive(anon):       3220 kB\nInactive(anon):  1228956 kB\nActive(file):     214284 kB\nInactive(file):   807840 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:       4194304 kB\nSwapFree:        4194304 kB\nDirty:               824 kB\nWriteback:             0 kB\nAnonPages:       1228016 kB\nMapped:           640928 kB\nShmem:              4688 kB\nKReclaimable:      38280 kB\nSlab:             137536 kB\nSReclaimable:      38280 kB\nSUnreclaim:        99256 kB\nKernelStack:        8568 kB\nPageTables:        24884 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    12330736 kB\nCommitted_AS:    3627048 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       95320 kB\nVmallocChunk:          0 kB\nPercpu:             7168 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:      8192 kB\nFilePmdMapped:         0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       60416 kB\nDirectMap2M:     8220672 kB\nDirectMap1G:    17825792 kB\n",
+  "memcap_pct": "70",
+  "jobs": 1,
+  "rustflags": "",
+  "encoded_rustflags": "",
+  "results": [
+    {
+      "fields": 600,
+      "strategy": "match",
+      "builds": [
+        {
+          "phase": "cold",
+          "seconds": 1313.630700877,
+          "exit": -15
+        }
+      ],
+      "status": "cancelled",
+      "reason": "Stopped deliberately after over 20 minutes of consumer compilation; not an OOM. Numeric-field study follows separately."
+    }
+  ],
+  "field_type": "string"
+}

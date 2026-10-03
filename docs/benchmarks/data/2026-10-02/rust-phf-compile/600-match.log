@@ -1,0 +1,41 @@
+memcap: <=5596 MiB (40% of 13990 MiB available) [systemd MemoryMax, swap off]
+    Updating crates.io index
+     Locking 34 packages to highest compatible versions
+
+=== cold ===
+memcap: <=5593 MiB (40% of 13983 MiB available) [systemd MemoryMax, swap off]
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling syn v3.0.6
+   Compiling serde_core v1.0.229
+   Compiling memchr v2.8.3
+   Compiling lexical-util v1.0.7
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling zmij v1.0.23
+   Compiling siphasher v1.0.4
+   Compiling phf_shared v0.14.0
+   Compiling lexical-parse-integer v1.0.6
+   Compiling lexical-write-integer v1.0.6
+   Compiling aho-corasick v1.1.5
+   Compiling thiserror v2.0.21
+   Compiling regex-syntax v0.8.11
+   Compiling fastrand v2.5.0
+   Compiling serde_json v1.0.151
+   Compiling phf_generator v0.14.0
+   Compiling regex-automata v0.4.18
+   Compiling lexical-write-float v1.0.6
+   Compiling lexical-parse-float v1.0.6
+   Compiling thiserror-impl v2.0.21
+   Compiling itoa v1.0.18
+   Compiling memo-map v0.3.4
+   Compiling minijinja v2.24.0
+   Compiling lexical-core v1.0.6
+   Compiling regex v1.13.1
+   Compiling phf_codegen v0.14.0
+   Compiling quick-xml v0.42.0
+   Compiling heck v0.5.0
+   Compiling smallvec v1.16.2
+   Compiling polyxml v0.34.0 (/home/bailey/github/PolyXML/crates/polyxml-core)
+   Compiling dispatch-consumer v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/600/match)

@@ -1,0 +1,4 @@
+Oct 02 21:58:11 BAILEYWHITEBOX systemd[727]: Started run-p11672-i11982.scope - [systemd-run] /usr/bin/time -v cargo build --release --offline --locked --manifest-path /home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/600/match/Cargo.toml.
+Oct 02 21:59:33 BAILEYWHITEBOX systemd[727]: run-p11672-i11982.scope: The kernel OOM killer killed some processes in this unit.
+Oct 02 21:59:33 BAILEYWHITEBOX systemd[727]: run-p11672-i11982.scope: Failed with result 'oom-kill'.
+Oct 02 21:59:33 BAILEYWHITEBOX systemd[727]: run-p11672-i11982.scope: Consumed 1min 22.458s CPU time over 1min 22.111s wall clock time, 5.4G memory peak.

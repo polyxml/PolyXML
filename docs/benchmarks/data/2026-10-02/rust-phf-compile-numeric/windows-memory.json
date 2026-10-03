@@ -1,0 +1,6 @@
+{
+  "TotalVisibleMemorySize": 33343812,
+  "FreePhysicalMemory": 14542408,
+  "captured_utc": "2026-10-03T04:43:47.664107+00:00",
+  "source": "Get-CimInstance Win32_OperatingSystem (values in KiB)"
+}

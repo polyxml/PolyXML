@@ -1,0 +1,23 @@
+Verification for issue #55 numeric-consumer study
+
+All four consumers: successful cold builds, three successful generated-file
+rebuilds, exact XML round trips and final section/file sizes retained in results.json.
+
+cargo fmt --check: passed.
+cargo clippy --workspace --all-targets -- -D warnings: passed.
+Ruff check/format for benchmark runner and Python wrappers/tests: passed.
+scripts/test_codegen.sh: passed with CARGO_BUILD_JOBS=1, RUST_TEST_THREADS=1,
+DOTNET_ROLL_FORWARD=Major, and a hard cgroup cap. C# net8.0 fixtures ran on
+Microsoft.NETCore.App 10.0.12; the .NET 8 runtime is absent. This verifies a
+.NET 10 compatibility smoke, not execution on the minimum .NET 8 runtime.
+The initial default-runtime test attempt failed on the missing .NET 8 runtime;
+subsequent mutex-poison errors were consequences of that first failure.
+
+maturin develop: built and installed a cp312-abi3 extension on Python 3.14.4.
+pytest --cov=polyxml --cov-branch --cov-fail-under=100 -q: 112 passed,
+100% statement and branch coverage (181 statements, 58 branches).
+uvx zensical build --clean --strict: passed.
+
+Heavy validation commands used scripts/memcap.sh, systemd MemoryMax,
+MemorySwapMax=0, and one Cargo worker. Benchmark builds used 70% available
+RAM; validation used 40%. WSL swap use stayed at zero in host checks.

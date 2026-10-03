@@ -8,6 +8,17 @@ description: >-
 
 # PolyXML Polyglot Codegen Development & Verification Playbook
 
+## C# runtime availability for smoke checks
+
+The C# execution fixtures target `net8.0`. An installed .NET 10 SDK/runtime
+can compile those fixtures but does not run them with default roll-forward
+settings if the .NET 8 runtime is absent. Install the .NET 8 runtime to verify
+the minimum target. For a compatibility smoke on a machine with only .NET 10,
+set `DOTNET_ROLL_FORWARD=Major` for the test command and report that runtime
+version; this does not verify execution on .NET 8. A missing-runtime panic
+poisons the shared test mutex and causes additional C# failures, so rerun the
+test binary after correcting the runtime environment.
+
 ## XML Schema semantics to regression-lock
 
 When triaging competitor reports, compile a minimal XSD, inspect the IR and
@@ -531,12 +542,20 @@ derived types inherit their base's patterns at parse time):
   measure/compile-size scripts per build step (own scope each) so one
   OOM kill doesn't abort the rest; `POLYXML_MEMCAP_LEVEL` (nesting depth)
   is set automatically so wrapped scripts can't re-exec in a loop, and
-  `POLYXML_MEMCAP_DISABLE=1` opts out. Known datum: generated consumer
+  `POLYXML_MEMCAP_DISABLE=1` opts out. Known historical datum: generated consumer
   crates at **600 and 1500 elements need >=3.2 GiB for a single `rustc`**
   (both the `match` and `phf` variants — it scales with field count, not
-  match-arm count), so compile-time/size measurements at those tiers are
+  match-arm count), so the original compile-time/size measurements were
   deferred to #55 and must not be retried uncapped on
-  8-GiB-class hosts.
+  8-GiB-class hosts. The numeric-field follow-up completed both tiers at a
+  deliberate 70% cap on the 16-GiB WSL instance, with about 6.7 GiB peak RSS.
+  The October 2, 2026 `benchmarks/rust-phf-compile/run.py` retry also
+  exceeded a 5,597-MiB cap at 600 fields (match, rustc 1.99.0), so even a
+  16-GiB host does not guarantee success. The runner requires systemd
+  cgroups and stops on failure; retain scope/kernel evidence.
+  Increase the cap only deliberately after checking Linux/host headroom.
+  WSL's visible RAM may be lower than Windows physical RAM; retain a
+  substantial reserve outside the scope. See the dispatch study for raw logs.
 - Shared CLI options apply to every `--lang`, not just the preceding one. Use
   per-target manifest entries for heterogeneous configurations. Schema-less
   `generate` must not silently ignore generation overrides.

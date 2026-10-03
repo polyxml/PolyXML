@@ -1,0 +1,3 @@
+[ 9285.676557] [  12964]  1000 12964  1961149  1451786  1426126    25660         0 12242944        0             0 rustc
+[ 9285.676559] oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=user.slice,mems_allowed=0,oom_memcg=/wsl-user/distro-191/user.slice/user-1000.slice/user@1000.service/app.slice/run-p11672-i11982.scope,task_memcg=/wsl-user/distro-191/user.slice/user-1000.slice/user@1000.service/app.slice/run-p11672-i11982.scope,task=rustc,pid=12964,uid=1000
+[ 9285.676604] Memory cgroup out of memory: Killed process 12964 (rustc) total-vm:7844596kB, anon-rss:5704504kB, file-rss:102640kB, shmem-rss:0kB, UID:1000 pgtables:11956kB oom_score_adj:0

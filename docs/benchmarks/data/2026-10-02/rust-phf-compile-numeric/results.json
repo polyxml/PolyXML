@@ -1,0 +1,134 @@
+{
+  "revision": "a36000e5c4c7721708849497a7d836d785af64f1",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+  "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz",
+  "meminfo": "MemTotal:       16272864 kB\nMemFree:        12685600 kB\nMemAvailable:   14343664 kB\nBuffers:           17752 kB\nCached:          1810148 kB\nSwapCached:            0 kB\nActive:           733588 kB\nInactive:        2333452 kB\nActive(anon):       3232 kB\nInactive(anon):  1240288 kB\nActive(file):     730356 kB\nInactive(file):  1093164 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:       4194304 kB\nSwapFree:        4194304 kB\nDirty:             11484 kB\nWriteback:             0 kB\nAnonPages:       1238984 kB\nMapped:           654372 kB\nShmem:              4684 kB\nKReclaimable:      43316 kB\nSlab:             143004 kB\nSReclaimable:      43316 kB\nSUnreclaim:        99688 kB\nKernelStack:        8524 kB\nPageTables:        25276 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    12330736 kB\nCommitted_AS:    3631220 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       95400 kB\nVmallocChunk:          0 kB\nPercpu:             7168 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:     22528 kB\nFilePmdMapped:         0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       60416 kB\nDirectMap2M:     8220672 kB\nDirectMap1G:    17825792 kB\n",
+  "memcap_pct": "70",
+  "jobs": 1,
+  "field_type": "unsignedInt",
+  "rustflags": "",
+  "encoded_rustflags": "",
+  "results": [
+    {
+      "fields": 600,
+      "strategy": "match",
+      "builds": [
+        {
+          "phase": "cold",
+          "seconds": 134.52803895999932,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-1",
+          "seconds": 69.78615643599915,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-2",
+          "seconds": 70.15952702200047,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-3",
+          "seconds": 70.49894513799882,
+          "exit": 0
+        }
+      ],
+      "size_A": "/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/600/match/target/release/dispatch-consumer  :\nsection                 size      addr\n.interp                   28       736\n.note.ABI-tag             32       764\n.note.gnu.build-id        36       796\n.dynsym                 1656       832\n.gnu.version             138      2488\n.gnu.version_r           288      2628\n.gnu.hash                 28      2920\n.dynstr                 1066      2948\n.rela.dyn              20040      4016\n.rela.plt                 48     24056\n.gcc_except_table     231044     24104\n.rodata                92972    255152\n.eh_frame_hdr          14668    348124\n.eh_frame              92560    362792\n.text                 902115    459456\n.init                     27   1361572\n.fini                     13   1361600\n.plt                      48   1361616\n.tdata                    48   1365760\n.tbss                     32   1365808\n.fini_array                8   1365808\n.init_array               16   1365816\n.data.rel.ro            9688   1365832\n.dynamic                 464   1375520\n.got                    2536   1375984\n.got.plt                  40   1378520\n.relro_padding          1792   1378560\n.tm_clone_table            0   1382656\n.data                   2656   1382656\n.bss                     224   1385312\n.comment                 177         0\nTotal                1374488\n\n\n",
+      "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n1356807\t  15456\t   2048\t1374311\t 14f867\t/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/600/match/target/release/dispatch-consumer\n",
+      "roundtrip": "passed",
+      "binary_bytes": 1809096
+    },
+    {
+      "fields": 600,
+      "strategy": "phf",
+      "builds": [
+        {
+          "phase": "cold",
+          "seconds": 121.84512918300061,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-1",
+          "seconds": 57.48603528499916,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-2",
+          "seconds": 57.66209858399998,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-3",
+          "seconds": 57.1242315290001,
+          "exit": 0
+        }
+      ],
+      "size_A": "/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/600/phf/target/release/dispatch-consumer  :\nsection                 size      addr\n.interp                   28       736\n.note.ABI-tag             32       764\n.note.gnu.build-id        36       796\n.dynsym                 1656       832\n.gnu.version             138      2488\n.gnu.version_r           288      2628\n.gnu.hash                 28      2920\n.dynstr                 1066      2948\n.rela.dyn              34608      4016\n.rela.plt                 48     38624\n.gcc_except_table     231168     38672\n.rodata                84916    269840\n.eh_frame_hdr          14668    354756\n.eh_frame              92548    369424\n.text                 861123    466080\n.init                     27   1327204\n.fini                     13   1327232\n.plt                      48   1327248\n.tdata                    48   1331392\n.tbss                     32   1331440\n.fini_array                8   1331440\n.init_array               16   1331448\n.data.rel.ro           24256   1331464\n.dynamic                 464   1355720\n.got                    2536   1356184\n.got.plt                  40   1358720\n.relro_padding          1112   1358760\n.tm_clone_table            0   1362856\n.data                   2656   1362856\n.bss                     224   1365512\n.comment                 177         0\nTotal                1354008\n\n\n",
+      "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n1322439\t  30024\t   1368\t1353831\t 14a867\t/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/600/phf/target/release/dispatch-consumer\n",
+      "roundtrip": "passed",
+      "binary_bytes": 1788208
+    },
+    {
+      "fields": 1500,
+      "strategy": "match",
+      "builds": [
+        {
+          "phase": "cold",
+          "seconds": 933.3488839709989,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-1",
+          "seconds": 850.9311851580005,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-2",
+          "seconds": 873.3872043779993,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-3",
+          "seconds": 851.5052511720005,
+          "exit": 0
+        }
+      ],
+      "size_A": "/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/1500/match/target/release/dispatch-consumer  :\nsection                 size      addr\n.interp                   28       736\n.note.ABI-tag             32       764\n.note.gnu.build-id        36       796\n.dynsym                 1656       832\n.gnu.version             138      2488\n.gnu.version_r           288      2628\n.gnu.hash                 28      2920\n.dynstr                 1066      2948\n.rela.dyn              20040      4016\n.rela.plt                 48     24056\n.gcc_except_table     280560     24104\n.rodata               185908    304672\n.eh_frame_hdr          29068    490580\n.eh_frame             193376    519648\n.text                1794611    717120\n.init                     27   2511732\n.fini                     13   2511760\n.plt                      48   2511776\n.tdata                    48   2515920\n.tbss                     32   2515968\n.fini_array                8   2515968\n.init_array               16   2515976\n.data.rel.ro            9688   2515992\n.dynamic                 464   2525680\n.got                    2536   2526144\n.got.plt                  40   2528680\n.relro_padding          2608   2528720\n.tm_clone_table            0   2532816\n.data                   2656   2532816\n.bss                     224   2535472\n.comment                 177         0\nTotal                2525468\n\n\n",
+      "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n2506971\t  15456\t   2864\t2525291\t 26886b\t/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/1500/match/target/release/dispatch-consumer\n",
+      "roundtrip": "passed",
+      "binary_bytes": 3199568
+    },
+    {
+      "fields": 1500,
+      "strategy": "phf",
+      "builds": [
+        {
+          "phase": "cold",
+          "seconds": 814.0013930329987,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-1",
+          "seconds": 736.8077171309997,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-2",
+          "seconds": 748.7654866480007,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-3",
+          "seconds": 761.1288260389993,
+          "exit": 0
+        }
+      ],
+      "size_A": "/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/1500/phf/target/release/dispatch-consumer  :\nsection                 size      addr\n.interp                   28       736\n.note.ABI-tag             32       764\n.note.gnu.build-id        36       796\n.dynsym                 1656       832\n.gnu.version             138      2488\n.gnu.version_r           288      2628\n.gnu.hash                 28      2920\n.dynstr                 1066      2948\n.rela.dyn              56208      4016\n.rela.plt                 48     60224\n.gcc_except_table     280712     60272\n.rodata               173188    340992\n.eh_frame_hdr          29068    514180\n.eh_frame             193364    543248\n.text                1717379    740720\n.init                     27   2458100\n.fini                     13   2458128\n.plt                      48   2458144\n.tdata                    48   2462288\n.tbss                     32   2462336\n.fini_array                8   2462336\n.init_array               16   2462344\n.data.rel.ro           45856   2462360\n.dynamic                 464   2508216\n.got                    2536   2508680\n.got.plt                  40   2511216\n.relro_padding          3688   2511256\n.tm_clone_table            0   2515352\n.data                   2656   2515352\n.bss                     224   2518008\n.comment                 177         0\nTotal                2509072\n\n\n",
+      "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n2453327\t  51624\t   3944\t2508895\t 26485f\t/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/unsignedInt/1500/phf/target/release/dispatch-consumer\n",
+      "roundtrip": "passed",
+      "binary_bytes": 3179200
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+benchmarks/rust-phf-compile/target/unsignedInt/1500/phf/target/release/dispatch-consumer  :
+section                 size      addr
+.interp                   28       736
+.note.ABI-tag             32       764
+.note.gnu.build-id        36       796
+.dynsym                 1656       832
+.gnu.version             138      2488
+.gnu.version_r           288      2628
+.gnu.hash                 28      2920
+.dynstr                 1066      2948
+.rela.dyn              56208      4016
+.rela.plt                 48     60224
+.gcc_except_table     280712     60272
+.rodata               173188    340992
+.eh_frame_hdr          29068    514180
+.eh_frame             193364    543248
+.text                1717379    740720
+.init                     27   2458100
+.fini                     13   2458128
+.plt                      48   2458144
+.tdata                    48   2462288
+.tbss                     32   2462336
+.fini_array                8   2462336
+.init_array               16   2462344
+.data.rel.ro           45856   2462360
+.dynamic                 464   2508216
+.got                    2536   2508680
+.got.plt                  40   2511216
+.relro_padding          3688   2511256
+.tm_clone_table            0   2515352
+.data                   2656   2515352
+.bss                     224   2518008
+.comment                 177         0
+Total                2509072
+
+

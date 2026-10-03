@@ -1,0 +1,49 @@
+{
+  "revision": "a36000e5c4c7721708849497a7d836d785af64f1",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+  "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz",
+  "meminfo": "MemTotal:       16272864 kB\nMemFree:         9879812 kB\nMemAvailable:   14345100 kB\nBuffers:           44308 kB\nCached:          4516776 kB\nSwapCached:            0 kB\nActive:          1246912 kB\nInactive:        4511444 kB\nActive(anon):       3256 kB\nInactive(anon):  1198348 kB\nActive(file):    1243656 kB\nInactive(file):  3313096 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:       4194304 kB\nSwapFree:        4194304 kB\nDirty:               940 kB\nWriteback:             0 kB\nAnonPages:       1197492 kB\nMapped:           682236 kB\nShmem:              4676 kB\nKReclaimable:     157092 kB\nSlab:             265648 kB\nSReclaimable:     157092 kB\nSUnreclaim:       108556 kB\nKernelStack:        8364 kB\nPageTables:        24152 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    12330736 kB\nCommitted_AS:    3434532 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       95084 kB\nVmallocChunk:          0 kB\nPercpu:             6976 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:    184320 kB\nFilePmdMapped:         0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       60416 kB\nDirectMap2M:     8220672 kB\nDirectMap1G:    17825792 kB\n",
+  "memcap_pct": "40",
+  "jobs": 1,
+  "results": [
+    {
+      "fields": 16,
+      "strategy": "match",
+      "builds": [
+        {
+          "phase": "cold",
+          "seconds": 65.12220772999899,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-1",
+          "seconds": 0.7283612060000451,
+          "exit": 0
+        }
+      ],
+      "size_A": "/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/16/match/target/release/dispatch-consumer  :\nsection                size     addr\n.interp                  28      736\n.note.ABI-tag            32      764\n.note.gnu.build-id       36      796\n.dynsym                1656      832\n.gnu.version            138     2488\n.gnu.version_r          288     2628\n.gnu.hash                28     2920\n.dynstr                1066     2948\n.rela.dyn             20208     4016\n.rela.plt                48    24224\n.rodata               28084    24272\n.gcc_except_table    198148    52356\n.eh_frame_hdr          5188   250504\n.eh_frame             25772   255696\n.text                323427   285568\n.init                    27   608996\n.fini                    13   609024\n.plt                     48   609040\n.tdata                   48   613184\n.tbss                    32   613232\n.fini_array               8   613232\n.init_array              16   613240\n.data.rel.ro           9912   613256\n.dynamic                464   623168\n.got                   2528   623632\n.got.plt                 40   626160\n.relro_padding          488   626200\n.tm_clone_table           0   630296\n.data                  2656   630296\n.bss                    224   632952\n.comment                177        0\nTotal                620828\n\n\n",
+      "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n 604235\t  15672\t    744\t 620651\t  9786b\t/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/16/match/target/release/dispatch-consumer\n",
+      "roundtrip": "passed"
+    },
+    {
+      "fields": 16,
+      "strategy": "phf",
+      "builds": [
+        {
+          "phase": "cold",
+          "seconds": 64.83787412099991,
+          "exit": 0
+        },
+        {
+          "phase": "rebuild-1",
+          "seconds": 0.7606323609998071,
+          "exit": 0
+        }
+      ],
+      "size_A": "/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/16/phf/target/release/dispatch-consumer  :\nsection                size     addr\n.interp                  28      736\n.note.ABI-tag            32      764\n.note.gnu.build-id       36      796\n.dynsym                1656      832\n.gnu.version            138     2488\n.gnu.version_r          288     2628\n.gnu.hash                28     2920\n.dynstr                1066     2948\n.rela.dyn             20736     4016\n.rela.plt                48    24752\n.rodata               27852    24800\n.gcc_except_table    198424    52652\n.eh_frame_hdr          5196   251076\n.eh_frame             25800   256272\n.text                325443   286176\n.init                    27   611620\n.fini                    13   611648\n.plt                     48   611664\n.tdata                   48   615808\n.tbss                    32   615856\n.fini_array               8   615856\n.init_array              16   615864\n.data.rel.ro          10432   615880\n.dynamic                464   626312\n.got                   2528   626776\n.got.plt                 40   629304\n.relro_padding         1440   629344\n.tm_clone_table           0   633440\n.data                  2656   633440\n.bss                    224   636096\n.comment                177        0\nTotal                624924\n\n\n",
+      "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n 606859\t  16192\t   1696\t 624747\t  9886b\t/home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/16/phf/target/release/dispatch-consumer\n",
+      "roundtrip": "passed"
+    }
+  ]
+}

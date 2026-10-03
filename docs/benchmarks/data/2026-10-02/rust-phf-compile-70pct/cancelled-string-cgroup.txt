@@ -1,0 +1,4 @@
+Oct 02 22:07:52 BAILEYWHITEBOX systemd[727]: Started run-p14583-i14900.scope - [systemd-run] /usr/bin/time -v cargo build --release --offline --locked --manifest-path /home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/600/match/Cargo.toml.
+Oct 02 22:29:46 BAILEYWHITEBOX systemd[727]: Stopping run-p14583-i14900.scope - [systemd-run] /usr/bin/time -v cargo build --release --offline --locked --manifest-path /home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/600/match/Cargo.toml...
+Oct 02 22:29:46 BAILEYWHITEBOX systemd[727]: Stopped run-p14583-i14900.scope - [systemd-run] /usr/bin/time -v cargo build --release --offline --locked --manifest-path /home/bailey/github/PolyXML/benchmarks/rust-phf-compile/target/600/match/Cargo.toml.
+Oct 02 22:29:46 BAILEYWHITEBOX systemd[727]: run-p14583-i14900.scope: Consumed 21min 53.543s CPU time over 21min 53.712s wall clock time, 6G memory peak.

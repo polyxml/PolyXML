@@ -21,6 +21,7 @@ benchmarks/
 ├── cpp/             # C++ generated-model XML adapter
 ├── csharp/          # C# generated models vs handwritten classes
 ├── rust-phf-e2e/    # Generated Rust match vs phf XML decoding
+├── rust-phf-compile/ # Capped generated-consumer compile time and binary size
 ├── workloads/       # Shared XML input fixtures for cross-language runs
 └── typescript-wasm/ # Node, Bun, and browser Wasm comparisons
 ```
@@ -36,6 +37,7 @@ equivalent) and never at this root.
 | Rust core engine | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) | `cargo bench --bench core_benchmarks` |
 | Rust tag dispatch | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) + `perf stat` | `cargo bench --bench tag_dispatch` ([results](../docs/benchmarks/rust-phf-dispatch.md)) |
 | Rust end-to-end dispatch | [`rust-phf-e2e/`](rust-phf-e2e/README.md) | Generated decoders | `./benchmarks/rust-phf-e2e/run.sh` |
+| Rust dispatch compile cost | [`rust-phf-compile/`](rust-phf-compile/README.md) | Sequential capped release builds, GNU time, size | See suite README |
 | Python XML comparative | [`python/`](python/README.md) | Custom CLI suite | `python -m benchmarks.python` or `./benchmarks/run_all.sh` |
 | Python JSON comparative | [`python-json/`](python-json/README.md) | Custom CLI suite | `./benchmarks/python-json/run.sh` |
 | Python binary serialization | [`python-binary/`](python-binary/README.md) | Custom CLI suite | `./benchmarks/python-binary/run.sh` |

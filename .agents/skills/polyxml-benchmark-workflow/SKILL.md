@@ -35,3 +35,22 @@ description: Use when running, adding, or publishing PolyXML language and runtim
    with a source link. Remove or qualify old figures when no matching result
    or reproducible runner can be found; a general benchmark index link does
    not establish an individual measurement.
+9. For issue #55 compile-time/size work, use
+   `benchmarks/rust-phf-compile/run.py` with a freshly built CLI. It requires
+   systemd cgroups, disables swap, uses one Cargo worker and caps each build
+   separately (40% available RAM by default). Run the 16-field smoke first.
+   Use `encode_xml(..., Some("Record"))` for the round trip: root aliases
+   otherwise serialize with the type name. The October 2, 2026 attempt at
+   600 fields exceeded 5,597 MiB on rustc 1.99.0; a 16-GiB host alone is
+   insufficient assurance. After a capped failure, inspect current headroom
+   before deliberately raising the budget; keep a substantial host reserve
+   and never disable the cap. On WSL, check both Linux MemAvailable and
+   Windows physical/free RAM: this machine has 32 GiB physically but WSL
+   sees 15.5 GiB. A 70% retry with about 13.7 GiB available leaves roughly
+   4 GiB outside the scope; the 600-field build passed its initial peak at
+   about 6.1 GiB. The numeric 600/1500 study completed at 70%, peaking at
+   about 6.7 GiB RSS; all consumers passed full XML round trips. Retain `journalctl --user -u <scope>` and the
+   matching kernel OOM evidence: a group OOM can kill GNU time before it
+   writes peak RSS. A failed build duration is not a compile-time result.
+   The detailed checklist is in
+   [polyxml-phf-compile-benchmark](../polyxml-phf-compile-benchmark/SKILL.md).

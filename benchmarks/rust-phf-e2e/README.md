@@ -8,9 +8,10 @@ field before measuring and reports five repetitions in ns/document and MB/s.
 Set `POLYXML_PHF_FIRST=1` for a second run with the strategy order reversed;
 compare both runs before interpreting a small difference.
 
-These are small and medium schemas only. The 600/1500-element compile-time and
-binary-size study remains deferred in issue #55, and no automatic `phf`
-threshold should be selected from this limited range. The runner does not
+These are small and medium schemas only. The separate [600/1500-element numeric-consumer compile-time and
+binary-size study](../rust-phf-compile/README.md) addresses issue #55. It does
+not measure decoder throughput; no automatic `phf` threshold should be selected
+from this limited end-to-end range. The runner does not
 measure allocation or hardware counters. Run on an idle host, retain raw output
 with the Git revision and toolchain, and inspect run-to-run spread before
 claiming a speedup.
