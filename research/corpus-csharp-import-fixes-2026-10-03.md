@@ -29,6 +29,11 @@ These are compile checks, not a claim of full NeTEx XML conformance.
   proxies reject a missing value; optional proxies retain nullable behavior.
   Fixed-value setters preserve nonnullable typing. Mixed attributes use XML
   lexical serialization, including enum/boolean/simple types and namespaces.
+- Rust also allocates unique Serde field names when distinct XML fields share
+  a name (including wildcards). The first JSON name is preserved; later collisions
+  use unique Rust field names without taking another real XML field's JSON name.
+  XML metadata and codecs retain their original names. A borrowed/owned JSON
+  round-trip regression denies unreachable patterns and verifies all three values.
 - Rust omits empty module glob reexports; Go bases the bytes import on emitted
   code instead of imported ordered types remaining in the schema IR.
 

@@ -905,3 +905,21 @@ Rust modules with no public declarations omit their empty glob reexport. Go
 imports bytes only when emitted code uses bytes, since external ordered types
 can remain in the IR without being emitted locally. Compile reduced generated
 modules to catch unused imports rather than just inspecting source text.
+
+Rust Serde field names also need uniqueness within each generated struct. XML
+attributes/elements or multiple wildcards can share an XML name while retaining
+distinct model fields. Preserve the first JSON wire name and disambiguate later
+collisions with the generated Rust field name, reserving all real XML field
+names before allocating suffixes. Do not alter XML metadata or codecs. Cover
+borrowed and owned JSON round trips and a collision with a real named element;
+deny unreachable patterns in the generated consumer. UBL exposed duplicate
+Serde wildcard names even after its unused module reexport was removed.
+
+The inherited mixed-stream regression covers an extension adding attributes.
+An extension adding new child elements still has a separate gap: the derived
+item union can contain only its own branches, so flattening selects that stream
+and omits inherited children. The independently valid saved case is
+research/fixtures/mixed_content_extension_children.{xsd,xml}. Preserve the
+complete extension particle when fixing it and distinguish restrictions before
+merging ancestor branches; do not claim full mixed-inheritance support from
+compile success or the added-attribute regression alone.

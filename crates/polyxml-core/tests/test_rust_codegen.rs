@@ -1461,3 +1461,47 @@ fn empty_modules_compile_without_unused_reexports() {
         );
     }
 }
+
+#[test]
+fn duplicate_wire_names_keep_distinct_json_values() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Payload"><xs:sequence><xs:any namespace="urn:first" minOccurs="0" maxOccurs="unbounded"/><xs:any namespace="urn:second" minOccurs="0" maxOccurs="unbounded"/><xs:element name="any_2" type="xs:string" minOccurs="0"/></xs:sequence></xs:complexType></xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let core = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    for zero_copy in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(
+            dir.path().join("src/models.rs"),
+            RustCodegen::new(RustOptions {
+                zero_copy,
+                emit_codecs: false,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"),format!("[package]\nname=\"duplicate-json-test\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[dependencies]\npolyxml={{path={core:?}}}\nserde={{version=\"1\",features=[\"derive\"]}}\nserde_json=\"1\"\n")).unwrap();
+        std::fs::write(dir.path().join("src/main.rs"),r#"mod models;use models::*;
+fn main(){
+let mut value=Payload::default();value.any.push("first".into());value.any_2.push("second".into());value.any_2_2=Some("named".into());
+let json=serde_json::to_string(&value).unwrap();let parsed:Payload=serde_json::from_str(&json).unwrap();
+assert_eq!(parsed,value);let object:serde_json::Value=serde_json::from_str(&json).unwrap();assert_eq!(object.as_object().unwrap().len(),3);
+}
+"#).unwrap();
+        let output = std::process::Command::new("cargo")
+            .args(["run", "--quiet", "--offline"])
+            .env("RUSTFLAGS", "-D unreachable-patterns")
+            .env(
+                "CARGO_TARGET_DIR",
+                core.join("../../target/binary-lexical-tests"),
+            )
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "borrowed={zero_copy}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

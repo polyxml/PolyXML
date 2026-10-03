@@ -928,9 +928,31 @@ impl RustCodegen {
         let _ = writeln!(out, "{} {{", struct_decl);
 
         let mut seen_fields = HashSet::new();
-        for field in flatten_fields(s, ir) {
+        let mut seen_json_names = HashSet::new();
+        let fields = flatten_fields(s, ir);
+        let wire_names: HashSet<_> = fields.iter().map(|field| field.xml_name.as_str()).collect();
+        for field in fields {
             let rust_name = self.unique_rust_field_name(&field.name, &mut seen_fields);
-            self.emit_struct_field(out, field, &rust_name, types_with_lifetime, has_boxed);
+            let mut json_name = field.xml_name.clone();
+            if !seen_json_names.insert(json_name.clone()) {
+                let base = rust_name.strip_prefix("r#").unwrap_or(&rust_name);
+                json_name = base.to_string();
+                let mut suffix = 2;
+                while wire_names.contains(json_name.as_str())
+                    || !seen_json_names.insert(json_name.clone())
+                {
+                    json_name = format!("{base}_{suffix}");
+                    suffix += 1;
+                }
+            }
+            self.emit_struct_field(
+                out,
+                field,
+                &rust_name,
+                &json_name,
+                types_with_lifetime,
+                has_boxed,
+            );
         }
 
         out.push_str("}\n");
@@ -960,6 +982,7 @@ impl RustCodegen {
         out: &mut String,
         field: &FieldDef,
         rust_name: &str,
+        json_name: &str,
         types_with_lifetime: &HashSet<QName>,
         has_boxed: bool,
     ) {
@@ -984,8 +1007,8 @@ impl RustCodegen {
         // Serde attribute
         if self.options.derive_serde {
             let mut serde_parts = Vec::new();
-            if field.xml_name != rust_name.strip_prefix("r#").unwrap_or(rust_name) {
-                serde_parts.push(format!("rename = \"{}\"", field.xml_name));
+            if json_name != rust_name.strip_prefix("r#").unwrap_or(rust_name) {
+                serde_parts.push(format!("rename = \"{}\"", json_name));
             }
             if is_optional {
                 serde_parts.push("default".to_string());
