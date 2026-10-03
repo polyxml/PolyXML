@@ -575,30 +575,14 @@ impl XmlSerializer {
                     } else {
                         Cow::Borrowed(local_name)
                     };
-                    // A tagged null is a present nil element, unlike an absent
-                    // ordinary field. Bind the instance prefix locally so nil
-                    // also works without a root namespace context. Do not
-                    // shadow the prefix used by the element's own QName.
-                    if content.is_null() && !matches!(branch.val_type, ValueType::List(_)) {
-                        let prefix = if qualified.starts_with("xsi:") {
-                            "xsi1"
-                        } else {
-                            "xsi"
-                        };
-                        let mut element = BytesStart::new(qualified.as_ref());
-                        let declaration = format!("xmlns:{prefix}");
-                        let attribute = format!("{prefix}:nil");
-                        element.push_attribute((declaration.as_str(), XSI_NS));
-                        element.push_attribute((attribute.as_str(), "true"));
-                        writer
-                            .write_event(Event::Empty(element))
-                            .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                        continue;
-                    }
                     match &branch.val_type {
                         ValueType::Scalar(_) => {
                             let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                             let Some(text) = Self::format_scalar_to(content, &mut buf) else {
+                                if content.is_null() {
+                                    Self::write_mixed_nil(writer, qualified.as_ref())?;
+                                    continue;
+                                }
                                 return Err(PolyXmlError::SerializationError(format!(
                                     "Invalid mixed content value for {kind}"
                                 )));
@@ -614,15 +598,21 @@ impl XmlSerializer {
                                 .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
                                 .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                         }
-                        ValueType::Nested(nested) => Self::write_model(
-                            writer,
-                            &branch.xml_name,
-                            content,
-                            nested,
-                            ns_ctx,
-                            false,
-                            branch.namespace.as_deref().or(nested.namespace.as_deref()),
-                        )?,
+                        ValueType::Nested(nested) => {
+                            if content.is_null() {
+                                Self::write_mixed_nil(writer, qualified.as_ref())?;
+                            } else {
+                                Self::write_model(
+                                    writer,
+                                    &branch.xml_name,
+                                    content,
+                                    nested,
+                                    ns_ctx,
+                                    false,
+                                    branch.namespace.as_deref().or(nested.namespace.as_deref()),
+                                )?;
+                            }
+                        }
                         ValueType::List(_) => {
                             return Err(PolyXmlError::SerializationError(
                                 "Nested lists are invalid mixed content branches".into(),
@@ -777,6 +767,24 @@ impl XmlSerializer {
             .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
 
         Ok(())
+    }
+
+    // A tagged null is a present nil element, unlike an absent ordinary field.
+    // Bind the instance prefix locally without shadowing the element's QName.
+    // Scalar callers reach this through their existing failed-format path.
+    #[cold]
+    fn write_mixed_nil<W: std::io::Write>(writer: &mut Writer<W>, qualified: &str) -> Result<()> {
+        let (declaration, attribute) = if qualified.starts_with("xsi:") {
+            ("xmlns:xsi1", "xsi1:nil")
+        } else {
+            ("xmlns:xsi", "xsi:nil")
+        };
+        let mut element = BytesStart::new(qualified);
+        element.push_attribute((declaration, XSI_NS));
+        element.push_attribute((attribute, "true"));
+        writer
+            .write_event(Event::Empty(element))
+            .map_err(|error| PolyXmlError::SerializationError(error.to_string()))
     }
 
     fn write_any_wildcard_element<W: std::io::Write>(
