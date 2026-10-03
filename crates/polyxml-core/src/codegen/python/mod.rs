@@ -36,7 +36,7 @@ fn write_python_docstring(out: &mut String, indent: &str, doc: &str) {
     let escaped = doc
         .trim()
         .replace('\\', "\\\\")
-        .replace("\"\"\"", "\\\"\\\"\\\"")
+        .replace('"', "\\\"")
         .replace('\r', "");
     let _ = writeln!(out, "{indent}\"\"\"{escaped}\"\"\"");
 }

@@ -16,7 +16,7 @@ use crate::ir::{
 /// Options configuring Rust 2021/2024 code generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RustOptions {
-    /// Use zero-copy Cow<'a, str> and Cow<'a, [u8]> (default: true).
+    /// Use zero-copy Cow<'a, str> for XML lexical values (default: true).
     pub zero_copy: bool,
     /// Derive serde::{Serialize, Deserialize} (default: true).
     pub derive_serde: bool,
@@ -147,11 +147,13 @@ impl LanguageContext for RustLanguageContext {
             PrimitiveType::UnsignedShort => "u16",
             PrimitiveType::UnsignedByte => "u8",
 
+            // XML carries hex/base64 lexical text, just as the runtime schema does.
+            // Preserve that spelling; callers can explicitly decode binary payloads.
             PrimitiveType::HexBinary | PrimitiveType::Base64Binary => {
                 if self.zero_copy {
-                    "Cow<'a, [u8]>"
+                    "Cow<'a, str>"
                 } else {
-                    "Vec<u8>"
+                    "String"
                 }
             }
         }

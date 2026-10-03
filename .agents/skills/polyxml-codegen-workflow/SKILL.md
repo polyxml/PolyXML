@@ -821,3 +821,21 @@ synthesized methods (UCI QueryPET's Equals field exposed CS8866). Suffix their
 identifiers with Value before applying per-struct uniqueness; preserve original
 XML names. The particle wire round-trip test covers these names and an explicit
 EqualsValue collision in both record and mutable-class modes.
+
+Rust binary primitives preserve hex/base64 XML lexical strings, matching the
+core runtime ScalarType::String mapping. Mapping them to Cow<[u8]>/Vec<u8>
+without binary codecs causes type errors in UCI fields and choice branches.
+Verify required/optional/repeated elements, attributes, simple content and
+choice round trips in both owned and borrowed generator modes.
+
+Composite module builds keep the closure of owned types and global element
+references. Imported parser frames may synthesize unused ordered-content helpers
+after downstream substitutions; those must not trigger missing-owner errors when
+the canonical owner's definition won the merge. Traverse struct bases/fields,
+union branches, and simple bases; reachable imported types still need owners.
+The CLI substitution-helper fixture covers both outcomes.
+
+Python triple-quoted docstrings must escape every double quote, not only triple
+quote sequences. A trailing quoted word (NeTEx's Default is "Outbound") otherwise
+creates four adjacent quotes and invalid syntax. The AST regression verifies
+exact enum/class documentation text, quotes and backslashes, for both backends.

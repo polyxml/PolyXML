@@ -219,3 +219,9 @@ after abstract heads have been removed from concrete parser branches.
 use `ScalarType::Integer(kind)` with lexical `PolyValue::String` storage; never
 narrow these through i64/f64. Compare integer restriction bounds and fixed values
 in the exact sign/magnitude value space. Keep bounded integer builtins distinct.
+
+UPA source documents must be deduplicated by full equality during IR merge.
+Appending transitive documents for every diamond include path causes exponential
+memory growth in NeTEx. Namespace-rekeyed chameleon models remain distinct.
+The diamond include regression checks all declarations and exact unique UPA
+document retention after a cache hit.

@@ -2554,7 +2554,13 @@ fn collect_chain_patterns(ir: &SchemaIR, q: &QName, visited: &mut HashSet<QName>
 }
 
 fn merge_ir(dest: &mut SchemaIR, src: SchemaIR) {
-    dest.upa_documents.extend(src.upa_documents);
+    // Diamond include graphs can replay the same transitive document many times.
+    // Validate each identical source model once; chameleon copies differ by namespace.
+    for document in src.upa_documents {
+        if !dest.upa_documents.contains(&document) {
+            dest.upa_documents.push(document);
+        }
+    }
     dest.abstract_elements.extend(src.abstract_elements);
     dest.ordered_types.extend(src.ordered_types);
     dest.content_models.extend(src.content_models);

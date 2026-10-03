@@ -596,6 +596,8 @@ fn run_module_build(
         );
     }
 
+    retain_owned_type_closure(&mut global, &owners);
+
     for qname in global.types.keys() {
         if qname
             .namespace
@@ -788,6 +790,52 @@ fn run_module_build(
     }
     println!("Module build finished successfully.");
     Ok(())
+}
+
+/// Imported parsing frames can synthesize context-specific helpers that are
+/// unused after the canonical owning module's declaration wins the merge.
+fn retain_owned_type_closure(ir: &mut SchemaIR, owners: &BTreeMap<QName, String>) {
+    fn collect(reference: &TypeRef, pending: &mut Vec<QName>) {
+        match reference {
+            TypeRef::Named(name) => pending.push(name.clone()),
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => collect(inner, pending),
+            TypeRef::Primitive(_) => {}
+        }
+    }
+    let mut pending = owners.keys().cloned().collect::<Vec<_>>();
+    for element in ir.elements.values() {
+        collect(&element.type_ref, &mut pending);
+    }
+    let mut reachable = BTreeSet::new();
+    while let Some(name) = pending.pop() {
+        if !reachable.insert(name.clone()) {
+            continue;
+        }
+        match ir.types.get(&name) {
+            Some(TypeDef::Struct(s)) => {
+                if let Some(base) = &s.base_type {
+                    pending.push(base.clone());
+                }
+                for field in &s.fields {
+                    collect(&field.type_ref, &mut pending);
+                }
+            }
+            Some(TypeDef::Union(u)) => {
+                for branch in &u.branches {
+                    collect(&branch.type_ref, &mut pending);
+                }
+            }
+            Some(TypeDef::Simple(s)) => collect(&s.base_type, &mut pending),
+            _ => {}
+        }
+    }
+    ir.types.retain(|name, _| {
+        reachable.contains(name)
+            || name
+                .namespace
+                .as_deref()
+                .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+    });
 }
 
 fn referenced_external_types(ir: &SchemaIR, language: &str) -> BTreeSet<QName> {

@@ -3166,3 +3166,38 @@ output = "manifest"
         assert!(cli.contains("tools.jackson.dataformat.xml.annotation"));
     }
 }
+
+#[test]
+fn imported_substitution_helpers_do_not_require_spurious_module_owners() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("common.xsd"), r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:c="urn:common" targetNamespace="urn:common"><xs:complexType name="Head"><xs:sequence><xs:element name="label" type="xs:string"/></xs:sequence></xs:complexType><xs:element name="HeadElement" type="c:Head" abstract="true"/><xs:complexType name="Envelope"><xs:sequence><xs:element ref="c:HeadElement"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
+    fs::write(dir.path().join("client.xsd"), r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:c="urn:common" xmlns:t="urn:client" targetNamespace="urn:client"><xs:import namespace="urn:common" schemaLocation="common.xsd"/><xs:complexType name="Child"><xs:complexContent><xs:extension base="c:Head"><xs:sequence><xs:element name="number" type="xs:int"/></xs:sequence></xs:extension></xs:complexContent></xs:complexType><xs:element name="ChildElement" type="t:Child" substitutionGroup="c:HeadElement"/><xs:element name="Root" type="c:Envelope"/></xs:schema>"#).unwrap();
+    let common = "[modules.common]\nschemas=[\"common.xsd\"]\n";
+    let client = "[modules.client]\nschemas=[\"client.xsd\"]\n";
+    let config = dir.path().join("polyxml.toml");
+    fs::write(&config, format!("{common}{client}depends_on=[\"common\"]\n[[generate]]\ntarget=\"python\"\noutput=\"generated\"\n")).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config"])
+        .arg(&config)
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let source = fs::read_to_string(dir.path().join("generated/common/common.py")).unwrap();
+    assert!(source.contains("class Envelope"));
+    assert!(!source.contains("EnvelopeItem"));
+    // Reachable imported declarations still require an explicit owner.
+    fs::write(&config, client).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--dry-run", "--config"])
+        .arg(&config)
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("no owning"));
+}

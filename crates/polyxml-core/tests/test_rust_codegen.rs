@@ -1310,3 +1310,57 @@ fn test_rust_digit_prefixed_module_sanitization() {
     assert!(mod_file.1.contains("pub mod _17_report;"));
     assert!(mod_file.1.contains("pub use _17_report::*;"));
 }
+
+#[test]
+fn binary_lexical_values_compile_and_round_trip_in_owned_and_borrowed_modes() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="BinaryText"><xs:simpleContent><xs:extension base="xs:hexBinary"/></xs:simpleContent></xs:complexType>
+      <xs:complexType name="Payload"><xs:sequence>
+        <xs:element name="required" type="xs:hexBinary"/>
+        <xs:element name="optional" type="xs:base64Binary" minOccurs="0"/>
+        <xs:element name="repeated" type="xs:hexBinary" maxOccurs="unbounded"/>
+      </xs:sequence><xs:attribute name="encoded" type="xs:base64Binary"/></xs:complexType>
+      <xs:complexType name="Alternative"><xs:choice><xs:element name="hex" type="xs:hexBinary"/><xs:element name="base64" type="xs:base64Binary"/></xs:choice></xs:complexType>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+    let core = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    for zero_copy in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"), format!("[package]\nname=\"binary-lexical-test\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[dependencies]\npolyxml={{path={core:?}}}\nquick-xml={{version=\"0.42\",features=[\"serialize\"]}}\nserde={{version=\"1\",features=[\"derive\"]}}\nserde_json=\"1\"\nregex=\"1\"\n")).unwrap();
+        let code = RustCodegen::new(RustOptions {
+            zero_copy,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        std::fs::write(dir.path().join("src/models.rs"), code).unwrap();
+        std::fs::write(dir.path().join("src/main.rs"), r#"mod models;
+use models::*;
+fn main() {
+ let xml="<Payload encoded=\"YWI=\"><required>0aFF</required><optional>YWI=</optional><repeated>00</repeated><repeated>FE</repeated></Payload>";
+ let value=Payload::from_xml(xml).unwrap();
+ assert_eq!(&*value.required,"0aFF"); assert_eq!(&*value.optional.as_ref().unwrap(),"YWI=");
+ assert_eq!(&*value.repeated[1],"FE"); assert_eq!(&*value.encoded.as_ref().unwrap(),"YWI=");
+ assert_eq!(value.to_xml_string().unwrap(),xml);
+ let text=BinaryText::from_xml("<BinaryText>0AFF</BinaryText>").unwrap();
+ assert_eq!(text.to_xml_string().unwrap(),"<BinaryText>0AFF</BinaryText>");
+ for xml in ["<hex>0AFF</hex>","<base64>YWI=</base64>"] { let value=Alternative::from_xml(xml).unwrap(); assert_eq!(value.to_xml_string().unwrap(),xml); }
+}
+"#).unwrap();
+        let output = std::process::Command::new("cargo")
+            .args(["run", "--quiet", "--offline"])
+            .env(
+                "CARGO_TARGET_DIR",
+                core.join("../../target/binary-lexical-tests"),
+            )
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "zero_copy={zero_copy}: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

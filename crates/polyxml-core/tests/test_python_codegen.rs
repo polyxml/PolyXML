@@ -793,3 +793,32 @@ fn test_python_sequence_nested_inside_choice_codegen() {
     assert!(code.contains("first: str | None = field("));
     assert!(code.contains("second: str | None = field("));
 }
+
+#[test]
+fn quoted_docstrings_preserve_text_and_remain_valid_python() {
+    let ir = XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:simpleType name="Direction"><xs:annotation><xs:documentation>Default is "Outbound"</xs:documentation></xs:annotation><xs:restriction base="xs:string"><xs:enumeration value="Outbound"/></xs:restriction></xs:simpleType><xs:complexType name="Record"><xs:annotation><xs:documentation>Literal \path, "quotes" and """triples"""</xs:documentation></xs:annotation><xs:sequence><xs:element name="direction" type="Direction"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
+    for backend in [PythonBackend::Dataclass, PythonBackend::Pydantic] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("models.py");
+        std::fs::write(
+            &path,
+            PythonCodegen::new(PythonOptions {
+                backend,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        let expected = serde_json::to_string(&vec![
+            "Default is \"Outbound\"",
+            r#"Literal \path, "quotes" and """triples""""#,
+        ])
+        .unwrap();
+        let output = std::process::Command::new("python3").arg("-c").arg("import ast,json,sys; tree=ast.parse(open(sys.argv[1]).read()); docs=[ast.get_docstring(n) for n in tree.body if isinstance(n,ast.ClassDef) and ast.get_docstring(n) is not None]; assert docs==json.loads(sys.argv[2]),docs").arg(path).arg(expected).output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

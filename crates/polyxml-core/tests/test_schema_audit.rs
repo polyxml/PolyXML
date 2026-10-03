@@ -576,3 +576,30 @@ fn restricted_simple_types_emit_named_aliases() {
     let csharp = CSharpCodegen::new(CSharpOptions::default()).generate_module(&ir);
     assert!(csharp.contains("BicCode"), "csharp type missing:\n{csharp}");
 }
+
+#[test]
+fn diamond_includes_do_not_duplicate_upa_source_documents() {
+    let dir = tempdir().unwrap();
+    for index in 0usize..16 {
+        let includes = (index.saturating_sub(2)..index)
+            .map(|previous| format!("<xs:include schemaLocation=\"{previous}.xsd\"/>"))
+            .collect::<String>();
+        fs::write(dir.path().join(format!("{index}.xsd")), format!("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">{includes}<xs:complexType name=\"T{index}\"><xs:sequence><xs:element name=\"item{index}\" type=\"xs:string\"/></xs:sequence></xs:complexType></xs:schema>")).unwrap();
+    }
+    let mut parser = XsdParser::new();
+    let ir = parser.parse_file(dir.path().join("15.xsd")).unwrap();
+    assert_eq!(ir.types.len(), 16);
+    assert_eq!(
+        ir.upa_documents.len(),
+        16,
+        "each unique source document is retained once"
+    );
+    assert_eq!(
+        parser
+            .parse_file(dir.path().join("15.xsd"))
+            .unwrap()
+            .upa_documents
+            .len(),
+        16
+    );
+}

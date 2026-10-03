@@ -360,3 +360,11 @@ let restored_xml = json_to_xml(
 ## 9. rkyv generation status
 
 The CLI accepts `--feature rkyv`, but the generated `#[rkyv(check_bytes)]` attribute is incompatible with rkyv 0.8. Do not enable this option for new projects until the generator is updated and its output is verified against the rkyv version you use. The default Rust output does not require rkyv.
+
+### Binary lexical values
+
+Generated `xs:hexBinary` and `xs:base64Binary` fields preserve their XML lexical
+text as `Cow<'a, str>` (or `String` with zero-copy disabled), including through
+XML round trips. They are not decoded byte buffers. Decode hex/base64 explicitly
+when consuming the payload. This matches the core runtime's lexical storage and
+avoids passing byte slices to string-based XML codecs.
