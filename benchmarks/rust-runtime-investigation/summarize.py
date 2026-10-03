@@ -3,9 +3,9 @@
 
 import argparse
 import csv
-from collections import defaultdict
 import json
 import statistics
+from collections import defaultdict
 from pathlib import Path
 
 
