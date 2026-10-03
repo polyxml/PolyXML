@@ -1,0 +1,93 @@
+diff --git a/crates/polyxml-core/src/parser.rs b/crates/polyxml-core/src/parser.rs
+index afc027e..5741d45 100644
+--- a/crates/polyxml-core/src/parser.rs
++++ b/crates/polyxml-core/src/parser.rs
+@@ -1,4 +1,5 @@
+ use std::collections::HashMap;
++use std::num::NonZeroUsize;
+ use std::sync::Arc;
+ 
+ use quick_xml::events::{BytesStart, Event};
+@@ -22,7 +23,8 @@ pub(crate) struct StackFrame {
+     values: SmallVec<[Option<PolyValue>; 8]>,
+     list_values: SmallVec<[Option<Vec<PolyValue>>; 4]>,
+     frame_text_buf: Option<Vec<u8>>,
+-    mixed_parent_kind: Option<String>,
++    // Parent branch index + 1 keeps the absent case in one machine word.
++    mixed_parent_branch: Option<NonZeroUsize>,
+     content_tokens: String,
+ }
+ 
+@@ -39,7 +41,7 @@ impl StackFrame {
+             values: smallvec![None; field_count],
+             list_values: SmallVec::new(),
+             frame_text_buf,
+-            mixed_parent_kind: None,
++            mixed_parent_branch: None,
+             content_tokens: String::new(),
+         }
+     }
+@@ -569,7 +571,8 @@ impl XmlDeserializer {
+                                             namespace_stack.last().unwrap(),
+                                         )?;
+                                         let mut frame = StackFrame::new(frame_schema);
+-                                        frame.mixed_parent_kind = Some(branch.variant_name.clone());
++                                        frame.mixed_parent_branch =
++                                            NonZeroUsize::new(branch_index + 1);
+                                         Self::parse_attributes(e, &mut frame)?;
+                                         stack.push(frame);
+                                     }
+@@ -949,13 +952,17 @@ impl XmlDeserializer {
+                             }
+                         }
+                     } else if stack.len() > 1 {
+-                        let mut finished_frame = stack.pop().unwrap();
++                        let finished_frame = stack.pop().unwrap();
+                         let local_name = e.local_name();
+-                        let mixed_kind = finished_frame.mixed_parent_kind.take();
++                        let mixed_branch = finished_frame.mixed_parent_branch;
+                         let instance = finished_frame.finish()?;
+                         let parent = stack.last_mut().unwrap();
+ 
+-                        if let Some(kind) = mixed_kind {
++                        if let Some(branch) = mixed_branch {
++                            let kind = parent.schema.mixed_content.as_ref().unwrap().branches
++                                [branch.get() - 1]
++                                .variant_name
++                                .clone();
+                             parent.push_mixed_item(kind, instance);
+                             continue;
+                         }
+diff --git a/crates/polyxml-core/tests/test_runtime_fast_paths.rs b/crates/polyxml-core/tests/test_runtime_fast_paths.rs
+index c0f13f1..35e1753 100644
+--- a/crates/polyxml-core/tests/test_runtime_fast_paths.rs
++++ b/crates/polyxml-core/tests/test_runtime_fast_paths.rs
+@@ -242,3 +242,28 @@ fn unified_scalar_state_keeps_mixed_branch_order_nil_and_nested_frames() {
+     assert!(deserialize(nil_document, Arc::clone(&schema)).is_ok());
+     assert!(deserialize(b"<Root><State>invalid</State></Root>", schema).is_err());
+ }
++
++#[test]
++fn nested_mixed_frames_resolve_kind_from_their_parent_schema() {
++    use polyxml::schema_parser::XsdParser;
++    let ir = XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
++      <xs:element name="Root"><xs:complexType mixed="true"><xs:choice minOccurs="0" maxOccurs="unbounded">
++        <xs:element name="Lead" type="xs:string"/>
++        <xs:element name="Child"><xs:complexType mixed="true"><xs:choice minOccurs="0" maxOccurs="unbounded">
++          <xs:element name="Grand"><xs:complexType><xs:sequence><xs:element name="Value" type="xs:string"/></xs:sequence></xs:complexType></xs:element>
++          <xs:element name="Inner" type="xs:string"/>
++        </xs:choice></xs:complexType></xs:element>
++        <xs:element name="Tail" type="xs:int"/>
++      </xs:choice></xs:complexType></xs:element>
++    </xs:schema>"#).unwrap();
++    let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();
++    let xml = b"<Root>before<Lead>lead</Lead><Child>start<Grand><Value>deep</Value></Grand><Inner>inner</Inner>end</Child><Tail>7</Tail>after</Root>";
++    let value = deserialize(xml, Arc::clone(&schema)).unwrap();
++    let output = serialize("Root", &value, &schema, None).unwrap();
++    assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());
++    assert!(deserialize(
++        b"<Root><Child><Grand><Value>unfinished</Value></Grand>",
++        schema
++    )
++    .is_err());
++}
