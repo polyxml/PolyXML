@@ -6,6 +6,8 @@ and JSON/Serde consumers have separate suites in
 
 Start from a committed core implementation and an explicit detached baseline.
 Run builds, profiles and latency measurements serially through `scripts/memcap.sh`.
+Preflight companion tools before timing: even `uv run ... --help` can rebuild an
+editable extension. Use `uv run --no-sync` after preparing that environment.
 The runners use one Cargo worker, systemd memory limits and disabled swap. Keep
 source files stable until a comparison finishes; source revisions describe HEAD,
 so an uncommitted core edit makes that identification incomplete.
@@ -104,3 +106,9 @@ Reads cycle pattern keys to force FIFO misses above capacity. Writes visit each
 field's eight occurrences consecutively, so they can still reuse each compiled
 regex locally even when the full schema exceeds capacity. Run it with the same
 `--harness` option and retain both cases; field order affects reuse.
+
+For the generated sensor control, run the XML/Serde regression runner and use
+`python3 benchmarks/rust-runtime-investigation/summarize.py --generated DIR` on
+its output directory. This computes each process's median of seven timing
+samples, then the median across processes; it retains the process deltas. The
+statistic differs from the Criterion process means above.

@@ -19,6 +19,10 @@ separate from the schema-driven `PolyValue` runtime.
   instruction count identifies candidates; verify changes with uninstrumented
   Criterion consumers. Extracting Valgrind locally is an option when installation
   would unnecessarily change the host.
+- Preflight companion tooling before timing. Even `uv run runner.py --help` can
+  synchronize and rebuild an editable binding. After preparing its environment,
+  use `uv run --no-sync` for companion runs. If a build overlaps timing, retain
+  and mark that attempt as contaminated, then repeat it.
 - Run heavy work serially, with one Cargo worker and the repository memory cap.
   Short comparisons screen hypotheses. Repeat retained improvements with longer
   measurements, alternating revision order and preserving every raw sample.
