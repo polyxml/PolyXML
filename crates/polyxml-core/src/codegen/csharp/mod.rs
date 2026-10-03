@@ -277,7 +277,7 @@ fn root_names(ir: &SchemaIR) -> HashMap<QName, String> {
     names
 }
 
-fn choice_variant_name(branch: &UnionBranch) -> String {
+fn choice_variant_base(branch: &UnionBranch) -> String {
     let name = to_csharp_type_name(&branch.variant_name);
     if matches!(
         name.as_str(),
@@ -290,12 +290,43 @@ fn choice_variant_name(branch: &UnionBranch) -> String {
     }
 }
 
+fn choice_variant_names(union: &UnionDef) -> Vec<String> {
+    let mut used = HashSet::from([type_ident(&union.qname)]);
+    for branch in &union.branches {
+        let mut ty = &branch.type_ref;
+        while let TypeRef::List(inner) | TypeRef::Boxed(inner) = ty {
+            ty = inner;
+        }
+        if let TypeRef::Named(name) = ty {
+            used.insert(type_ident(name));
+        }
+    }
+    union
+        .branches
+        .iter()
+        .map(|branch| {
+            let base = choice_variant_base(branch);
+            let mut name = base.clone();
+            let mut suffix = 2;
+            while !used.insert(name.clone()) {
+                name = format!("{base}{suffix}");
+                suffix += 1;
+            }
+            name
+        })
+        .collect()
+}
+
 fn simple_value_target(base: &TypeRef, ir: &SchemaIR) -> String {
     let mut target = "Value".to_string();
     let mut current = base;
     let mut seen = HashSet::new();
     while let TypeRef::Named(qname) = current {
         if !seen.insert(qname.clone()) {
+            break;
+        }
+        if matches!(ir.types.get(qname), Some(TypeDef::Enum(_))) {
+            target.push_str(".ToXmlValue()");
             break;
         }
         let Some(TypeDef::Simple(simple)) = ir.types.get(qname) else {
@@ -340,6 +371,41 @@ impl CSharpCodegen {
 
     /// Emits all types in the given SchemaIR as a single C# compilation unit.
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
+        let has_duplicate_items = ir.types.values().any(|def| {
+            let TypeDef::Union(union) = def else {
+                return false;
+            };
+            if !union.is_mixed_content() {
+                return false;
+            }
+            let mut seen = HashSet::new();
+            union
+                .branches
+                .iter()
+                .any(|b| !seen.insert((&b.xml_name, &b.namespace, &b.type_ref)))
+        });
+        let mut canonical = if has_duplicate_items {
+            std::borrow::Cow::Owned(ir.clone())
+        } else {
+            std::borrow::Cow::Borrowed(ir)
+        };
+        if let std::borrow::Cow::Owned(canonical) = &mut canonical {
+            for def in canonical.types.values_mut() {
+                if let TypeDef::Union(union) = def {
+                    if union.is_mixed_content() {
+                        let mut seen = HashSet::new();
+                        union.branches.retain(|b| {
+                            seen.insert((
+                                b.xml_name.clone(),
+                                b.namespace.clone(),
+                                b.type_ref.clone(),
+                            ))
+                        });
+                    }
+                }
+            }
+        }
+        let ir = canonical.as_ref();
         set_type_name_map(build_type_name_map(ir, to_csharp_type_name));
         let mut out = String::new();
 
@@ -438,6 +504,13 @@ impl CSharpCodegen {
             writeln!(out, "}}").unwrap();
         }
 
+        if out.contains(".Select(") || out.contains(".Any(") {
+            out = out.replacen(
+                "using System.Collections.Generic;",
+                "using System.Collections.Generic;\nusing System.Linq;",
+                1,
+            );
+        }
         out
     }
 
@@ -749,8 +822,7 @@ impl CSharpCodegen {
 
         // XmlInclude attributes for element-choice polymorphism.
         if self.options.emit_xml_attributes && !u.is_lexical() && !u.is_mixed_content() {
-            for branch in &u.branches {
-                let variant_name = choice_variant_name(branch);
+            for variant_name in choice_variant_names(u) {
                 writeln!(
                     out,
                     "{}[XmlInclude(typeof({}.{}))]",
@@ -761,14 +833,11 @@ impl CSharpCodegen {
         }
 
         if !self.options.use_records && self.options.emit_json_attributes {
-            for branch in &u.branches {
+            for (branch, variant_name) in u.branches.iter().zip(choice_variant_names(u)) {
                 writeln!(
                     out,
                     "{}[JsonDerivedType(typeof({}.{}), {:?})]",
-                    indent,
-                    choice_name,
-                    choice_variant_name(branch),
-                    branch.xml_name
+                    indent, choice_name, variant_name, branch.xml_name
                 )
                 .unwrap();
             }
@@ -787,8 +856,7 @@ impl CSharpCodegen {
         .unwrap();
         writeln!(out, "{}{{", indent).unwrap();
 
-        for branch in &u.branches {
-            let variant_name = choice_variant_name(branch);
+        for (branch, variant_name) in u.branches.iter().zip(choice_variant_names(u)) {
             let branch_type = self.context.map_type_ref(&branch.type_ref);
 
             if let Some(ref doc) = branch.documentation {
@@ -864,8 +932,11 @@ impl CSharpCodegen {
         );
         let _ = writeln!(out, "{}    {{", indent);
         let _ = writeln!(out, "{}        var value = text.Trim();", indent);
-        for (idx, branch) in u.branches.iter().enumerate() {
-            let variant = choice_variant_name(branch);
+        let mut exhaustive = false;
+        for (idx, (branch, variant_name)) in
+            u.branches.iter().zip(choice_variant_names(u)).enumerate()
+        {
+            let variant = variant_name;
             let mapped = self.context.map_type_ref(&branch.type_ref);
             if let TypeRef::Named(qname) = &branch.type_ref {
                 if let Some(TypeDef::Enum(def)) = ir.types.get(qname) {
@@ -894,6 +965,11 @@ impl CSharpCodegen {
             } else {
                 format!("candidate{}", idx)
             };
+            if matches!(base, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(nested)) if nested.is_lexical()))
+            {
+                writeln!(out, "{indent}        try {{ var candidate{idx}={base_name}.Parse(value);return new {variant}({wrap}); }}catch(FormatException){{}}").unwrap();
+                continue;
+            }
             if let Some(p) = super::unbounded_integer(&branch.type_ref, ir) {
                 let kind = match p {
                     PrimitiveType::PositiveInteger => 1,
@@ -927,6 +1003,8 @@ impl CSharpCodegen {
                         "{}        {{ var candidate{} = value; return new {}({}); }}",
                         indent, idx, variant, wrap
                     );
+                    exhaustive = true;
+                    break;
                 }
             } else if base_name == "bool" {
                 let _ = writeln!(out, "{}        if (value == \"true\" || value == \"1\") {{ var candidate{} = true; return new {}({}); }}", indent, idx, variant, wrap);
@@ -943,16 +1021,18 @@ impl CSharpCodegen {
                 );
             }
         }
-        let _ = writeln!(
-            out,
-            "{}        throw new FormatException(\"No {} union member accepts the value\");",
-            indent, name
-        );
+        if !exhaustive {
+            let _ = writeln!(
+                out,
+                "{}        throw new FormatException(\"No {} union member accepts the value\");",
+                indent, name
+            );
+        }
         let _ = writeln!(out, "{}    }}", indent);
         let _ = writeln!(out, "{indent}    private string? _lexical;\n{indent}    private string? _parsedCanonical;\n{indent}    private static {name} Preserve({name} member, string lexical) {{ member._parsedCanonical = member.FormatXmlValue(); member._lexical = lexical; return member; }}\n{indent}    public string ToXmlString() {{ var canonical = FormatXmlValue(); return canonical == _parsedCanonical ? _lexical! : canonical; }}\n{indent}    private string FormatXmlValue() => this switch");
         let _ = writeln!(out, "{}    {{", indent);
-        for branch in &u.branches {
-            let variant = choice_variant_name(branch);
+        for (branch, variant_name) in u.branches.iter().zip(choice_variant_names(u)) {
+            let variant = variant_name;
             let value = if matches!(
                 super::primitive_base(&branch.type_ref, ir),
                 TypeRef::Primitive(PrimitiveType::Date)
@@ -970,6 +1050,7 @@ impl CSharpCodegen {
                 "item.Value.ToString(\"HH:mm:ssK\", System.Globalization.CultureInfo.InvariantCulture)".to_string()
             } else {
                 match &branch.type_ref {
+                TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Union(nested)) if nested.is_lexical()) => "item.Value.ToXmlString()".to_string(),
                 TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Enum(_))) => "item.Value.ToXmlValue()".to_string(),
                 TypeRef::Named(qname) if matches!(ir.types.get(qname), Some(TypeDef::Simple(_))) => "Convert.ToString(item.Value.Value, System.Globalization.CultureInfo.InvariantCulture) ?? \"\"".to_string(),
                 _ => "Convert.ToString(item.Value, System.Globalization.CultureInfo.InvariantCulture) ?? \"\"".to_string(),
@@ -1031,17 +1112,30 @@ impl CSharpCodegen {
             "{indent}    [XmlIgnore] {json}public {ty} {name} {{get;set;}} = {default};"
         )
         .unwrap();
+        let optional = ty.ends_with('?');
         let validation = if field.cardinality.is_list() {
-            format!("{name}?.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()")
-        } else {
+            if optional {
+                format!("{name}?.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()")
+            } else {
+                format!("{name}.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()")
+            }
+        } else if optional {
             format!("{name} is null ? null : PolyxmlIntegerLexical.Validate({name},{kind})")
+        } else {
+            format!("PolyxmlIntegerLexical.Validate({name} ?? throw new InvalidOperationException(\"Missing required integer\"),{kind})")
         };
         let parse = if field.cardinality.is_list() {
-            format!("value?.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()!")
+            if optional {
+                format!("value?.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()")
+            } else {
+                format!("value.Select(v=>PolyxmlIntegerLexical.Validate(v,{kind})).ToList()")
+            }
+        } else if optional {
+            format!("value is null ? null : PolyxmlIntegerLexical.Validate(value,{kind})")
         } else {
-            format!("value is null ? default! : PolyxmlIntegerLexical.Validate(value,{kind})")
+            format!("PolyxmlIntegerLexical.Validate(value,{kind})")
         };
-        writeln!(out,"{indent}    {attrs}{ignore}public {ty} {name}Xml {{ get => {validation}!; set => {name} = {parse}; }}").unwrap();
+        writeln!(out,"{indent}    {attrs}{ignore}public {ty} {name}Xml {{ get => {validation}; set => {name} = {parse}; }}").unwrap();
         true
     }
 
@@ -1166,6 +1260,22 @@ impl CSharpCodegen {
         }
         let ty = self.map_field_type(field, ir);
         let base = ty.trim_end_matches('?');
+        let can_be_null = ty.ends_with('?')
+            || !(matches!(
+                base,
+                "bool"
+                    | "byte"
+                    | "sbyte"
+                    | "short"
+                    | "ushort"
+                    | "int"
+                    | "uint"
+                    | "long"
+                    | "ulong"
+                    | "float"
+                    | "double"
+                    | "decimal"
+            ) || matches!(&field.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Enum(_)))));
         let namespace = field
             .namespace
             .as_ref()
@@ -1199,8 +1309,13 @@ impl CSharpCodegen {
             } else {
                 format!("object.Equals(value, {expected})")
             };
+            let present = if ty.ends_with('?') {
+                "value is not null && "
+            } else {
+                ""
+            };
             writeln!(out, "{indent}    private {ty} _{name} = {initial};
-{indent}    [XmlIgnore] public {ty} {name} {{ get => _{name}; set {{ if (value is not null && !({equal})) throw new System.ComponentModel.DataAnnotations.ValidationException(\"Fixed value constraint violated for {name}\"); _{name} = value; }} }}").unwrap();
+{indent}    [XmlIgnore] public {ty} {name} {{ get => _{name}; set {{ if ({present}!({equal})) throw new System.ComponentModel.DataAnnotations.ValidationException(\"Fixed value constraint violated for {name}\"); _{name} = value; }} }}").unwrap();
         } else {
             let initial = if field.kind == FieldKind::Attribute {
                 parse(&format!("{default:?}"))
@@ -1224,10 +1339,15 @@ impl CSharpCodegen {
             field.xml_name
         )
         .unwrap();
-        if let Some(kind) = integer_kind {
-            writeln!(out,"{indent}        get {{ if ({name} is null) return null; return PolyxmlIntegerLexical.Validate({name},{kind}); }}").unwrap();
+        let null_guard = if can_be_null {
+            format!("if ({name} is null) return null; ")
         } else {
-            writeln!(out, "{indent}        get {{ if ({name} is null) return null; var writer = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture); new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Serialize(writer, {name}); return System.Xml.Linq.XDocument.Parse(writer.ToString()).Root!.Value; }}").unwrap();
+            String::new()
+        };
+        if let Some(kind) = integer_kind {
+            writeln!(out,"{indent}        get {{ {null_guard} return PolyxmlIntegerLexical.Validate({name},{kind}); }}").unwrap();
+        } else {
+            writeln!(out, "{indent}        get {{ {null_guard}var writer = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture); new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Serialize(writer, {name}); return System.Xml.Linq.XDocument.Parse(writer.ToString()).Root!.Value; }}").unwrap();
         }
         let text = if field.kind == FieldKind::Attribute {
             "value".into()
@@ -1274,12 +1394,24 @@ impl CSharpCodegen {
         };
         let item_name = &prop_names[item_index];
         let union_name = type_ident(&union.qname);
+        let text_variant = union
+            .branches
+            .iter()
+            .zip(choice_variant_names(union))
+            .find(|(branch, _)| branch.xml_name == "#text")
+            .map(|(_, name)| name)
+            .expect("mixed union text branch");
         let class_kind = if self.options.use_records {
             "record"
         } else {
             "class"
         };
-        let _ = writeln!(out, "{indent}public {class_kind} {struct_name} : System.Xml.Serialization.IXmlSerializable\n{indent}{{");
+        let validation_interface = if self.options.emit_validation {
+            ", IValidatableObject"
+        } else {
+            ""
+        };
+        let _ = writeln!(out, "{indent}public {class_kind} {struct_name} : System.Xml.Serialization.IXmlSerializable{validation_interface}\n{indent}{{");
         for (field, prop_name) in s.fields.iter().zip(prop_names) {
             let ty = self.map_field_type(field, ir);
             if field.kind == FieldKind::Attribute {
@@ -1307,22 +1439,23 @@ impl CSharpCodegen {
             if field.kind == FieldKind::Attribute {
                 let ty = self.map_field_type(field, ir);
                 let base_type = ty.trim_end_matches('?');
-                let _ = writeln!(out, "        {{ var raw = reader.GetAttribute({:?}); if (raw is not null) {prop_name} = ({ty})System.Convert.ChangeType(raw, typeof({base_type}), System.Globalization.CultureInfo.InvariantCulture); }}", field.xml_name);
+                let namespace = field.namespace.as_deref().unwrap_or("");
+                let _ = writeln!(out, "        {{ var raw = reader.GetAttribute({:?}, {namespace:?}); if (raw is not null) {prop_name} = ({ty})new XmlSerializer(typeof({base_type}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape(raw) + \"</value>\"))!; }}", field.xml_name);
             }
         }
         let _ = writeln!(out, "        {item_name} = new List<{union_name}>();");
         out.push_str("        bool empty = reader.IsEmptyElement;\n        reader.ReadStartElement();\n        if (empty) return;\n        while (reader.NodeType != System.Xml.XmlNodeType.EndElement && !reader.EOF)\n        {\n            switch (reader.NodeType)\n            {\n                case System.Xml.XmlNodeType.Text:\n                case System.Xml.XmlNodeType.CDATA:\n                case System.Xml.XmlNodeType.Whitespace:\n                case System.Xml.XmlNodeType.SignificantWhitespace:\n");
         let _ = writeln!(
             out,
-            "                    {item_name}.Add(new {union_name}.Text(reader.Value));"
+            "                    {item_name}.Add(new {union_name}.{text_variant}(reader.Value));"
         );
         out.push_str("                    reader.Read();\n                    break;\n                case System.Xml.XmlNodeType.Element:\n                    switch (reader.LocalName)\n                    {\n");
-        for branch in &union.branches {
+        for (branch, variant) in union.branches.iter().zip(choice_variant_names(union)) {
             if branch.xml_name == "#text" {
                 continue;
             }
             let branch_type = self.context.map_type_ref(&branch.type_ref);
-            let variant = choice_variant_name(branch);
+
             let namespace = branch.namespace.as_deref().unwrap_or("");
             let _ = writeln!(out, "                        case {:?}:\n                            {{ var serializer = new XmlSerializer(typeof({branch_type}), new XmlRootAttribute({:?}) {{ Namespace = {:?} }}); {item_name}.Add(new {union_name}.{variant}(({branch_type})serializer.Deserialize(reader)!)); break; }}", branch.xml_name, branch.xml_name, namespace);
         }
@@ -1334,12 +1467,34 @@ impl CSharpCodegen {
         );
         for (field, prop_name) in s.fields.iter().zip(prop_names) {
             if field.kind == FieldKind::Attribute {
-                let _ = writeln!(out, "        if ({prop_name} is not null) writer.WriteAttributeString({:?}, System.Convert.ToString({prop_name}, System.Globalization.CultureInfo.InvariantCulture));", field.xml_name);
+                let ty = self.map_field_type(field, ir);
+                let base = ty.trim_end_matches('?');
+                let is_value = matches!(
+                    base,
+                    "bool"
+                        | "byte"
+                        | "sbyte"
+                        | "short"
+                        | "ushort"
+                        | "int"
+                        | "uint"
+                        | "long"
+                        | "ulong"
+                        | "float"
+                        | "double"
+                        | "decimal"
+                ) || matches!(&field.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Enum(_))));
+                let guard = if ty.ends_with('?') || !is_value {
+                    format!("if ({prop_name} is not null) ")
+                } else {
+                    String::new()
+                };
+                let namespace = field.namespace.as_deref().unwrap_or("");
+                let _ = writeln!(out, "        {guard}{{ var text = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture); new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Serialize(text, {prop_name}); writer.WriteAttributeString({:?}, {namespace:?}, System.Xml.Linq.XDocument.Parse(text.ToString()).Root!.Value); }}", field.xml_name);
             }
         }
         let _ = writeln!(out, "        foreach (var item in {item_name})\n        {{\n            switch (item)\n            {{");
-        for branch in &union.branches {
-            let variant = choice_variant_name(branch);
+        for (branch, variant) in union.branches.iter().zip(choice_variant_names(union)) {
             if branch.xml_name == "#text" {
                 let _ = writeln!(out, "                case {union_name}.{variant} text: writer.WriteString(text.Value); break;");
             } else {
@@ -1349,10 +1504,27 @@ impl CSharpCodegen {
             }
         }
         out.push_str("            }\n        }\n");
-        let _ = writeln!(out, "{indent}    }}\n{indent}}}\n");
+        let _ = writeln!(out, "{indent}    }}");
+        if self.options.emit_validation {
+            self.emit_struct_validator(out, s, ir, prop_names, indent);
+        }
+        let _ = writeln!(out, "{indent}}}\n");
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR, indent: &str) {
+        if ir.has_ordered_content(s) && s.base_type.is_some() {
+            let fields = super::flatten_fields(s, ir);
+            if fields.iter().any(|f| {
+                matches!(&f.type_ref, TypeRef::Named(q)
+                if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_mixed_content()))
+            }) {
+                let mut flat = s.clone();
+                flat.fields = fields.into_iter().cloned().collect();
+                flat.base_type = None;
+                self.emit_struct(out, &flat, ir, indent);
+                return;
+            }
+        }
         // Reuse inherited XML members. Simple-content IR includes a text
         // placeholder for non-inheriting targets; restrictions can repeat
         // attribute declarations already present on the generated base.
@@ -1436,7 +1608,13 @@ impl CSharpCodegen {
             .map(|f| self.unique_property_name(&f.name, &mut seen_props, Some(&struct_name)))
             .collect();
 
-        if ir.has_ordered_content(s) && self.options.emit_xml_attributes {
+        if ir.has_ordered_content(s)
+            && self.options.emit_xml_attributes
+            && s.fields.iter().any(|f| {
+                matches!(&f.type_ref, TypeRef::Named(q)
+                if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_mixed_content()))
+            })
+        {
             self.emit_mixed_struct(out, s, ir, indent, &struct_name, &prop_names);
             return;
         }
@@ -1769,16 +1947,15 @@ impl CSharpCodegen {
             .as_ref()
             .map(|b| matches!(ir.types.get(b), Some(TypeDef::Struct(_))))
             .unwrap_or(false);
-        let new_kw = if !self.options.use_records {
-            if has_struct_base {
-                "override "
-            } else {
-                "virtual "
-            }
-        } else if has_struct_base {
-            "new "
-        } else {
+        let new_kw = if self.options.use_records
+            && self.options.record_kind == CSharpRecordKind::Struct
+            && !ir.has_ordered_content(s)
+        {
             ""
+        } else if has_struct_base {
+            "override "
+        } else {
+            "virtual "
         };
         writeln!(
             out,
@@ -1788,7 +1965,7 @@ impl CSharpCodegen {
         .unwrap();
         writeln!(out, "{}    {{", indent).unwrap();
 
-        if !self.options.use_records && has_struct_base {
+        if has_struct_base {
             writeln!(out, "{}        foreach (var result in base.Validate(validationContext)) yield return result;", indent).unwrap();
         }
         let mut has_checks = false;
@@ -1872,11 +2049,12 @@ impl CSharpCodegen {
         target: &str,
         indent: &str,
     ) {
+        let member = target.split('.').next().unwrap_or(target);
         if let Some(min_len) = facets.min_length {
             writeln!(
                 out,
                 "{}if ({}.Length < {}) yield return new ValidationResult(\"{} length must be >= {}\", [nameof({})]);",
-                indent, target, min_len, target, min_len, target
+                indent, target, min_len, target, min_len, member
             )
             .unwrap();
         }
@@ -1884,7 +2062,7 @@ impl CSharpCodegen {
             writeln!(
                 out,
                 "{}if ({}.Length > {}) yield return new ValidationResult(\"{} length must be <= {}\", [nameof({})]);",
-                indent, target, max_len, target, max_len, target
+                indent, target, max_len, target, max_len, member
             )
             .unwrap();
         }
@@ -1895,7 +2073,7 @@ impl CSharpCodegen {
             writeln!(
                 out,
                 "{}if (!Regex.IsMatch({}.ToString() ?? \"\", \"{}\")) yield return new ValidationResult(\"{} does not match pattern {}\", [nameof({})]);",
-                indent, target, escaped, target, escaped, target
+                indent, target, escaped, target, escaped, member
             )
             .unwrap();
         }
@@ -1903,7 +2081,7 @@ impl CSharpCodegen {
             writeln!(
                 out,
                 "{}if ({} < {}) yield return new ValidationResult(\"{} must be >= {}\", [nameof({})]);",
-                indent, target, min_inc, target, min_inc, target
+                indent, target, min_inc, target, min_inc, member
             )
             .unwrap();
         }
@@ -1911,7 +2089,7 @@ impl CSharpCodegen {
             writeln!(
                 out,
                 "{}if ({} > {}) yield return new ValidationResult(\"{} must be <= {}\", [nameof({})]);",
-                indent, target, max_inc, target, max_inc, target
+                indent, target, max_inc, target, max_inc, member
             )
             .unwrap();
         }
@@ -1919,7 +2097,7 @@ impl CSharpCodegen {
             writeln!(
                 out,
                 "{}if ({} <= {}) yield return new ValidationResult(\"{} must be > {}\", [nameof({})]);",
-                indent, target, min_exc, target, min_exc, target
+                indent, target, min_exc, target, min_exc, member
             )
             .unwrap();
         }
@@ -1927,7 +2105,7 @@ impl CSharpCodegen {
             writeln!(
                 out,
                 "{}if ({} >= {}) yield return new ValidationResult(\"{} must be < {}\", [nameof({})]);",
-                indent, target, max_exc, target, max_exc, target
+                indent, target, max_exc, target, max_exc, member
             )
             .unwrap();
         }
@@ -1984,8 +2162,7 @@ impl CSharpCodegen {
             if let Some(qname) = named_qname {
                 if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
                     let choice_name = type_ident(&u.qname);
-                    for branch in &u.branches {
-                        let variant_name = choice_variant_name(branch);
+                    for (branch, variant_name) in u.branches.iter().zip(choice_variant_names(u)) {
                         parts.push(format!(
                             "XmlElement(\"{}\", typeof({}.{}), Namespace = {:?})",
                             branch.xml_name,

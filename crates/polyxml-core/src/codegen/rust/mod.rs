@@ -345,7 +345,7 @@ impl RustCodegen {
         let chunk_size = self.options.chunk_size.unwrap_or(250);
 
         let safe_mod = sanitize_rust_module_name(base_name);
-        let mod_export = if safe_mod == base_name {
+        let mut mod_export = if safe_mod == base_name {
             format!("pub mod {base_name};\npub use {base_name}::*;\n")
         } else {
             format!("#[path = \"{base_name}.rs\"]\npub mod {safe_mod};\npub use {safe_mod}::*;\n")
@@ -353,6 +353,13 @@ impl RustCodegen {
 
         if !should_split {
             let code = self.generate_module(ir);
+            if !code.lines().any(|line| line.starts_with("pub ")) {
+                mod_export = mod_export
+                    .lines()
+                    .filter(|line| !line.starts_with("pub use "))
+                    .map(|line| format!("{line}\n"))
+                    .collect();
+            }
             if base_name == "mod" {
                 return vec![("mod.rs".to_string(), code)];
             }
@@ -365,6 +372,13 @@ impl RustCodegen {
         let plan = ir.partition_topological_chunks(chunk_size);
         if plan.chunks.len() <= 1 {
             let code = self.generate_module(ir);
+            if !code.lines().any(|line| line.starts_with("pub ")) {
+                mod_export = mod_export
+                    .lines()
+                    .filter(|line| !line.starts_with("pub use "))
+                    .map(|line| format!("{line}\n"))
+                    .collect();
+            }
             if base_name == "mod" {
                 return vec![("mod.rs".to_string(), code)];
             }

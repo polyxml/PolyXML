@@ -419,13 +419,7 @@ impl GoCodegen {
         if body.contains("xml.") {
             imports.push("\"encoding/xml\"");
         }
-        if self.options.emit_xml_tags
-            && (!ir.content_models.is_empty()
-                || ir
-                    .types
-                    .values()
-                    .any(|def| matches!(def, TypeDef::Struct(s) if ir.has_ordered_content(s))))
-        {
+        if body.contains("bytes.") {
             imports.push("\"bytes\"");
         }
         if has_fmt || body.contains("fmt.") {

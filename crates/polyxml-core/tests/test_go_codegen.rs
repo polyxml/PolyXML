@@ -1449,3 +1449,32 @@ func TestIntegers(t *testing.T) {
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn imported_ordered_types_do_not_add_unused_bytes_import() {
+    let mut ir=XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Foreign" mixed="true"><xs:sequence><xs:element name="child" type="xs:string"/></xs:sequence></xs:complexType><xs:complexType name="Local"><xs:attribute name="id" type="xs:string"/></xs:complexType></xs:schema>"#).unwrap();
+    for name in ir.types.keys() {
+        if name.local != "Local" {
+            ir.external_types.insert(name.clone(), "shared".into());
+        }
+    }
+    ir.content_models.clear();
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module importcheck\n\ngo 1.22\n").unwrap();
+    fs::write(
+        dir.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

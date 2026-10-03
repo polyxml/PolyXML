@@ -1423,3 +1423,41 @@ fn main() {
         );
     }
 }
+
+#[test]
+fn empty_modules_compile_without_unused_reexports() {
+    let core = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    for split_units in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("src/models")).unwrap();
+        let ir = SchemaIR::new();
+        for (name, code) in RustCodegen::new(RustOptions {
+            split_units: Some(split_units),
+            ..Default::default()
+        })
+        .generate_files(&ir, "models")
+        {
+            std::fs::write(dir.path().join("src/models").join(name), code).unwrap();
+        }
+        std::fs::write(
+            dir.path().join("src/lib.rs"),
+            "#![deny(unused_imports)]\npub mod models;\n",
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"),format!("[package]\nname=\"empty-module-test\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[dependencies]\npolyxml={{path={core:?}}}\nquick-xml=\"0.42\"\nserde={{version=\"1\",features=[\"derive\"]}}\nserde_json=\"1\"\n")).unwrap();
+        let result = std::process::Command::new("cargo")
+            .args(["check", "--quiet", "--offline"])
+            .env(
+                "CARGO_TARGET_DIR",
+                core.join("../../target/binary-lexical-tests"),
+            )
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "split={split_units}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}

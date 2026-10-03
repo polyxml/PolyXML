@@ -168,3 +168,95 @@ var json=System.Text.Json.JsonSerializer.Serialize(value);if(!json.Contains("att
         );
     }
 }
+
+#[test]
+fn derived_validators_preserve_base_constraints() {
+    use polyxml::ir::{QName, RestrictionFacets, TypeDef};
+    let mut ir=XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Base"><xs:attribute name="code" type="xs:string"/></xs:complexType><xs:complexType name="Derived"><xs:complexContent><xs:extension base="Base"><xs:attribute name="extra" type="xs:string"/></xs:extension></xs:complexContent></xs:complexType></xs:schema>"#).unwrap();
+    let TypeDef::Struct(base) = ir.types.get_mut(&QName::local("Base")).unwrap() else {
+        panic!()
+    };
+    base.fields[0].facets = Some(RestrictionFacets {
+        min_length: Some(3),
+        ..Default::default()
+    });
+    for use_records in [true, false] {
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("App.csproj"),r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><WarningsAsErrors>CS0108;CS0109;CS0114</WarningsAsErrors></PropertyGroup></Project>"#).unwrap();
+        fs::write(
+            temp.path().join("Models.cs"),
+            CSharpCodegen::new(CSharpOptions {
+                namespace: "Models".into(),
+                use_records,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        fs::write(temp.path().join("Program.cs"),r#"using Models;using System.ComponentModel.DataAnnotations;
+var value=new Derived {Code="x",Extra="leaf"};
+if(!value.Validate(new ValidationContext(value)).Any())throw new Exception("base constraint lost");
+if(!((Base)value).Validate(new ValidationContext(value)).Any())throw new Exception("base dispatch lost");
+var results=new List<ValidationResult>();if(Validator.TryValidateObject(value,new ValidationContext(value),results,true))throw new Exception("interface validation lost");
+var valid=new Derived {Code="valid",Extra="leaf"};if(valid.Validate(new ValidationContext(valid)).Any())throw new Exception("valid value rejected");
+"#).unwrap();
+        let output = Command::new("dotnet")
+            .args(["run", "--disable-build-servers"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "records={use_records}: {}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+
+#[test]
+fn lexical_dependencies_compile_and_round_trip_without_implicit_imports() {
+    let ir=XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="Code"><xs:restriction base="xs:string"><xs:enumeration value="A"/><xs:enumeration value="B"/><xs:enumeration value="LONG"/></xs:restriction></xs:simpleType>
+      <xs:simpleType name="ShortCode"><xs:restriction base="Code"><xs:maxLength value="1"/></xs:restriction></xs:simpleType><xs:simpleType name="Inner"><xs:union memberTypes="Code xs:int"/></xs:simpleType>
+      <xs:simpleType name="Outer"><xs:union memberTypes="Inner xs:token xs:anyURI"/></xs:simpleType>
+      <xs:simpleType name="Numbers"><xs:list itemType="xs:int"/></xs:simpleType>
+      <xs:complexType name="Payload"><xs:sequence><xs:element name="Flag" type="xs:boolean" default="true"/><xs:element name="Count" type="xs:int" fixed="7"/><xs:element name="Huge" type="xs:integer"/><xs:element name="Values" type="Numbers"/><xs:element name="Reason" type="Outer"/></xs:sequence><xs:attribute name="mode" type="Code" use="required" fixed="A"/></xs:complexType>
+    </xs:schema>"#).unwrap();
+    for use_records in [true, false] {
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("App.csproj"),r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup></Project>"#).unwrap();
+        fs::write(
+            temp.path().join("Models.cs"),
+            CSharpCodegen::new(CSharpOptions {
+                namespace: "Models".into(),
+                use_records,
+                ..Default::default()
+            })
+            .generate_module(&ir),
+        )
+        .unwrap();
+        fs::write(temp.path().join("Program.cs"),r#"using System;using System.IO;using System.Xml.Serialization;using System.Xml.Linq;using Models;using System.ComponentModel.DataAnnotations;
+var invalidCode=new ShortCode((Code)2);if(!invalidCode.Validate(new ValidationContext(invalidCode)).GetEnumerator().MoveNext())throw new Exception("enum lexical facet ignored");
+var validCode=new ShortCode(Code.A);if(validCode.Validate(new ValidationContext(validCode)).GetEnumerator().MoveNext())throw new Exception("valid enum rejected");
+foreach(var lexical in new[]{"A","42","fallback"}) {
+var serializer=new XmlSerializer(typeof(Payload));var value=(Payload)serializer.Deserialize(new StringReader("<Payload mode='A'><Flag/><Count>7</Count><Huge>123456789012345678901234567890</Huge><Values>1 2</Values><Reason>"+lexical+"</Reason></Payload>"))!;
+if(!value.Flag||value.Count!=7||value.Huge!="123456789012345678901234567890"||value.Values.Value.Count!=2||value.Values.Value[1]!=2||value.Reason.ToXmlString()!=lexical)throw new Exception("lexical input lost");
+var writer=new StringWriter();serializer.Serialize(writer,value);var root=XDocument.Parse(writer.ToString()).Root!;
+if(root.Attribute("mode")!.Value!="A"||root.Element("Flag")!.Value!="true"||root.Element("Count")!.Value!="7"||root.Element("Values")!.Value!="1 2"||root.Element("Reason")!.Value!=lexical)throw new Exception(writer.ToString());
+value.Huge=null!;try{serializer.Serialize(new StringWriter(),value);throw new Exception("missing required integer emitted");}catch(InvalidOperationException){}
+}
+"#).unwrap();
+        let output = Command::new("dotnet")
+            .args(["run", "--disable-build-servers"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "records={use_records}: {}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

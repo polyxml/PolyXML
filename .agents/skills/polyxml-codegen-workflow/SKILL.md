@@ -873,3 +873,35 @@ distinct XML members despite their identical normalized C# identifier. Suffix
 the derived identifier while retaining XML metadata; adding new or suppressing
 CS0108 does not establish correct serialization. Check record/class builds,
 base-reference access, XML and JSON round trips, and multi-level collisions.
+
+## Full NeTEx C# and empty module imports
+
+Ordered-content C# emission must find a real mixed item union before returning
+through the custom codec path. Flatten inherited item streams and attributes
+before removing inherited fields; otherwise an XmlRoot attribute is emitted
+without a declaration and leaks onto the next type. Mixed IXmlSerializable
+models also need validation methods. Record/class validation uses virtual and
+override methods, calling base.Validate, so base constraints remain effective.
+Readonly record structs cannot have virtual methods.
+
+Allocate unique nested choice identifiers in every declaration, annotation,
+parser and formatter. Reserve referenced top-level type names against shadowing;
+retain original XML names. Deduplicate identical QName/type branches only in
+ordered item streams, where repeated occurrences retain their list positions.
+Keep different XML names/types distinct. Compute the names once per branch list
+rather than rescanning all prior branches for every lookup on large schemas.
+
+C# generated list codecs need their own System.Linq import; consumer implicit
+usings are not guaranteed. Nested lexical unions call Parse/ToXmlString, and an
+unrestricted string fallback ends parse dispatch to avoid unreachable code.
+Apply enum restriction string facets to ToXmlValue, preserving the outer member
+name in validation errors. Required default/fixed value types cannot be checked
+against null; required unbounded-integer proxies must reject missing values,
+while optional proxies retain nullable types. Mixed attribute codecs parse and
+format XML lexicals via XmlSerializer, including booleans, enums and simple
+wrappers, and preserve attribute namespaces.
+
+Rust modules with no public declarations omit their empty glob reexport. Go
+imports bytes only when emitted code uses bytes, since external ordered types
+can remain in the IR without being emitted locally. Compile reduced generated
+modules to catch unused imports rather than just inspecting source text.
