@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import platform
 import subprocess
 from pathlib import Path
 
@@ -16,6 +17,15 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     repo = args.repo.resolve()
+    revision = subprocess.check_output(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
+    ).strip()
+    core_status = subprocess.check_output(
+        ["git", "-C", str(repo), "status", "--porcelain", "--", "crates/polyxml-core"],
+        text=True,
+    )
+    if core_status:
+        parser.error("commit core changes before collecting diagnostics")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     crate = root / "benchmarks/rust-runtime-investigation/target" / args.label
@@ -37,6 +47,12 @@ def main():
         + json.dumps(str(repo / "crates/polyxml-core"))
         + "}\n[profile.release]\ndebug=1\n"
     )
+    for name, source in [
+        ("harness.rs", crate / "src/main.rs"),
+        ("fixtures.rs", crate / "src/fixtures.rs"),
+        ("Cargo.toml", crate / "Cargo.toml"),
+    ]:
+        (output / f"{args.label}-{name}").write_bytes(source.read_bytes())
     seed = root / "benchmarks/rust-xml-regression/target/core-current/Cargo.lock"
     if seed.exists():
         (crate / "Cargo.lock").write_bytes(seed.read_bytes())
@@ -77,9 +93,10 @@ def main():
     (output / f"{args.label}-metadata.json").write_text(
         json.dumps(
             {
-                "revision": subprocess.check_output(
-                    ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
-                ).strip(),
+                "revision": revision,
+                "core_status": core_status,
+                "os": platform.platform(),
+                "rustc": subprocess.check_output(["rustc", "-Vv"], text=True),
                 "executable": str(executable),
                 "profile": "release debug=1; allocation instrumentation; not used for latency numbers",
             },
