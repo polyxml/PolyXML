@@ -114,6 +114,12 @@ pub fn to_csharp_property_name(raw: &str, enclosing_type: Option<&str>) -> Strin
     };
 
     let sanitized = sanitize_keyword(&safe, "csharp");
+    // Positional record members cannot shadow the synthesized equality methods.
+    let sanitized = if matches!(sanitized.as_str(), "Equals" | "GetHashCode" | "ToString") {
+        format!("{sanitized}Value")
+    } else {
+        sanitized
+    };
     if let Some(enclosing) = enclosing_type {
         if sanitized == enclosing || sanitized.trim_start_matches('@') == enclosing {
             return format!("{}Value", sanitized);

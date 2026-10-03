@@ -79,6 +79,7 @@ static DOTNET_LOCK: Mutex<()> = Mutex::new(());
 #[test]
 fn particle_wire_structure_round_trips() {
     for (schema, root, documents) in [
+        (r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="Query"><xs:complexType><xs:sequence><xs:element name="Equals" type="xs:string"/><xs:element name="EqualsValue" type="xs:string"/><xs:element name="GetHashCode" type="xs:string"/><xs:element name="ToString" type="xs:string"/></xs:sequence></xs:complexType></xs:element></xs:schema>"#, "Query", vec!["<Query><Equals>a</Equals><EqualsValue>b</EqualsValue><GetHashCode>c</GetHashCode><ToString>d</ToString></Query>"]),
         (include_str!("../../../research/fixtures/nested_sequence_choice.xsd"), "Root", vec!["<Root><First>A</First><Second>B</Second></Root>", "<Root><Alternative>C</Alternative></Root>"]),
         (include_str!("../../../research/fixtures/repeated_sequence.xsd"), "Root", vec!["<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>"]),
         (include_str!("../../../research/fixtures/substitution_group.xsd"), "Portfolio", vec!["<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"]),
