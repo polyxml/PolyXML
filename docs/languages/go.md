@@ -334,6 +334,7 @@ func handleCustomer(xmlData []byte) ([]byte, error) {
 	// Direct-to-JSON serialization using Go's standard library:
 	return json.MarshalIndent(customer, "", "  ")
 }
+```
 
 ---
 
@@ -377,8 +378,29 @@ type Customer struct {
 }
 ```
 
+Current Sonic releases use the standard `json` tags for field names; PolyXML’s extra `sonic` tags do not enable a separate fast path. Use the default Go backend unless you need these tags for another tool.
+
+## Generated models: XML and JSON round trips
+
+```bash
+polyxml generate customer.xsd --lang go --out models
 ```
 
+Use the generated root model from your application's `models` package with
+both standard-library serializers:
 
+```go
+var customer models.Customer
+if err := xml.Unmarshal(xmlData, &customer); err != nil { return err }
+jsonData, err := json.Marshal(customer)
+if err != nil { return err }
+var restored models.Customer
+if err := json.Unmarshal(jsonData, &restored); err != nil { return err }
+xmlData, err = xml.Marshal(restored)
+if err != nil { return err }
+```
 
-Current Sonic releases use the standard `json` tags for field names; PolyXML’s extra `sonic` tags do not enable a separate fast path. Use the default Go backend unless you need these tags for another tool.
+Import `encoding/xml`, `encoding/json`, and your generated package. Replace
+`Customer` with the generated root name for your schema. Generated XML methods
+handle the supported schema-specific mappings; JSON uses the emitted tags.
+The generated-model path uses Go serializers and requires no native C binding.

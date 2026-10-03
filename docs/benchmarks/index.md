@@ -38,6 +38,9 @@ lists every entry point.
 
 ## Published studies
 
+- [October 2026 Rust XML/Serde regression check](rust-xml-serde-regression-2026-10.md):
+  same-host generated-model and dynamic-core comparisons with retained samples.
+
 - [September 2026 language runs](language-results-2026-09.md): repeated Java,
   Go, C#, and C++ measurements with raw output and workload limits.
 - [Python JSON, binary, and real-world AOT runs](python-json-binary-aot-2026-09.md):

@@ -1,0 +1,12 @@
+{
+  "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz",
+  "rounds": 2,
+  "warmup": "100 operations per operation/size",
+  "samples": "7 x >=250ms per operation/size/process",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+  "revisions": {
+    "baseline": "cef575c11cc4f05e877ced157036f7ff53b8687b",
+    "current": "bbbd087a9a8e9838a32912973cd4029c30f29c08"
+  }
+}

@@ -475,3 +475,28 @@ public class PaymentProcessor {
 ```
 
 > **Note:** The default `--backend standard` (or no `--backend`) continues to emit pure, zero-dependency Java 22+ records with no Jackson imports.
+
+## Generate once for XML and JSON
+
+```bash
+polyxml generate customer.xsd --lang java --style pojo --backend jackson3 --out generated
+```
+
+Compile the generated sources with Jackson 3's databind and XML modules (or the
+managed dependencies in the Spring Boot 4 example above). Use your generated
+root model in both mapper calls:
+
+```java
+var xmlMapper = tools.jackson.dataformat.xml.XmlMapper.builder().build();
+var jsonMapper = tools.jackson.databind.json.JsonMapper.builder().build();
+Customer customer = xmlMapper.readValue(xml, Customer.class);
+String json = jsonMapper.writeValueAsString(customer);
+Customer restored = jsonMapper.readValue(json, Customer.class);
+String outputXml = xmlMapper.writeValueAsString(restored);
+```
+
+Replace `Customer` with the emitted class for your schema. Use `--backend jackson`
+with Jackson 2's `com.fasterxml.jackson` mapper packages. For direct StAX XML
+without Jackson, see [direct streaming XML codecs](#direct-streaming-xml-codecs).
+Java mapping annotations and direct codecs are separate from the native binding
+and Rust Serde. The direct-codec support limits described above still apply.

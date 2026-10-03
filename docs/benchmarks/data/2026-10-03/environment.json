@@ -1,0 +1,19 @@
+{
+  "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+  "date": "2026-10-03",
+  "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
+  "cpu_count": 12,
+  "measurement_conditions": "WSL with IDE background processes, no other local build/benchmark jobs during timing, serial capped builds and runs, no CPU affinity or governor pinning.",
+  "fixture_sha256": {
+    "sensor-1000.xml": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+    "sensor-1.xml": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e"
+  },
+  "generated_executable_sha256": {
+    "baseline-borrowed": "19755eef2df55824d0c2b77db83a62f7e560c5554f7c49fd0948da111b5c5886",
+    "baseline-owned": "d996f2e9d64297d676253624c3564aa4d140d8d4c0fffa34b0545acad5a32fb6",
+    "current-borrowed": "96f5df9709273df468b8024a7a61676a5a46d662659b4a57525f27d1dfd2671b",
+    "current-owned": "890b97d083edecd01ddbbf87ad9b204f920996068715e068da656c23c72ef165"
+  }
+}

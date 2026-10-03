@@ -1,0 +1,536 @@
+{
+  "generated": {
+    "borrowed/json_read/1": {
+      "baseline_ns": 81.65450000000001,
+      "current_ns": 81.59700000000001,
+      "delta_percent": -0.07041865420767124,
+      "baseline_process_ns": [
+        81.174,
+        82.135
+      ],
+      "current_process_ns": [
+        81.504,
+        81.69
+      ],
+      "process_deltas_percent": [
+        0.40653411190774147,
+        -0.5417909539173427
+      ]
+    },
+    "borrowed/json_read/1000": {
+      "baseline_ns": 61061.062999999995,
+      "current_ns": 60196.474,
+      "delta_percent": -1.4159416124150837,
+      "baseline_process_ns": [
+        61102.149,
+        61019.977
+      ],
+      "current_process_ns": [
+        60150.202,
+        60242.746
+      ],
+      "process_deltas_percent": [
+        -1.5579599336187022,
+        -1.2737320435240451
+      ]
+    },
+    "borrowed/json_write/1": {
+      "baseline_ns": 39.289500000000004,
+      "current_ns": 39.6625,
+      "delta_percent": 0.9493630613777171,
+      "baseline_process_ns": [
+        40.374,
+        38.205
+      ],
+      "current_process_ns": [
+        39.115,
+        40.21
+      ],
+      "process_deltas_percent": [
+        -3.1183434883836125,
+        5.248004187933519
+      ]
+    },
+    "borrowed/json_write/1000": {
+      "baseline_ns": 26880.2275,
+      "current_ns": 26824.7425,
+      "delta_percent": -0.20641566370671605,
+      "baseline_process_ns": [
+        27800.763,
+        25959.692
+      ],
+      "current_process_ns": [
+        26521.961,
+        27127.524
+      ],
+      "process_deltas_percent": [
+        -4.599880945713608,
+        4.498635808159834
+      ]
+    },
+    "borrowed/xml_read/1": {
+      "baseline_ns": 299.873,
+      "current_ns": 302.876,
+      "delta_percent": 1.0014239361329613,
+      "baseline_process_ns": [
+        299.667,
+        300.079
+      ],
+      "current_process_ns": [
+        301.309,
+        304.443
+      ],
+      "process_deltas_percent": [
+        0.5479415484521244,
+        1.4542837052909263
+      ]
+    },
+    "borrowed/xml_read/1000": {
+      "baseline_ns": 197070.5725,
+      "current_ns": 196570.0645,
+      "delta_percent": -0.2539739919819817,
+      "baseline_process_ns": [
+        197252.037,
+        196889.108
+      ],
+      "current_process_ns": [
+        194849.162,
+        198290.967
+      ],
+      "process_deltas_percent": [
+        -1.2181749991256097,
+        0.7120043430741685
+      ]
+    },
+    "borrowed/xml_write/1": {
+      "baseline_ns": 172.2185,
+      "current_ns": 173.07850000000002,
+      "delta_percent": 0.4993656314507433,
+      "baseline_process_ns": [
+        172.189,
+        172.248
+      ],
+      "current_process_ns": [
+        171.786,
+        174.371
+      ],
+      "process_deltas_percent": [
+        -0.23404514806404375,
+        1.2325251962286954
+      ]
+    },
+    "borrowed/xml_write/1000": {
+      "baseline_ns": 54318.754499999995,
+      "current_ns": 54697.7135,
+      "delta_percent": 0.697657749129732,
+      "baseline_process_ns": [
+        54365.931,
+        54271.578
+      ],
+      "current_process_ns": [
+        54517.418,
+        54878.009
+      ],
+      "process_deltas_percent": [
+        0.2786432554608531,
+        1.1174007138690545
+      ]
+    },
+    "owned/json_read/1": {
+      "baseline_ns": 81.649,
+      "current_ns": 81.09649999999999,
+      "delta_percent": -0.6766769954316798,
+      "baseline_process_ns": [
+        81.035,
+        82.263
+      ],
+      "current_process_ns": [
+        81.161,
+        81.032
+      ],
+      "process_deltas_percent": [
+        0.15548836922318898,
+        -1.4964200187204568
+      ]
+    },
+    "owned/json_read/1000": {
+      "baseline_ns": 59234.018500000006,
+      "current_ns": 59552.5545,
+      "delta_percent": 0.5377585517011507,
+      "baseline_process_ns": [
+        59300.167,
+        59167.87
+      ],
+      "current_process_ns": [
+        59526.57,
+        59578.539
+      ],
+      "process_deltas_percent": [
+        0.3817915049041831,
+        0.6940743346008471
+      ]
+    },
+    "owned/json_write/1": {
+      "baseline_ns": 39.6685,
+      "current_ns": 37.0455,
+      "delta_percent": -6.612299431538893,
+      "baseline_process_ns": [
+        36.655,
+        42.682
+      ],
+      "current_process_ns": [
+        36.431,
+        37.66
+      ],
+      "process_deltas_percent": [
+        -0.6111035329423142,
+        -11.766084063539672
+      ]
+    },
+    "owned/json_write/1000": {
+      "baseline_ns": 24263.748,
+      "current_ns": 24569.374499999998,
+      "delta_percent": 1.2596013608449974,
+      "baseline_process_ns": [
+        24316.278,
+        24211.218
+      ],
+      "current_process_ns": [
+        24098.929,
+        25039.82
+      ],
+      "process_deltas_percent": [
+        -0.8938415657198773,
+        3.422388745580651
+      ]
+    },
+    "owned/xml_read/1": {
+      "baseline_ns": 323.0385,
+      "current_ns": 315.5435,
+      "delta_percent": -2.32015688532482,
+      "baseline_process_ns": [
+        323.109,
+        322.968
+      ],
+      "current_process_ns": [
+        314.967,
+        316.12
+      ],
+      "process_deltas_percent": [
+        -2.519892667799406,
+        -2.1203339030492208
+      ]
+    },
+    "owned/xml_read/1000": {
+      "baseline_ns": 234574.729,
+      "current_ns": 235633.066,
+      "delta_percent": 0.4511726410222128,
+      "baseline_process_ns": [
+        235896.165,
+        233253.293
+      ],
+      "current_process_ns": [
+        235310.527,
+        235955.605
+      ],
+      "process_deltas_percent": [
+        -0.24826092446225134,
+        1.158531125217599
+      ]
+    },
+    "owned/xml_write/1": {
+      "baseline_ns": 179.9355,
+      "current_ns": 175.3345,
+      "delta_percent": -2.557027379255339,
+      "baseline_process_ns": [
+        180.318,
+        179.553
+      ],
+      "current_process_ns": [
+        175.438,
+        175.231
+      ],
+      "process_deltas_percent": [
+        -2.706329928237905,
+        -2.4070887147527475
+      ]
+    },
+    "owned/xml_write/1000": {
+      "baseline_ns": 80294.813,
+      "current_ns": 81325.3035,
+      "delta_percent": 1.2833836477083471,
+      "baseline_process_ns": [
+        80195.731,
+        80393.895
+      ],
+      "current_process_ns": [
+        81308.896,
+        81341.711
+      ],
+      "process_deltas_percent": [
+        1.3880601699359785,
+        1.1789651440572646
+      ]
+    }
+  },
+  "core": {
+    "deserialization/catalog_items/1000": {
+      "baseline_ns": 751552.5779598973,
+      "current_ns": 810399.3493984102,
+      "delta_percent": 7.830027221548952,
+      "baseline_process_ns": [
+        742619.4124669014,
+        760485.7434528933
+      ],
+      "current_process_ns": [
+        808192.8941452402,
+        812605.80465158
+      ],
+      "process_deltas_percent": [
+        8.830025256209083,
+        6.853522455535055
+      ],
+      "process_confidence_intervals": {
+        "baseline": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 739457.1062102462,
+            "upper_bound": 746088.3508038425
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 746698.0810437711,
+            "upper_bound": 779954.4999358626
+          }
+        ],
+        "current": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 802870.1726983988,
+            "upper_bound": 814716.1567241298
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 801956.2635558551,
+            "upper_bound": 827094.8626342112
+          }
+        ]
+      }
+    },
+    "deserialization/catalog_items/10000": {
+      "baseline_ns": 7517365.33357143,
+      "current_ns": 8103851.633571429,
+      "delta_percent": 7.801753326805061,
+      "baseline_process_ns": [
+        7510999.737142857,
+        7523730.9300000025
+      ],
+      "current_process_ns": [
+        8054972.237142858,
+        8152731.030000001
+      ],
+      "process_deltas_percent": [
+        7.242344814765289,
+        8.360215242306634
+      ],
+      "process_confidence_intervals": {
+        "baseline": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 7475870.108285718,
+            "upper_bound": 7551012.3655
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 7487461.6445357185,
+            "upper_bound": 7564135.092107146
+          }
+        ],
+        "current": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 8005003.477178571,
+            "upper_bound": 8117513.869714287
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 8085664.805357144,
+            "upper_bound": 8227711.209142856
+          }
+        ]
+      }
+    },
+    "deserialization/sensor_micro": {
+      "baseline_ns": 958.7302701207018,
+      "current_ns": 1055.1953061847994,
+      "delta_percent": 10.061749281364918,
+      "baseline_process_ns": [
+        962.3758492545414,
+        955.0846909868621
+      ],
+      "current_process_ns": [
+        1053.5765963307128,
+        1056.8140160388857
+      ],
+      "process_deltas_percent": [
+        9.476624662476274,
+        10.651340767163742
+      ],
+      "process_confidence_intervals": {
+        "baseline": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 956.3988243437776,
+            "upper_bound": 969.183030195551
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 951.9902199959514,
+            "upper_bound": 958.4400041204256
+          }
+        ],
+        "current": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 1048.8104823251733,
+            "upper_bound": 1058.8832650524494
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 1052.9745261355376,
+            "upper_bound": 1061.061158605508
+          }
+        ]
+      }
+    },
+    "serialization/catalog_items/1000": {
+      "baseline_ns": 196940.07967326994,
+      "current_ns": 223876.28294552962,
+      "delta_percent": 13.677359792352938,
+      "baseline_process_ns": [
+        196408.99506809053,
+        197471.16427844937
+      ],
+      "current_process_ns": [
+        224987.09573668777,
+        222765.47015437146
+      ],
+      "process_deltas_percent": [
+        14.550301353911955,
+        12.809113658870807
+      ],
+      "process_confidence_intervals": {
+        "baseline": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 195648.39660390877,
+            "upper_bound": 197224.47455973653
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 196406.4355982552,
+            "upper_bound": 198894.93912386437
+          }
+        ],
+        "current": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 223355.34395330175,
+            "upper_bound": 227047.95823935416
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 222098.48655893025,
+            "upper_bound": 223485.8089469914
+          }
+        ]
+      }
+    },
+    "serialization/catalog_items/10000": {
+      "baseline_ns": 2004502.9683615381,
+      "current_ns": 2250635.9506521747,
+      "delta_percent": 12.279003133221767,
+      "baseline_process_ns": [
+        2008451.051923077,
+        2000554.8847999992
+      ],
+      "current_process_ns": [
+        2254040.619130435,
+        2247231.282173914
+      ],
+      "process_deltas_percent": [
+        12.227809434151137,
+        12.330398893233841
+      ],
+      "process_confidence_intervals": {
+        "baseline": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 1995901.9656250004,
+            "upper_bound": 2024757.0251442303
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 1988213.0934800005,
+            "upper_bound": 2016142.4799500003
+          }
+        ],
+        "current": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 2242034.1526304344,
+            "upper_bound": 2270213.9519999996
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 2238903.155858696,
+            "upper_bound": 2256974.066184784
+          }
+        ]
+      }
+    },
+    "serialization/sensor_micro": {
+      "baseline_ns": 250.91988241568808,
+      "current_ns": 282.97094573369685,
+      "delta_percent": 12.773425130540739,
+      "baseline_process_ns": [
+        248.4902987517697,
+        253.34946607960646
+      ],
+      "current_process_ns": [
+        284.4981753671011,
+        281.4437161002926
+      ],
+      "process_deltas_percent": [
+        14.490656897355025,
+        11.08912935773012
+      ],
+      "process_confidence_intervals": {
+        "baseline": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 247.05828407438037,
+            "upper_bound": 250.37650436431576
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 250.2116797312015,
+            "upper_bound": 257.2062203146519
+          }
+        ],
+        "current": [
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 281.4995940123103,
+            "upper_bound": 288.1909633596482
+          },
+          {
+            "confidence_level": 0.95,
+            "lower_bound": 280.1040205387349,
+            "upper_bound": 282.95054520222175
+          }
+        ]
+      }
+    }
+  }
+}

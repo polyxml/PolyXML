@@ -1,0 +1,8 @@
+{
+  "quality_gate": "pass: fmt, strict Clippy, workspace tests, Python lint and 112 tests with 100% statement/branch coverage",
+  "strict_docs": "pass",
+  "rust_generated_guide": "compiled and executed",
+  "python_generated_guide": "XML/JSON/XML round trip executed with current extension",
+  "typescript_generated_guide": "strict TypeScript compile and Zod JSON round trip executed",
+  "runtime_changes": "none; measured source commits recorded in metadata"
+}

@@ -1,0 +1,1 @@
+memcap: <=7702 MiB (60% of 12836 MiB available) [systemd MemoryMax, swap off]

@@ -923,3 +923,14 @@ research/fixtures/mixed_content_extension_children.{xsd,xml}. Preserve the
 complete extension particle when fixing it and distinguish restrictions before
 merging ancestor branches; do not claim full mixed-inheritance support from
 compile success or the added-attribute regression alone.
+
+## Generated model documentation and Serde
+
+Keep an explicit generation-to-XML/JSON section in every language guide. Rust
+XML methods use quick-xml directly; Serde attributes describe JSON, not a
+third-party Serde XML mapping. Borrowed XML models do not make JSON parsing
+zero-copy: the current Cow string derives lack serde(borrow). Check real
+owned/borrowed XML and JSON round trips, use the declared root name explicitly
+when it differs from its type name, and distinguish C++/TypeScript model-only
+generation from their runtime binding schemas. Strict docs builds catch broken
+anchors and misplaced code fences, including guides appended after old fences.

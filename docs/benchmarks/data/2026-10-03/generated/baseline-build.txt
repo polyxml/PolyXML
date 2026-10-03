@@ -1,0 +1,132 @@
+memcap: <=7859 MiB (60% of 13098 MiB available) [systemd MemoryMax, swap off]
+ Downloading crates ...
+  Downloaded thiserror v2.0.20
+  Downloaded smallvec v1.16.1
+  Downloaded thiserror-impl v2.0.20
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling syn v3.0.5
+   Compiling lexical-util v1.0.7
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling siphasher v1.0.3
+   Compiling zmij v1.0.23
+   Compiling utf8parse v0.2.2
+   Compiling anstyle-parse v1.0.0
+   Compiling phf_shared v0.14.0
+   Compiling lexical-parse-integer v1.0.6
+   Compiling lexical-write-integer v1.0.6
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling anstyle-query v1.1.5
+   Compiling heck v0.5.0
+   Compiling memchr v2.8.3
+   Compiling anstyle v1.0.14
+   Compiling thiserror v2.0.20
+   Compiling fastrand v2.5.0
+   Compiling serde_json v1.0.151
+   Compiling phf_generator v0.14.0
+   Compiling anstream v1.0.0
+   Compiling lexical-write-float v1.0.6
+   Compiling lexical-parse-float v1.0.6
+   Compiling thiserror-impl v2.0.20
+   Compiling winnow v1.0.4
+   Compiling itoa v1.0.18
+   Compiling memo-map v0.3.4
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.0
+   Compiling clap_builder v4.6.7
+   Compiling minijinja v2.24.0
+   Compiling toml_parser v1.1.3+spec-1.1.0
+   Compiling lexical-core v1.0.6
+   Compiling phf_codegen v0.14.0
+   Compiling quick-xml v0.42.0
+   Compiling clap_derive v4.6.7
+   Compiling toml_datetime v1.1.1+spec-1.1.0
+   Compiling serde_spanned v1.1.1
+   Compiling smallvec v1.16.1
+   Compiling toml_writer v1.1.2+spec-1.1.0
+   Compiling toml v1.1.6+spec-1.1.0
+   Compiling polyxml v0.27.0 (/home/bailey/github/polyxml-benchmark-baseline/crates/polyxml-core)
+   Compiling clap v4.6.7
+   Compiling glob v0.3.4
+   Compiling polyxml-cli v0.27.0 (/home/bailey/github/polyxml-benchmark-baseline/crates/polyxml-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 24.36s
+Parsing schema: /home/bailey/github/PolyXML/benchmarks/workloads/sensor-batch/batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+memcap: <=7788 MiB (60% of 12980 MiB available) [systemd MemoryMax, swap off]
+    Updating crates.io index
+     Locking 30 packages to highest compatible versions
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling syn v3.0.6
+   Compiling serde_core v1.0.229
+   Compiling lexical-util v1.0.7
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling zmij v1.0.23
+   Compiling siphasher v1.0.4
+   Compiling phf_shared v0.14.0
+   Compiling lexical-parse-integer v1.0.6
+   Compiling lexical-write-integer v1.0.6
+   Compiling thiserror v2.0.21
+   Compiling fastrand v2.5.0
+   Compiling memchr v2.8.3
+   Compiling serde_json v1.0.151
+   Compiling phf_generator v0.14.0
+   Compiling lexical-write-float v1.0.6
+   Compiling lexical-parse-float v1.0.6
+   Compiling thiserror-impl v2.0.21
+   Compiling memo-map v0.3.4
+   Compiling itoa v1.0.18
+   Compiling minijinja v2.24.0
+   Compiling lexical-core v1.0.6
+   Compiling phf_codegen v0.14.0
+   Compiling quick-xml v0.42.0
+   Compiling heck v0.5.0
+   Compiling smallvec v1.16.2
+   Compiling polyxml v0.27.0 (/home/bailey/github/polyxml-benchmark-baseline/crates/polyxml-core)
+   Compiling xml-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/baseline-borrowed)
+    Finished `release` profile [optimized] target(s) in 41.02s
+Parsing schema: /home/bailey/github/PolyXML/benchmarks/workloads/sensor-batch/batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+memcap: <=7782 MiB (60% of 12970 MiB available) [systemd MemoryMax, swap off]
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling syn v3.0.6
+   Compiling serde_core v1.0.229
+   Compiling lexical-util v1.0.7
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling siphasher v1.0.4
+   Compiling zmij v1.0.23
+   Compiling phf_shared v0.14.0
+   Compiling lexical-parse-integer v1.0.6
+   Compiling lexical-write-integer v1.0.6
+   Compiling serde_json v1.0.151
+   Compiling fastrand v2.5.0
+   Compiling memchr v2.8.3
+   Compiling thiserror v2.0.21
+   Compiling phf_generator v0.14.0
+   Compiling lexical-write-float v1.0.6
+   Compiling lexical-parse-float v1.0.6
+   Compiling thiserror-impl v2.0.21
+   Compiling memo-map v0.3.4
+   Compiling itoa v1.0.18
+   Compiling minijinja v2.24.0
+   Compiling lexical-core v1.0.6
+   Compiling phf_codegen v0.14.0
+   Compiling quick-xml v0.42.0
+   Compiling smallvec v1.16.2
+   Compiling heck v0.5.0
+   Compiling polyxml v0.27.0 (/home/bailey/github/polyxml-benchmark-baseline/crates/polyxml-core)
+   Compiling xml-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/baseline-owned)
+    Finished `release` profile [optimized] target(s) in 40.66s

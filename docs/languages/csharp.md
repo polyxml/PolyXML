@@ -288,3 +288,17 @@ if (!isValid)
 | **Facets** | `IValidatableObject.Validate()` | Built-in .NET `DataAnnotations` standard integration |
 | **Enums** | `public enum EnumName` with `[XmlEnum]` | Autocomplete, strongly typed string & JSON mappings |
 
+
+## Generate once for XML and JSON
+
+```bash
+polyxml generate customer.xsd --lang csharp --out Models
+```
+
+Include the generated `.cs` files in your project. The [serialization examples](#3-serialization-deserialization)
+apply directly to the generated root class: `XmlSerializer` reads/writes XML and
+`System.Text.Json.JsonSerializer` reads/writes JSON. Use the generated root name
+when it differs from the reusable type name. Select `--style class` if your
+application requires mutable models; the default is record classes. This path
+uses .NET serializers with emitted attributes and XML proxies and does not need
+the native Rust binding or Rust Serde.

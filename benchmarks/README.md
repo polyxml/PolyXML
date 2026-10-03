@@ -35,6 +35,7 @@ equivalent) and never at this root.
 | Suite | Location | Tooling | How to run |
 | :--- | :--- | :--- | :--- |
 | Rust core engine | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) | `cargo bench --bench core_benchmarks` |
+| Rust same-host XML/Serde regression | [`rust-xml-regression/`](rust-xml-regression/README.md) | Generated consumers + Criterion | See suite README |
 | Rust tag dispatch | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) + `perf stat` | `cargo bench --bench tag_dispatch` ([results](../docs/benchmarks/rust-phf-dispatch.md)) |
 | Rust end-to-end dispatch | [`rust-phf-e2e/`](rust-phf-e2e/README.md) | Generated decoders | `./benchmarks/rust-phf-e2e/run.sh` |
 | Rust dispatch compile cost | [`rust-phf-compile/`](rust-phf-compile/README.md) | Sequential capped release builds, GNU time, size | See suite README |

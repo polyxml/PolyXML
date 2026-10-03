@@ -422,3 +422,19 @@ int main() {
     return 0;
 }
 ```
+
+## Generated models and serialization
+
+```bash
+polyxml generate customer.xsd --lang cpp --out generated
+```
+
+Default generated C++ headers contain model types, not standalone XML codecs.
+Use the native `polyxml::Schema`/`polyxml::Value` API shown above and explicitly
+map its values to your generated types when XML is required. Generating a header
+does not automatically create that mapping or connect it to the native binding.
+
+For JSON metadata, select `--backend glaze` and follow the Glaze example above
+with your generated header and the matching Glaze dependency. This is a C++
+serialization integration; it does not expose Rust Serde traits. Do not assume
+the generated JSON metadata establishes XML round-trip support.

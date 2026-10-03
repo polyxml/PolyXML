@@ -1,0 +1,11 @@
+{
+  "revisions": {
+    "baseline": "cef575c11cc4f05e877ced157036f7ff53b8687b",
+    "current": "bbbd087a9a8e9838a32912973cd4029c30f29c08"
+  },
+  "sample_size": 100,
+  "warmup_seconds": 3,
+  "measurement_seconds": 5,
+  "rounds": 2,
+  "order": "baseline,current,current,baseline"
+}

@@ -564,3 +564,32 @@ json_bytes = reading.to_json(indent=2)
 
 - **Real-World Showcase**: The **[polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)** repository includes an end-to-end AOT C2 telemetry bridge ([`examples/python/bridge_aot.py`](https://github.com/polyxml/polyxml-defense-examples/blob/main/examples/python/bridge_aot.py)) for USAF UCI v2.5 schemas.
 - **Detailed Benchmarks**: See the [Python AOT vs Dataclass Benchmark](../benchmarks/python-aot-vs-dataclass.md) for full metrics showing 3.4x higher throughput and 60.3% lower peak memory.
+
+## Generated models: XML and JSON together
+
+Save the [shared batch schema](https://github.com/polyxml/PolyXML/blob/main/benchmarks/workloads/sensor-batch/batch.xsd)
+as `batch.xsd` and generate importable Python models:
+
+```bash
+polyxml generate batch.xsd --lang python --out generated
+# Alternatively: --backend pydantic
+```
+
+```python
+from generated.batch import Batch
+import polyxml
+
+xml = b"<Batch><Sensor><Id>sensor-0</Id><Value>0</Value></Sensor></Batch>"
+model = polyxml.deserialize(xml, Batch)
+json_bytes = polyxml.serialize_json(model)
+restored = polyxml.deserialize_json(json_bytes, Batch)
+assert restored.sensor[0].id == "sensor-0"
+xml_bytes = polyxml.serialize(restored)
+# Equivalent generated helpers: Batch.from_xml(xml), model.to_json(),
+# Batch.from_json(json_bytes), restored.to_xml().
+```
+
+Use the generated root class (`Batch`) when reading or writing the declared
+root, rather than its reusable type class (`BatchType`). Both formats use the
+model's emitted XML/JSON field metadata. These are Python runtime APIs backed
+by Rust, rather than Rust Serde traits on Python objects.

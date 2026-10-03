@@ -60,3 +60,16 @@ mixed text. DTDs and other declarations are rejected. This API is for large
 lists of records; it cannot split a single huge child into smaller records.
 
 See [Wasm benchmark results](../benchmarks/wasm-vs-js.md) for measured tradeoffs.
+
+## Using generated TypeScript models alongside Wasm
+
+Generate TypeScript types or validation schemas with `polyxml generate schema.xsd
+--lang ts --out generated` (add `--backend zod` for runtime JSON validation).
+See the [generated TypeScript serialization example](node.md#generated-typescript-models-and-serialization).
+
+Generated interfaces do not generate a Wasm schema handle or XML codec. Create
+and free the XSD runtime schema explicitly as shown above, then map its converted
+object to the generated model's field names and validate it if required. Use
+`JSON.stringify`/`JSON.parse` for JSON text and `schema.jsonToXmlBytes` for XML.
+Rust Serde implementation details inside the Wasm runtime do not make TypeScript
+interfaces runtime serializers.

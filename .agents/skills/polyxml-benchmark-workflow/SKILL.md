@@ -54,3 +54,15 @@ description: Use when running, adding, or publishing PolyXML language and runtim
    writes peak RSS. A failed build duration is not a compile-time result.
    The detailed checklist is in
    [polyxml-phf-compile-benchmark](../polyxml-phf-compile-benchmark/SKILL.md).
+
+10. For runtime regressions, use `benchmarks/rust-xml-regression/run.py` and
+    `run_core.py` against an explicit detached baseline worktree. Keep both
+    revisions on the same host/toolchain and shared dependency resolutions;
+    retain locks, source revisions, generated sources, samples and confidence
+    intervals. Generated XML/Serde consumers test owned/borrowed strings and
+    all sensor fields before timing; XML writes specify the declared Batch
+    root rather than the type name. Core Criterion checks stay separate from
+    generated-model timings. Run builds and measured suites serially, alternate
+    revision order and repeat uncertain results before calling a regression.
+    Check per-process medians as well as pooled samples; do not treat correlated
+    samples as independent process repetitions or call noise a speedup.

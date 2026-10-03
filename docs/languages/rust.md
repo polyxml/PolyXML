@@ -310,7 +310,7 @@ To achieve the maximum throughput from `polyxml-core`:
 
 ### Inherent JSON Methods on Generated Models
 
-Rust models compiled with `polyxml generate --lang rust --codecs` automatically implement inherent, zero-copy JSON codecs backed by `serde_json`:
+Rust models compiled with `polyxml generate --lang rust --codecs` implement inherent JSON helpers backed by `serde_json` (borrowing depends on the generated field type and input):
 
 ```rust
 // Generated model from schemas/order.xsd
@@ -368,3 +368,63 @@ text as `Cow<'a, str>` (or `String` with zero-copy disabled), including through
 XML round trips. They are not decoded byte buffers. Decode hex/base64 explicitly
 when consuming the payload. This matches the core runtime's lexical storage and
 avoids passing byte slices to string-based XML codecs.
+
+## Generated models: XML and Serde together
+
+Download the [shared batch schema](https://github.com/polyxml/PolyXML/blob/main/benchmarks/workloads/sensor-batch/batch.xsd)
+as `batch.xsd`, then generate a module:
+
+```bash
+polyxml generate batch.xsd --lang rust --out src/generated
+```
+
+The default output derives `serde::Serialize` and `serde::Deserialize` and emits
+XML codecs. Add these dependencies to your application's `Cargo.toml`:
+
+```toml
+[dependencies]
+polyxml = "0.34"
+quick-xml = "0.42"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+```
+
+```rust
+#[path = "generated/batch.rs"]
+mod batch;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let xml = r#"<Batch><Sensor><Id>sensor-0</Id><Value>0</Value></Sensor></Batch>"#;
+    let model = batch::BatchType::from_xml(xml)?;
+    assert_eq!(model.sensor[0].id, "sensor-0");
+
+    // Serde JSON operates on the same generated model.
+    let json = serde_json::to_string(&model)?;
+    let restored: batch::BatchType<'_> = serde_json::from_str(&json)?;
+    assert_eq!(restored.sensor[0].value, 0);
+
+    // Specify the XSD element name when it differs from its type name.
+    let mut writer = quick_xml::Writer::new(Vec::new());
+    restored.encode_xml(&mut writer, Some("Batch"))?;
+    let output = writer.into_inner();
+    batch::BatchType::from_xml_bytes(&output)?;
+    Ok(())
+}
+```
+
+Generated XML codecs call `quick-xml` directly; the Serde derives describe JSON
+field names and do not provide an XML mapping for third-party Serde XML crates.
+`to_xml()` uses the generated type's default name, so use `encode_xml` with an
+explicit root as above when the declared element is named differently.
+`encode_xml` also accepts a writer backed by a file or reusable buffer. It writes
+an existing model; it does not incrementally construct a repeated-item model.
+
+Borrowed models contain `Cow<'a, str>` and XML parsing can borrow from the input.
+Keep the input alive for the generated API's lifetime; escaping can require
+owned strings. The current Serde derives do not emit `#[serde(borrow)]` on
+string fields, so JSON deserialization into those `Cow` fields allocates owned
+strings. Borrowed XML models do not imply allocation-free JSON parsing. For models that
+must outlive their input, generate with `--zero-copy=false` and omit `<'_>` from the
+example's type annotation. JSON helpers such as `from_json_str` and
+`to_json_vec` are conveniences over the same Serde operations. Disabling XML
+codecs with `--codecs=false` retains the Serde derives.

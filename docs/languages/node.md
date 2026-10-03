@@ -271,3 +271,28 @@ export const AccountSchema = Type.Object({
 export type Account = Static<typeof AccountSchema>;
 ```
 
+
+
+## Generated TypeScript models and serialization
+
+```bash
+polyxml generate batch.xsd --lang ts --backend zod --out src/generated
+```
+
+With the [shared batch schema](https://github.com/polyxml/PolyXML/blob/main/benchmarks/workloads/sensor-batch/batch.xsd),
+JSON can be checked and returned through the generated Zod schema:
+
+```typescript
+import { BatchSchema } from './generated/batch';
+const model = BatchSchema.parse(JSON.parse(jsonText));
+const outputJson = JSON.stringify(model);
+```
+
+Install `zod` for this backend. Default interfaces supply compile-time types
+only; a TypeScript cast does not validate incoming JSON. Generated TypeScript
+models do not emit XML codecs or the native binding's `ModelSchema`. For XML,
+construct a `ModelSchema` explicitly and call the Node `deserialize`/`serialize`
+APIs shown above, mapping the returned fields to the generated model as needed.
+Zod field identifiers and XML wire names can differ, so do not pass an unchecked
+XML result straight into the JSON schema. These are JavaScript runtime APIs,
+not Rust Serde traits on TypeScript interfaces.

@@ -34,3 +34,23 @@ All seven targets can generate models from XSD with `polyxml generate`. The defa
 | [C#](csharp.md) | Record classes | Mutable classes, record structs, source generation |
 
 The [compiler guide](../guides/compiler.md) lists the exact backend, style, and feature values accepted by the CLI. For parsing and serialization from application code, start with your language guide. For command-line generation, validation, builds, and transcoding, start with the [compiler guide](../guides/compiler.md).
+
+## Serialization with generated models
+
+Each guide includes a path from XSD generation to serialization. Rust Serde is
+specific to Rust; other languages use their own runtimes and model metadata.
+
+| Target | XML with generated models | JSON with generated models |
+| --- | --- | --- |
+| [Rust](rust.md#generated-models-xml-and-serde-together) | Generated `quick-xml` methods | Serde derives and `serde_json` |
+| [Python](python.md#generated-models-xml-and-json-together) | PolyXML runtime and generated helpers | PolyXML runtime and generated helpers |
+| [Go](go.md#generated-models-xml-and-json-round-trips) | `encoding/xml`, emitted tags/methods | `encoding/json`, emitted tags |
+| [C#](csharp.md#generate-once-for-xml-and-json) | `XmlSerializer`, emitted attributes/proxies | `System.Text.Json` |
+| [Java](java.md#generate-once-for-xml-and-json) | Jackson XML or opt-in direct StAX codecs | Jackson |
+| [C++](cpp.md#generated-models-and-serialization) | Native binding plus explicit model mapping | Optional Glaze metadata |
+| [TypeScript](node.md#generated-typescript-models-and-serialization) | Native binding with explicit `ModelSchema` and mapping | `JSON` APIs; optional generated validation |
+
+The C++ and TypeScript default generators emit model types without standalone
+XML codecs. Their runtime bindings require an explicit connection to those
+models. Round-trip support also depends on the schema features a backend supports;
+these examples do not establish full XSD conformance.

@@ -238,3 +238,15 @@ item facets, and reject a list with neither itemType nor an inline simpleType.
 The normative schema-for-schemas declares types in the XSD namespace; those
 references must reach IR resolution rather than being rejected as unknown
 primitive built-ins by the grammar pass. Unknown references remain errors.
+
+## Same-host runtime regression evidence
+
+The October 3, 2026 study in docs/benchmarks/rust-xml-serde-regression-2026-10.md
+compares 0.27.0 and 0.34.6 using identical Criterion harnesses/toolchains/locks.
+Dynamic core read/write regressions were repeatable in reversed revision order,
+while generated Rust sensor XML/Serde paths stayed stable. Profile default/fixed
+and typed-list prevalidation overhead before optimizing: ordinary repeated nested
+records need not be walked for lexical-list validation at the outer field when
+its value type cannot be a lexical list. Preserve all constraints, mutable-schema
+semantics and full read/write regressions; source inspection alone does not prove
+which change caused a measured slowdown. Keep generated and dynamic timings separate.
