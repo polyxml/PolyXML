@@ -1,3 +1,10 @@
+## [0.34.5](https://github.com/polyxml/PolyXML/compare/v0.34.4...v0.34.5) (2026-10-03)
+
+
+### Bug Fixes
+
+* **codegen:** compile NeTEx C# models and omit unused module imports ([6b495c0](https://github.com/polyxml/PolyXML/commit/6b495c0ca48e6a41de784529fa9caa6ca8411587))
+
 ## [0.34.4](https://github.com/polyxml/PolyXML/compare/v0.34.3...v0.34.4) (2026-10-03)
 
 
