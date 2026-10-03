@@ -113,3 +113,14 @@ For the generated sensor control, run the XML/Serde regression runner and use
 its output directory. This computes each process's median of seven timing
 samples, then the median across processes; it retains the process deltas. The
 statistic differs from the Criterion process means above.
+
+## Ordered mixed content
+
+Use `--harness benchmarks/rust-runtime-investigation/mixed.rs` for 1,000
+text, scalar, enum, warm-pattern or nested mixed items. Every decoded payload
+is checked before timing. Adjacent text events can be coalesced on output, so
+the text case compares the concatenated text value after a round trip; element
+cases compare the complete ordered value. These cases contain no nil items and
+can compare revisions whose nil writer is broken. Cover nil output separately
+with `test_mixed_nil`; a timing harness must not turn a known correctness
+failure into a performance result.

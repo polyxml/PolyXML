@@ -30,6 +30,11 @@ separate from the schema-driven `PolyValue` runtime.
   also matches deserialization. Remove stale results only in the runner's owned
   scratch directory before measurement, not from retained raw evidence.
 - Check rich enums, patterns, lists and mixed branches alongside plain records.
+  The `mixed.rs` consumer checks text/scalar/enum/pattern/nested ordered items.
+  Text/GeneralRef/CData boundaries may coalesce when written: compare adjacent
+  text's concatenated value, rather than treating token segmentation as XML
+  semantics. Keep nil correctness tests separate from baseline timing consumers
+  when the baseline cannot serialize nil.
   Warm pattern-cache gains do not establish cold-start, churn or concurrent
   throughput. Entry/key bounds do not constitute a compiled-regex byte budget.
 - Preserve validation, errors, split Text/CData/GeneralRef handling, nil reads,
