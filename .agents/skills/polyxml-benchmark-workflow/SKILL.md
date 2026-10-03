@@ -66,3 +66,9 @@ description: Use when running, adding, or publishing PolyXML language and runtim
     revision order and repeat uncertain results before calling a regression.
     Check per-process medians as well as pooled samples; do not treat correlated
     samples as independent process repetitions or call noise a speedup.
+
+11. For runtime optimization experiments, consult
+    [polyxml-runtime-investigation](../polyxml-runtime-investigation/SKILL.md).
+    Its allocation and Callgrind consumers are diagnostic only. Confirm wins
+    with the uninstrumented Criterion runner, and anchor write-only filters as
+    `^serialization/` because `serialization` also matches deserialization.

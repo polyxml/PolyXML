@@ -27,8 +27,12 @@ def main():
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("--rounds must be positive")
+    if args.samples < 10 or args.warmup <= 0 or args.measurement <= 0:
+        parser.error("use at least 10 samples and positive warmup/measurement times")
     root = Path(__file__).resolve().parents[2]
     output = args.output.resolve()
+    if (output / "metadata.json").exists():
+        parser.error("choose a new output directory to preserve earlier evidence")
     output.mkdir(parents=True, exist_ok=True)
     build = root / "benchmarks/rust-xml-regression/target"
     env = os.environ | {"CARGO_BUILD_JOBS": "1", "POLYXML_MEMCAP_BACKEND": "systemd"}
@@ -47,10 +51,27 @@ def main():
     (output / "harness.rs").write_text(source)
     executables = {}
     revisions = {}
+    core_status = {}
     for label, repo in [("baseline", args.baseline.resolve()), ("current", root)]:
         revisions[label] = run(
             ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True
         ).stdout.strip()
+        core_status[label] = run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "status",
+                "--porcelain",
+                "--",
+                "crates/polyxml-core",
+            ],
+            capture_output=True,
+        ).stdout
+        if core_status[label]:
+            parser.error(
+                f"commit core changes before measuring {label}: {core_status[label]}"
+            )
         crate = build / f"core-{label}"
         (crate / "benches").mkdir(parents=True, exist_ok=True)
         (crate / "benches/xml.rs").write_text(source)
@@ -90,6 +111,7 @@ def main():
         json.dumps(
             {
                 "revisions": revisions,
+                "core_status": core_status,
                 "sample_size": args.samples,
                 "warmup_seconds": args.warmup,
                 "measurement_seconds": args.measurement,
