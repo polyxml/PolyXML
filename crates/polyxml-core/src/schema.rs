@@ -176,6 +176,9 @@ impl ModelSchema {
 
     /// Look up a derivation by the QName local part of an `xsi:type` value.
     pub fn find_variant(&self, local: &[u8]) -> Option<Arc<ModelSchema>> {
+        if !self.has_variants() {
+            return None;
+        }
         self.variants
             .schemas
             .read()
@@ -187,6 +190,9 @@ impl ModelSchema {
 
     /// Look up a derivation by its complete QName.
     pub fn find_variant_qname(&self, namespace: &str, local: &[u8]) -> Option<Arc<ModelSchema>> {
+        if !self.has_variants() {
+            return None;
+        }
         self.variants
             .schemas
             .read()
@@ -200,6 +206,9 @@ impl ModelSchema {
 
     /// Whether `candidate` is a registered derivation of `self`.
     pub fn matches_variant(&self, candidate: &ModelSchema) -> bool {
+        if !self.has_variants() {
+            return false;
+        }
         self.variants
             .schemas
             .read()
