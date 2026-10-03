@@ -1,0 +1,4 @@
+Parsing schema: /home/bailey/github/polyxml-xsd-attributes/research/fixtures/enum_literal_escaping.xsd
+  Types: 1 total (0 structs, 1 enums, 0 unions, 0 simple restrictions)
+  Root elements: 0
+Code generation complete.

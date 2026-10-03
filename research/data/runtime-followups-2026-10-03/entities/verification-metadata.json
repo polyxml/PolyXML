@@ -1,0 +1,19 @@
+{
+  "host": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+  "python": "Python 3.14.4\n",
+  "date": "2026-10-03",
+  "memory_cap": "systemd; 60% available RAM; swap off; one Cargo worker",
+  "gates": {
+    "mixed-nil": {
+      "rust_tests": 323,
+      "python_tests": 112,
+      "python_statement_and_branch_coverage": "100%"
+    },
+    "xsd-entities": {
+      "rust_tests": 326,
+      "python_tests": 112,
+      "python_statement_and_branch_coverage": "100%"
+    }
+  }
+}

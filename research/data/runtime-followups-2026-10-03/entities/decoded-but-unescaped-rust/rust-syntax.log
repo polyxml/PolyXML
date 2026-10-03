@@ -1,0 +1,14 @@
+error: expected one of `,`, `.`, `?`, `}`, or an operator, found `" 'value' <tag>"`
+  --> /tmp/polyxml-entity-before/rust/schema_attribute_entities.rs:96:45
+   |
+96 |             Self::QuotedValueTag => ""quoted" 'value' <tag>",
+   |                                  --         ^^^^^^^^^^^^^^^^ expected one of `,`, `.`, `?`, `}`, or an operator
+   |                                  |
+   |                                  while parsing the `match` arm starting here
+
+error: expected one of `...`, `..=`, `..`, `=>`, `if`, or `|`, found `" 'value' <tag>"`
+   --> /tmp/polyxml-entity-before/rust/schema_attribute_entities.rs:109:21
+    |
+109 |             ""quoted" 'value' <tag>" => Ok(Self::QuotedValueTag),
+    |                     ^^^^^^^^^^^^^^^^ expected one of `...`, `..=`, `..`, `=>`, `if`, or `|`
+

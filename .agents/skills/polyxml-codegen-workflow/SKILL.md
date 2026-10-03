@@ -10,6 +10,13 @@ description: >-
 
 ## XSD attribute values
 
+Use separate `CARGO_TARGET_DIR` paths for revision-specific CLI/native-binding
+verification. A shared debug target can leave another checkout's same-named
+top-level binary or cdylib in place even when Cargo reports a fresh build. Probe
+a discriminating fixture before claiming a baseline comparison, record the
+executable/binding hashes, and retain rejected preflights separately. The runtime
+comparison runners already isolate baseline and candidate consumer targets.
+
 Normalize schema attributes with quick-xml's `normalized_value` before placing
 them in the IR. This resolves built-in/numeric references once and normalizes
 literal XML attribute whitespace while preserving referenced whitespace. Use the

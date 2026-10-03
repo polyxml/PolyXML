@@ -1,0 +1,22 @@
+{
+  "baseline": {
+    "revision": "1819c91b0808b9242c642d82350d2b657b60108c",
+    "binary_sha256": "b16e6e65aea5615a99cef64a305ae273939a9c2a53691004775489e3ce966f5c",
+    "binding": {
+      "result": "rejected",
+      "error": "Scalar parse error for field 'status': expected enumeration, got 'R&D'",
+      "module": "/home/bailey/github/polyxml-perf-selected/crates/polyxml-python/python/polyxml/_polyxml.abi3.so",
+      "sha256": "3eb1ac4f969508274e2f0073ed35e142a9be876278add61eff1e2977b70c4eb0"
+    }
+  },
+  "candidate": {
+    "revision": "dc38fde3bcbe36261aee1ecd0e0aaf4835d730ea",
+    "binary_sha256": "6641ff2fe5e44736f8d4f338dc1dd78ed4f7f681900ee8491e1b2cf159b9c787",
+    "binding": {
+      "result": "accepted",
+      "json": "{\"Code\":\"A&B\",\"Default\":\"caf\u00e9\",\"Fixed\":\"R&D\",\"Status\":\"R&D\",\"label\":\"<label>\",\"mode\":\"R&D\"}",
+      "module": "/home/bailey/github/polyxml-xsd-attributes/crates/polyxml-python/python/polyxml/_polyxml.abi3.so",
+      "sha256": "1c68a5177253ad4f9009c9ce586124241b5c4c3ff39b11d00a191227cbfe1a2d"
+    }
+  }
+}

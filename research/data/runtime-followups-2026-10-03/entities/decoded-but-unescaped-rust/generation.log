@@ -1,0 +1,4 @@
+Parsing schema: research/fixtures/schema_attribute_entities.xsd
+  Types: 3 total (1 structs, 1 enums, 0 unions, 1 simple restrictions)
+  Root elements: 1
+Code generation complete.

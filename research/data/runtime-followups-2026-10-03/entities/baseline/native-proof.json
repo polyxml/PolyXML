@@ -1,0 +1,6 @@
+{
+  "result": "rejected",
+  "error": "Scalar parse error for field 'status': expected enumeration, got 'R&D'",
+  "module": "/home/bailey/github/polyxml-perf-selected/crates/polyxml-python/python/polyxml/_polyxml.abi3.so",
+  "sha256": "3eb1ac4f969508274e2f0073ed35e142a9be876278add61eff1e2977b70c4eb0"
+}
