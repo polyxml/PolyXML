@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--warmup", type=float, default=3)
     parser.add_argument("--measurement", type=float, default=5)
     parser.add_argument("--filter", default="")
+    parser.add_argument("--harness", type=Path)
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("--rounds must be positive")
@@ -32,7 +33,9 @@ def main():
     build = root / "benchmarks/rust-xml-regression/target"
     env = os.environ | {"CARGO_BUILD_JOBS": "1", "POLYXML_MEMCAP_BACKEND": "systemd"}
     # Use one harness for both revisions, with round-trip checks outside timing.
-    source = (root / "crates/polyxml-core/benches/core_benchmarks.rs").read_text()
+    source = (
+        args.harness or root / "crates/polyxml-core/benches/core_benchmarks.rs"
+    ).read_text()
     source = source.replace(
         "    (schema, xml)\n",
         '    let value = deserialize(&xml, Arc::clone(&schema)).unwrap();\n    let output = serialize("Sensor", &value, &schema, None).unwrap();\n    assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());\n    (schema, xml)\n',

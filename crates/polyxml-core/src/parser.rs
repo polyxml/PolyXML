@@ -417,7 +417,7 @@ impl XmlDeserializer {
         Self::parse_attributes(root_start, &mut root_frame)?;
         stack.push(root_frame);
 
-        let mut active_scalar_field: Option<(usize, ScalarType, bool)> = None;
+        let mut active_scalar_field: Option<(usize, bool)> = None;
         let mut active_mixed_scalar: Option<(String, ScalarType)> = None;
         let mut unknown_depth: usize = 0;
         let mut any_stack: Vec<AnyElementFrame> = Vec::new();
@@ -476,24 +476,24 @@ impl XmlDeserializer {
                     {
                         let field = &current_schema.fields[field_idx];
                         match &field.val_type {
-                            ValueType::Scalar(st) => {
+                            ValueType::Scalar(_) => {
                                 if is_nil {
                                     stack.last_mut().unwrap().values[field_idx] =
                                         Some(PolyValue::Null);
                                 } else {
-                                    active_scalar_field = Some((field_idx, st.clone(), false));
+                                    active_scalar_field = Some((field_idx, false));
                                     text_buf.clear();
                                 }
                             }
                             ValueType::List(inner) => match inner.as_ref() {
-                                ValueType::Scalar(st) => {
+                                ValueType::Scalar(_) => {
                                     if is_nil {
                                         stack
                                             .last_mut()
                                             .unwrap()
                                             .push_list_item(field_idx, PolyValue::Null);
                                     } else {
-                                        active_scalar_field = Some((field_idx, st.clone(), true));
+                                        active_scalar_field = Some((field_idx, true));
                                         text_buf.clear();
                                     }
                                 }
@@ -907,10 +907,18 @@ impl XmlDeserializer {
                     if let Some((kind, scalar_type)) = active_mixed_scalar.take() {
                         let parsed = ValueConverter::parse_scalar(&scalar_type, &text_buf, &kind)?;
                         stack.last_mut().unwrap().push_mixed_item(&kind, parsed);
-                    } else if let Some((field_idx, ref scalar_type, is_list)) =
-                        active_scalar_field.take()
-                    {
+                    } else if let Some((field_idx, is_list)) = active_scalar_field.take() {
                         let field = &stack.last().unwrap().schema.fields[field_idx];
+                        // The frame retains the schema while a scalar is active.
+                        // Keep its index rather than cloning enum/pattern metadata.
+                        let scalar_type = match &field.val_type {
+                            ValueType::Scalar(scalar) => scalar,
+                            ValueType::List(inner) => match inner.as_ref() {
+                                ValueType::Scalar(scalar) => scalar,
+                                _ => unreachable!("active scalar list has a scalar item type"),
+                            },
+                            _ => unreachable!("active scalar field has a scalar type"),
+                        };
                         let parsed_val = parse_field_scalar(scalar_type, &text_buf, field)?;
                         let frame = stack.last_mut().unwrap();
                         if is_list {
