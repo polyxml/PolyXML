@@ -260,9 +260,11 @@ mixed-content tests when changing this state.
 
 Scalar regex validation uses the private process-wide `pattern` cache, keyed by
 the exact original pattern and preserving anchored matching. Compilation and
-matching run outside its lock. The FIFO admits 16 entries and keys up to 4,096
+matching run outside its lock. The cache admits 16 entries and keys up to 4,096
 bytes; larger keys bypass caching. These bound entries and key retention, not
-compiled-regex memory. Public schema metadata remains mutable before sharing,
+compiled-regex memory. At capacity it selects a victim using the existing
+randomized hasher and an eviction nonce; FIFO would miss on every access for a
+cycle of 17 patterns. Public schema metadata remains mutable before sharing,
 so avoid cached flags that become stale after edits.
 
 The serializer writes directly into an append-only byte vector and checks for

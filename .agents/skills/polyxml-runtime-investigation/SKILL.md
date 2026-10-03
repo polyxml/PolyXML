@@ -35,6 +35,10 @@ separate from the schema-driven `PolyValue` runtime.
 - Preserve validation, errors, split Text/CData/GeneralRef handling, nil reads,
   nesting and metadata mutation semantics. Borrow scalar metadata from the schema
   owned by a frame instead of cloning rich scalar definitions per element.
+- Include the 17-pattern cycle when changing eviction: a 16-entry FIFO has
+  systematic misses, while salted victim selection preserves reuse at the same
+  capacity. Confirm hot cases too; pressure improvements alone do not establish
+  universal throughput gains.
 - Publish positive and negative experiments with exact source revisions, raw
   evidence and remaining regressions. Run the full quality gate before pushing
   the experiment branch; a branch request does not authorize a merge to main.

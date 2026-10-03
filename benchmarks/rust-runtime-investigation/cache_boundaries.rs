@@ -5,7 +5,7 @@ use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType
 use polyxml::{deserialize, serialize};
 use std::{hint::black_box, sync::Arc};
 
-// Cycle through more than the admitted cache capacity to measure FIFO misses.
+// Cycle through more than the admitted cache capacity to compare eviction policies.
 // Schema construction and correctness checks remain outside measurement.
 fn fixture(patterns: usize) -> (Arc<ModelSchema>, Vec<u8>) {
     let mut builder = ModelSchema::builder("Root");
