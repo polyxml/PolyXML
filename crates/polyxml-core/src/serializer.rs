@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::io::Cursor;
 
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
@@ -189,7 +188,7 @@ impl XmlSerializer {
         enable_namespaces: Option<bool>,
         ns_map: Option<&HashMap<String, String>>,
     ) -> Result<Vec<u8>> {
-        let mut buffer = Cursor::new(Vec::with_capacity(512));
+        let mut buffer = Vec::with_capacity(512);
         let mut writer = match indent {
             Some(spaces) => Writer::new_with_indent(&mut buffer, b' ', spaces),
             None => Writer::new(&mut buffer),
@@ -210,7 +209,7 @@ impl XmlSerializer {
             schema.namespace.as_deref(),
         )?;
 
-        Ok(buffer.into_inner())
+        Ok(buffer)
     }
 
     #[inline]
