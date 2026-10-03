@@ -1,0 +1,34 @@
+diff --git a/crates/polyxml-core/src/parser.rs b/crates/polyxml-core/src/parser.rs
+index afc027e..43f50c0 100644
+--- a/crates/polyxml-core/src/parser.rs
++++ b/crates/polyxml-core/src/parser.rs
+@@ -154,6 +154,9 @@ fn parse_field_scalar(
+ pub struct XmlDeserializer;
+ 
+ fn is_nil_element(e: &BytesStart) -> bool {
++    if e.attributes_raw().is_empty() {
++        return false;
++    }
+     for attr in e.attributes().flatten() {
+         let raw_key = attr.key.as_ref();
+         if raw_key == "xmlns" || raw_key.starts_with("xmlns:") {
+@@ -172,6 +175,9 @@ fn is_nil_element(e: &BytesStart) -> bool {
+ /// Extend inherited namespace bindings for this element. Elements without
+ /// declarations share the existing map.
+ fn namespace_scope(parent: &NamespaceScope, e: &BytesStart) -> NamespaceScope {
++    if e.attributes_raw().is_empty() {
++        return Arc::clone(parent);
++    }
+     let mut scope = None;
+     for attr in e.attributes().flatten() {
+         let key = attr.key.as_ref();
+@@ -995,6 +1001,9 @@ impl XmlDeserializer {
+     }
+ 
+     pub(crate) fn parse_attributes(e: &BytesStart, frame: &mut StackFrame) -> Result<()> {
++        if frame.schema.attribute_map.is_empty() && frame.schema.any_attribute_field.is_none() {
++            return Ok(());
++        }
+         let mut any_attrs: Option<HashMap<String, PolyValue>> = None;
+         for attr in e.attributes().flatten() {
+             let raw_key = attr.key.as_ref();

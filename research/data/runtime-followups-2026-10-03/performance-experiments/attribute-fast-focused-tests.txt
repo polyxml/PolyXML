@@ -1,0 +1,67 @@
+memcap: <=7740 MiB (60% of 12900 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-attribute-fast/crates/polyxml-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.68s
+     Running tests/test_any_attribute.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_any_attribute-f8564805a9b9d00f)
+
+running 1 test
+test test_any_attribute_schema_parser_and_runtime_roundtrip ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_any_element.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_any_element-48a6e5ab2c28f2fe)
+
+running 2 tests
+test test_any_element_go_codegen ... ok
+test test_any_element_schema_parser_and_runtime_roundtrip ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_runtime_fast_paths.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_runtime_fast_paths-cb1357dd8af777c0)
+
+running 6 tests
+test repeated_lexical_lists_keep_whitespace_validation ... ok
+test repeated_nested_records_validate_their_own_lexical_lists ... ok
+test lexical_list_formatting_preserves_escaping_empty_lists_and_long_numbers ... ok
+test indexed_scalar_state_preserves_enum_pattern_and_split_text ... ok
+test cached_patterns_keep_raw_restriction_and_trimmed_pattern_semantics ... ok
+test unified_scalar_state_keeps_mixed_branch_order_nil_and_nested_frames ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_security.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_security-e324fcc17a7a8524)
+
+running 6 tests
+test test_malformed_unclosed_cdata_rejection ... ok
+test test_cdata_section_handling ... ok
+test test_numeric_character_references ... ok
+test test_max_depth_recursion_limit ... ok
+test test_xml_entity_roundtrip_escaping ... ok
+test unsupported_general_entities_are_rejected ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_value_constraints.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_value_constraints-22fd91427282898a)
+
+running 2 tests
+test fixed_constraints_cover_input_and_output_in_value_space ... ok
+test repeated_particle_cardinality_belongs_to_the_group ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_xsi_type.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_xsi_type-c45053350e445953)
+
+running 11 tests
+test abstract_type_without_derivations_errors ... ok
+test plain_type_attribute_is_not_mistaken_for_dispatch ... ok
+test from_ir_flattens_base_fields_and_registers_variants ... ok
+test abstract_type_requires_concrete_selector ... ok
+test iterparse_dispatches_each_streamed_item ... ok
+test nil_abstract_complex_type_skips_concrete_dispatch ... ok
+test nested_xsi_type_dispatch_and_round_trip ... ok
+test unknown_xsi_type_on_abstract_type_errors ... ok
+test root_xsi_type_dispatch_including_empty_element ... ok
+test variant_serialization_requires_namespaces ... ok
+test xsi_type_resolves_namespace_inherited_from_parent ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
