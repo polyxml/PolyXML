@@ -1,3 +1,10 @@
+## [0.34.4](https://github.com/polyxml/PolyXML/compare/v0.34.3...v0.34.4) (2026-10-03)
+
+
+### Bug Fixes
+
+* **codegen:** preserve Rust choice wrappers and C# inherited members ([08db594](https://github.com/polyxml/PolyXML/commit/08db594dff831df592bdf93b1315e6917aa3b7c5))
+
 ## [0.34.3](https://github.com/polyxml/PolyXML/compare/v0.34.2...v0.34.3) (2026-10-03)
 
 
