@@ -523,103 +523,7 @@ impl XmlSerializer {
             if let Some(PolyValue::List(items)) =
                 get_field(mixed.items_index, &schema.fields[mixed.items_index].name)
             {
-                for item in items {
-                    let tagged_field = |name: &str| -> Option<&PolyValue> {
-                        match item {
-                            PolyValue::Object(tagged) => tagged.get(name),
-                            PolyValue::Record { schema, values } => schema
-                                .fields
-                                .iter()
-                                .position(|field| field.name == name)
-                                .and_then(|idx| values.get(idx))
-                                .and_then(Option::as_ref),
-                            _ => None,
-                        }
-                    };
-                    let Some(kind) = tagged_field("kind").and_then(PolyValue::as_str) else {
-                        return Err(PolyXmlError::SerializationError(
-                            "Mixed content item has no kind".into(),
-                        ));
-                    };
-                    let Some(content) = tagged_field("value") else {
-                        return Err(PolyXmlError::SerializationError(
-                            "Mixed content item has no value".into(),
-                        ));
-                    };
-                    if kind == "#text" {
-                        let Some(text) = content.as_str() else {
-                            return Err(PolyXmlError::SerializationError(
-                                "Mixed text item must be a string".into(),
-                            ));
-                        };
-                        writer
-                            .write_event(Event::Text(BytesText::new(text)))
-                            .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                        continue;
-                    }
-                    let Some(branch) = mixed
-                        .branches
-                        .iter()
-                        .find(|branch| branch.variant_name == kind)
-                    else {
-                        return Err(PolyXmlError::SerializationError(format!(
-                            "Unknown mixed content kind: {kind}"
-                        )));
-                    };
-                    let local_name = std::str::from_utf8(&branch.xml_name)?;
-                    let qualified = if let Some(ctx) = ns_ctx {
-                        ctx.qualify_element(
-                            local_name,
-                            branch.namespace.as_deref().or(schema.namespace.as_deref()),
-                        )
-                    } else {
-                        Cow::Borrowed(local_name)
-                    };
-                    match &branch.val_type {
-                        ValueType::Scalar(_) => {
-                            let mut buf = [0u8; lexical_core::BUFFER_SIZE];
-                            let Some(text) = Self::format_scalar_to(content, &mut buf) else {
-                                if content.is_null() {
-                                    Self::write_mixed_nil(writer, qualified.as_ref())?;
-                                    continue;
-                                }
-                                return Err(PolyXmlError::SerializationError(format!(
-                                    "Invalid mixed content value for {kind}"
-                                )));
-                            };
-                            Self::validate_scalar(&branch.val_type, &text, kind)?;
-                            writer
-                                .write_event(Event::Start(BytesStart::new(qualified.as_ref())))
-                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                            writer
-                                .write_event(Event::Text(BytesText::new(&text)))
-                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                            writer
-                                .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
-                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
-                        }
-                        ValueType::Nested(nested) => {
-                            if content.is_null() {
-                                Self::write_mixed_nil(writer, qualified.as_ref())?;
-                            } else {
-                                Self::write_model(
-                                    writer,
-                                    &branch.xml_name,
-                                    content,
-                                    nested,
-                                    ns_ctx,
-                                    false,
-                                    branch.namespace.as_deref().or(nested.namespace.as_deref()),
-                                )?;
-                            }
-                        }
-                        ValueType::List(_) => {
-                            return Err(PolyXmlError::SerializationError(
-                                "Nested lists are invalid mixed content branches".into(),
-                            ))
-                        }
-                    }
-                }
+                Self::write_mixed_items(writer, items, schema, mixed, ns_ctx)?;
             }
         } else {
             for (idx, field) in schema.fields.iter().enumerate() {
@@ -766,6 +670,114 @@ impl XmlSerializer {
             .write_event(Event::End(BytesEnd::new(qualified_tag.as_ref())))
             .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
 
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn write_mixed_items<W: std::io::Write>(
+        writer: &mut Writer<W>,
+        items: &[PolyValue],
+        schema: &ModelSchema,
+        mixed: &crate::schema::MixedContentSchema,
+        ns_ctx: Option<&NamespaceContext>,
+    ) -> Result<()> {
+        for item in items {
+            let tagged_field = |name: &str| -> Option<&PolyValue> {
+                match item {
+                    PolyValue::Object(tagged) => tagged.get(name),
+                    PolyValue::Record { schema, values } => schema
+                        .fields
+                        .iter()
+                        .position(|field| field.name == name)
+                        .and_then(|idx| values.get(idx))
+                        .and_then(Option::as_ref),
+                    _ => None,
+                }
+            };
+            let Some(kind) = tagged_field("kind").and_then(PolyValue::as_str) else {
+                return Err(PolyXmlError::SerializationError(
+                    "Mixed content item has no kind".into(),
+                ));
+            };
+            let Some(content) = tagged_field("value") else {
+                return Err(PolyXmlError::SerializationError(
+                    "Mixed content item has no value".into(),
+                ));
+            };
+            if kind == "#text" {
+                let Some(text) = content.as_str() else {
+                    return Err(PolyXmlError::SerializationError(
+                        "Mixed text item must be a string".into(),
+                    ));
+                };
+                writer
+                    .write_event(Event::Text(BytesText::new(text)))
+                    .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                continue;
+            }
+            let Some(branch) = mixed
+                .branches
+                .iter()
+                .find(|branch| branch.variant_name == kind)
+            else {
+                return Err(PolyXmlError::SerializationError(format!(
+                    "Unknown mixed content kind: {kind}"
+                )));
+            };
+            let local_name = std::str::from_utf8(&branch.xml_name)?;
+            let qualified = if let Some(ctx) = ns_ctx {
+                ctx.qualify_element(
+                    local_name,
+                    branch.namespace.as_deref().or(schema.namespace.as_deref()),
+                )
+            } else {
+                Cow::Borrowed(local_name)
+            };
+            match &branch.val_type {
+                ValueType::Scalar(_) => {
+                    let mut buf = [0u8; lexical_core::BUFFER_SIZE];
+                    let Some(text) = Self::format_scalar_to(content, &mut buf) else {
+                        if content.is_null() {
+                            Self::write_mixed_nil(writer, qualified.as_ref())?;
+                            continue;
+                        }
+                        return Err(PolyXmlError::SerializationError(format!(
+                            "Invalid mixed content value for {kind}"
+                        )));
+                    };
+                    Self::validate_scalar(&branch.val_type, &text, kind)?;
+                    writer
+                        .write_event(Event::Start(BytesStart::new(qualified.as_ref())))
+                        .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                    writer
+                        .write_event(Event::Text(BytesText::new(&text)))
+                        .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                    writer
+                        .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
+                        .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                }
+                ValueType::Nested(nested) => {
+                    if content.is_null() {
+                        Self::write_mixed_nil(writer, qualified.as_ref())?;
+                    } else {
+                        Self::write_model(
+                            writer,
+                            &branch.xml_name,
+                            content,
+                            nested,
+                            ns_ctx,
+                            false,
+                            branch.namespace.as_deref().or(nested.namespace.as_deref()),
+                        )?;
+                    }
+                }
+                ValueType::List(_) => {
+                    return Err(PolyXmlError::SerializationError(
+                        "Nested lists are invalid mixed content branches".into(),
+                    ))
+                }
+            }
+        }
         Ok(())
     }
 
