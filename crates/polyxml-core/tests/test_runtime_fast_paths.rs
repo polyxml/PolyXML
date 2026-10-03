@@ -217,3 +217,27 @@ fn lexical_list_formatting_preserves_escaping_empty_lists_and_long_numbers() {
         }
     }
 }
+
+#[test]
+fn unified_scalar_state_keeps_mixed_branch_order_nil_and_nested_frames() {
+    use polyxml::schema_parser::XsdParser;
+    let ir = XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:simpleType name="StateType"><xs:restriction base="xs:string"><xs:enumeration value="R&amp;D"/><xs:enumeration value="Ready"/></xs:restriction></xs:simpleType>
+    <xs:element name="Root"><xs:complexType mixed="true"><xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="State" type="StateType"/>
+      <xs:element name="Text" type="xs:string" nillable="true"/>
+      <xs:element name="Number" type="xs:int"/>
+      <xs:element name="Child"><xs:complexType><xs:sequence><xs:element name="Value" type="xs:string"/></xs:sequence></xs:complexType></xs:element>
+    </xs:choice></xs:complexType></xs:element></xs:schema>"#).unwrap();
+    let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();
+    for document in [
+        "<Root>start<State>R&amp;<![CDATA[D]]></State>mid<Number>-7</Number><Text/><State>Ready</State>end</Root>",
+        "<Root><Child><Value>nested</Value></Child><Text>after</Text><Number>0</Number></Root>",
+        "<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Text xsi:nil='true'/><State>Ready</State></Root>",
+    ] {
+        let value = deserialize(document.as_bytes(),Arc::clone(&schema)).unwrap();
+        let output = serialize("Root",&value,&schema,None).unwrap();
+        assert_eq!(value,deserialize(&output,Arc::clone(&schema)).unwrap());
+    }
+    assert!(deserialize(b"<Root><State>invalid</State></Root>", schema).is_err());
+}
