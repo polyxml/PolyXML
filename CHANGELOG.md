@@ -1,3 +1,10 @@
+## [0.34.3](https://github.com/polyxml/PolyXML/compare/v0.34.2...v0.34.3) (2026-10-03)
+
+
+### Bug Fixes
+
+* **schema:** support inline attributes and the schema-for-schemas ([d3ecf31](https://github.com/polyxml/PolyXML/commit/d3ecf311d93fdcff118cfd7ca220fb86b4a8e34d))
+
 ## [0.34.2](https://github.com/polyxml/PolyXML/compare/v0.34.1...v0.34.2) (2026-10-03)
 
 
