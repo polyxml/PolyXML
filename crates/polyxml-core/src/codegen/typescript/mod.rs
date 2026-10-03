@@ -422,7 +422,12 @@ impl TypeScriptCodegen {
         let mut seen = HashSet::new();
         for v in &e.variants {
             let variant_key = self.unique_variant_name(&v.name, &mut seen);
-            let _ = writeln!(out, "  {}: {:?},", variant_key, v.value);
+            let _ = writeln!(
+                out,
+                "  {}: {},",
+                variant_key,
+                super::string_literal(&v.value)
+            );
         }
         out.push_str("} as const;\n\n");
 
@@ -437,7 +442,7 @@ impl TypeScriptCodegen {
         let literals = e
             .variants
             .iter()
-            .map(|v| format!("{:?}", v.value))
+            .map(|v| super::string_literal(&v.value))
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -461,7 +466,7 @@ impl TypeScriptCodegen {
                 let tb_literals = e
                     .variants
                     .iter()
-                    .map(|v| format!("Type.Literal({:?})", v.value))
+                    .map(|v| format!("Type.Literal({})", super::string_literal(&v.value)))
                     .collect::<Vec<_>>()
                     .join(", ");
                 let _ = writeln!(

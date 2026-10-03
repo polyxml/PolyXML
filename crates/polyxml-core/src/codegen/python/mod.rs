@@ -521,9 +521,9 @@ impl PythonCodegen {
 
             let _ = writeln!(
                 out,
-                "    {} = \"{}\"",
+                "    {} = {}",
                 var_id,
-                variant.value.replace('"', "\\\"")
+                super::string_literal(&variant.value)
             );
         }
     }

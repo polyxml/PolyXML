@@ -553,7 +553,14 @@ endif()
                         } else {
                             ""
                         };
-                        writeln!(out, "        {:?}, T::{}{}", v.value, var_name, comma).unwrap();
+                        writeln!(
+                            out,
+                            "        {}, T::{}{}",
+                            super::cpp_string_literal(&v.value),
+                            var_name,
+                            comma
+                        )
+                        .unwrap();
                     }
                     writeln!(out, "    );").unwrap();
                 }
@@ -790,8 +797,10 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             for (variant, var_name) in enum_def.variants.iter().zip(&variant_names) {
                 writeln!(
                     out,
-                    "        case {}::{}: return \"{}\";",
-                    enum_name, var_name, variant.value
+                    "        case {}::{}: return {};",
+                    enum_name,
+                    var_name,
+                    super::cpp_string_literal(&variant.value)
                 )
                 .unwrap();
             }
@@ -818,8 +827,10 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             for (variant, var_name) in enum_def.variants.iter().zip(&variant_names) {
                 writeln!(
                     out,
-                    "    if (s == \"{}\") return {}::{};",
-                    variant.value, enum_name, var_name
+                    "    if (s == {}) return {}::{};",
+                    super::cpp_string_literal(&variant.value),
+                    enum_name,
+                    var_name
                 )
                 .unwrap();
             }

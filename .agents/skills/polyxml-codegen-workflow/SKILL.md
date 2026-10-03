@@ -20,6 +20,15 @@ inside otherwise skipped annotations. Regression fixtures are in
 `research/fixtures/schema_attribute_entities.xsd` and
 `tests/test_schema_attribute_entities.rs` in the core crate.
 
+Decoded enum values need target-language string literal escaping at every output
+site: metadata attributes, constants, conversion tables and parse matches. Rust
+debug string formatting is suitable for Rust, but its `\u{...}` escapes are not
+portable to other targets. The shared JSON-compatible literal helper also
+escapes U+0085/U+2028/U+2029 because C# treats them as source line terminators;
+C++ uses fixed-width octal escapes for ASCII controls. Execute
+`test_enum_literal_codegen` with all seven toolchains to verify exact runtime
+values and Rust Serde round trips, not just whether generated files exist.
+
 ## C# runtime availability for smoke checks
 
 The C# execution fixtures target `net8.0`. An installed .NET 10 SDK/runtime

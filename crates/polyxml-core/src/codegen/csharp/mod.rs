@@ -618,7 +618,13 @@ impl CSharpCodegen {
                 self.emit_docstring(out, doc, &format!("{}    ", indent));
             }
             if self.options.emit_xml_attributes {
-                writeln!(out, "{}    [XmlEnum(\"{}\")]", indent, variant.value).unwrap();
+                writeln!(
+                    out,
+                    "{}    [XmlEnum({})]",
+                    indent,
+                    super::string_literal(&variant.value)
+                )
+                .unwrap();
             }
             writeln!(out, "{}    {},", indent, variant_name).unwrap();
         }
@@ -659,8 +665,11 @@ impl CSharpCodegen {
         for (variant, variant_name) in e.variants.iter().zip(&variant_names) {
             writeln!(
                 out,
-                "{}        {}.{} => \"{}\",",
-                indent, enum_name, variant_name, variant.value
+                "{}        {}.{} => {},",
+                indent,
+                enum_name,
+                variant_name,
+                super::string_literal(&variant.value)
             )
             .unwrap();
         }
