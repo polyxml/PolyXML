@@ -839,3 +839,19 @@ Python triple-quoted docstrings must escape every double quote, not only triple
 quote sequences. A trailing quoted word (NeTEx's Default is "Outbound") otherwise
 creates four adjacent quotes and invalid syntax. The AST regression verifies
 exact enum/class documentation text, quotes and backslashes, for both backends.
+
+## C# optional enum attributes
+
+XmlSerializer rejects nullable enum properties marked XmlAttribute. Keep the
+nullable typed property XmlIgnore and expose a string XML lexical proxy. Null
+omits the attribute; parse via the enum's XmlEnum lexical names, preserving the
+namespace. Exclude the proxy from JSON and retain the typed property's JSON
+wire name. Test present and absent imported inline enums with Go and both C#
+record/class modes; compilation alone misses this reflection-time error.
+
+Module builds retain ordered-content markers from directly owned definitions.
+An imported context can synthesize a reachable mixed-content union in an already
+owned namespace after substitutions become visible. Such helpers (identified
+by their #text branch) may use a unique namespace owner; ambiguous namespaces
+and ordinary imported declarations still need explicit owners. Unused imported
+helpers are pruned before this step. Test multi-schema modules and ambiguity.

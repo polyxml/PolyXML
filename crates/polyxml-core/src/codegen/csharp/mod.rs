@@ -1099,6 +1099,53 @@ impl CSharpCodegen {
         true
     }
 
+    fn emit_optional_enum_attribute_proxy(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        name: &str,
+        ir: &SchemaIR,
+        indent: &str,
+    ) -> bool {
+        if !self.options.emit_xml_attributes
+            || field.kind != FieldKind::Attribute
+            || !field.cardinality.is_optional()
+            || field.cardinality.is_list()
+        {
+            return false;
+        }
+        let TypeRef::Named(qname) = &field.type_ref else {
+            return false;
+        };
+        if !matches!(ir.types.get(qname), Some(TypeDef::Enum(_))) {
+            return false;
+        }
+        let ty = self.map_field_type(field, ir);
+        let base = ty.trim_end_matches('?');
+        let namespace = field
+            .namespace
+            .as_ref()
+            .map(|ns| format!(", Namespace = {ns:?}"))
+            .unwrap_or_default();
+        if self.options.emit_json_attributes {
+            writeln!(out, "{indent}    [JsonPropertyName({:?})]", field.xml_name).unwrap();
+        }
+        writeln!(
+            out,
+            "{indent}    [XmlIgnore] public {ty} {name} {{ get; set; }}"
+        )
+        .unwrap();
+        if self.options.emit_json_attributes {
+            // Keep the XML lexical proxy out of JSON, preserving the typed property.
+            writeln!(out, "{indent}    [JsonIgnore]").unwrap();
+        }
+        writeln!(out, "{indent}    [XmlAttribute({:?}{namespace})] public string? {name}Xml {{
+{indent}        get => {name}?.ToXmlValue();
+{indent}        set => {name} = value is null ? null : ({base})new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape(value) + \"</value>\"))!;
+{indent}    }}", field.xml_name).unwrap();
+        true
+    }
+
     fn emit_default_scalar_proxy(
         &self,
         out: &mut String,
@@ -1392,6 +1439,8 @@ impl CSharpCodegen {
         }
 
         let has_lexical_union = self.options.emit_xml_attributes && s.fields.iter().any(|f| {
+            (f.kind == FieldKind::Attribute && f.cardinality.is_optional()
+                && matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Enum(_))))) ||
             matches!(f.type_ref, TypeRef::Primitive(p) if p.is_unbounded_integer()) || matches!(f.type_ref, TypeRef::Primitive(PrimitiveType::Date | PrimitiveType::DateTime | PrimitiveType::Time | PrimitiveType::Duration)) || f.default_value.is_some() || f.fixed_value.is_some() || matches!(&f.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()))
         });
 
@@ -1404,6 +1453,7 @@ impl CSharpCodegen {
             .unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
                 if self.emit_default_scalar_proxy(out, f, name, ir, indent)
+                    || self.emit_optional_enum_attribute_proxy(out, f, name, ir, indent)
                     || self.emit_integer_proxy(out, f, name, ir, indent)
                     || self.emit_temporal_proxy(out, f, name, ir, indent)
                 {
@@ -1471,6 +1521,7 @@ impl CSharpCodegen {
             writeln!(out, "{}    public {}() {{ }}", indent, struct_name).unwrap();
             for (f, name) in s.fields.iter().zip(&prop_names) {
                 if self.emit_default_scalar_proxy(out, f, name, ir, indent)
+                    || self.emit_optional_enum_attribute_proxy(out, f, name, ir, indent)
                     || self.emit_integer_proxy(out, f, name, ir, indent)
                     || self.emit_temporal_proxy(out, f, name, ir, indent)
                 {

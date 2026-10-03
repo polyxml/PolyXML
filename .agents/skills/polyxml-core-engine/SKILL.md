@@ -225,3 +225,16 @@ Appending transitive documents for every diamond include path causes exponential
 memory growth in NeTEx. Namespace-rekeyed chameleon models remain distinct.
 The diamond include regression checks all declarations and exact unique UPA
 document retention after a cache hit.
+
+## Imported inline global attributes and the schema-for-schemas
+
+Global `xs:attribute` declarations may carry an anonymous restriction, enum,
+lexical union, or list instead of a `type` attribute. Parse their simple types
+and register the attribute's QName/type; do not skip the subtree or replace
+typed restrictions with strings. Untyped global attributes map to strings.
+Resolve references after imported declarations are merged. Inline list item
+types need their own uniquely named declaration; retain list cardinality and
+item facets, and reject a list with neither itemType nor an inline simpleType.
+The normative schema-for-schemas declares types in the XSD namespace; those
+references must reach IR resolution rather than being rejected as unknown
+primitive built-ins by the grammar pass. Unknown references remain errors.

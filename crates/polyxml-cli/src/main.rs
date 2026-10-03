@@ -503,6 +503,7 @@ fn run_module_build(
     let mut module_types = BTreeMap::<String, BTreeSet<QName>>::new();
     let mut module_elements = BTreeMap::new();
     let mut module_namespaces = BTreeMap::new();
+    let mut namespace_owners = BTreeMap::<Option<String>, BTreeSet<String>>::new();
 
     for name in &order {
         let paths = manifest.expand_module_schemas(name, base_dir)?;
@@ -515,6 +516,16 @@ fn run_module_build(
             println!("Compiling module [{name}]: {}", path.display());
             let mut parser = XsdParser::new();
             let ir = parser.parse_file(&path)?;
+            namespace_owners
+                .entry(ir.target_namespace.clone())
+                .or_default()
+                .insert(name.clone());
+            global.ordered_types.extend(
+                ir.ordered_types
+                    .iter()
+                    .filter(|qname| qname.namespace == ir.target_namespace)
+                    .cloned(),
+            );
             module_namespaces
                 .entry(name.clone())
                 .or_insert_with(|| ir.target_namespace.clone());
@@ -597,6 +608,23 @@ fn run_module_build(
     }
 
     retain_owned_type_closure(&mut global, &owners);
+
+    // Imported frames can synthesize reachable ordered-content helpers after
+    // downstream substitutions are known. These are generated unions, not XSD
+    // declarations. Give them the namespace's owner only when it is unique.
+    for (qname, definition) in &global.types {
+        if !owners.contains_key(qname)
+            && matches!(definition, TypeDef::Union(union) if union.is_mixed_content())
+        {
+            if let Some(candidates) = namespace_owners.get(&qname.namespace) {
+                if candidates.len() == 1 {
+                    let owner = candidates.first().unwrap();
+                    owners.insert(qname.clone(), owner.clone());
+                    module_types.get_mut(owner).unwrap().insert(qname.clone());
+                }
+            }
+        }
+    }
 
     for qname in global.types.keys() {
         if qname

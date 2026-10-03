@@ -652,3 +652,140 @@ fn schema_errors_preserve_forward_imports_and_annotation_payloads() {
         assert!(XsdParser::new().parse_str(schema).is_err());
     }
 }
+
+#[test]
+fn imported_inline_global_attribute_types_are_resolved() {
+    let dir = tempdir().unwrap();
+    std::fs::write(dir.path().join("attributes.xsd"), r#"<s:schema xmlns:s="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:attrs">
+      <s:attribute name="code"><s:annotation><s:documentation>Inline enum</s:documentation></s:annotation><s:simpleType><s:restriction base="s:string"><s:enumeration value="arc"/><s:enumeration value="resource"/></s:restriction></s:simpleType></s:attribute>
+      <s:attribute name="number"><s:simpleType><s:restriction base="s:int"><s:minInclusive value="3"/></s:restriction></s:simpleType></s:attribute>
+      <s:attribute name="lang"><s:simpleType><s:union memberTypes="s:language"><s:simpleType><s:restriction base="s:string"><s:enumeration value=""/></s:restriction></s:simpleType></s:union></s:simpleType></s:attribute>
+      <s:attribute name="plain"/>
+      <s:attribute name="annotated"><s:annotation><s:documentation>Untyped</s:documentation></s:annotation></s:attribute>
+    </s:schema>"#).unwrap();
+    let root = dir.path().join("root.xsd");
+    std::fs::write(&root, r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:a="urn:attrs">
+      <xs:import namespace="urn:attrs" schemaLocation="attributes.xsd"/>
+      <xs:complexType name="Record"><xs:attribute ref="a:code" use="required"/><xs:attribute ref="a:number"/><xs:attribute ref="a:lang"/><xs:attribute ref="a:plain"/><xs:attribute ref="a:annotated"/></xs:complexType>
+    </xs:schema>"#).unwrap();
+    let ir = XsdParser::new().parse_file(&root).unwrap();
+    let TypeDef::Struct(record) = &ir.types[&QName::new(None::<String>, "Record")] else {
+        panic!("Record");
+    };
+    for field in &record.fields {
+        assert_eq!(field.namespace.as_deref(), Some("urn:attrs"));
+        assert_eq!(
+            field.type_ref,
+            ir.attributes[&QName::new(Some("urn:attrs"), &field.xml_name)]
+        );
+    }
+    assert_eq!(record.fields[0].cardinality, Cardinality::required_one());
+    let TypeRef::Named(enum_name) = &record.fields[0].type_ref else {
+        panic!("enum type");
+    };
+    let TypeDef::Enum(enumeration) = &ir.types[enum_name] else {
+        panic!("enum declaration");
+    };
+    assert_eq!(
+        enumeration
+            .variants
+            .iter()
+            .map(|v| v.value.as_str())
+            .collect::<Vec<_>>(),
+        ["arc", "resource"]
+    );
+    let TypeRef::Named(number_name) = &record.fields[1].type_ref else {
+        panic!("number type");
+    };
+    let TypeDef::Simple(number) = &ir.types[number_name] else {
+        panic!("restriction");
+    };
+    assert_eq!(number.base_type, TypeRef::Primitive(PrimitiveType::Int));
+    assert_eq!(number.facets.min_inclusive.as_deref(), Some("3"));
+    let TypeRef::Named(union_name) = &record.fields[2].type_ref else {
+        panic!("union type");
+    };
+    let TypeDef::Union(union) = &ir.types[union_name] else {
+        panic!("union declaration");
+    };
+    assert!(union.is_lexical());
+    assert_eq!(union.branches.len(), 2);
+    assert_eq!(record.fields[3].type_ref, TypeRef::string());
+    assert_eq!(record.fields[4].type_ref, TypeRef::string());
+    let invalid = std::fs::read_to_string(&root)
+        .unwrap()
+        .replace("a:code", "a:missing");
+    std::fs::write(&root, invalid).unwrap();
+    assert!(XsdParser::new()
+        .parse_file(&root)
+        .unwrap_err()
+        .to_string()
+        .contains("Unresolved type"));
+}
+
+#[test]
+fn schema_for_schemas_declared_types_are_not_unknown_builtins() {
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="Derived"><xs:complexContent><xs:extension base="xs:openAttrs"><xs:attribute name="name" type="xs:string"/></xs:extension></xs:complexContent></xs:complexType>
+      <xs:complexType name="openAttrs"><xs:anyAttribute processContents="lax"/></xs:complexType>
+      <xs:element name="Root" type="xs:Derived"/>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let ns = Some("http://www.w3.org/2001/XMLSchema");
+    let TypeDef::Struct(derived) = &ir.types[&QName::new(ns, "Derived")] else {
+        panic!("Derived");
+    };
+    assert_eq!(derived.base_type, Some(QName::new(ns, "openAttrs")));
+    let missing = xsd.replace("base=\"xs:openAttrs\"", "base=\"xs:Misspelled\"");
+    assert!(XsdParser::new()
+        .parse_str(&missing)
+        .unwrap_err()
+        .to_string()
+        .contains("Misspelled"));
+    let normal = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="Root" type="xs:NotAType"/></xs:schema>"#;
+    assert!(XsdParser::new()
+        .parse_str(normal)
+        .unwrap_err()
+        .to_string()
+        .contains("Unknown built-in type"));
+}
+
+#[test]
+fn inline_list_item_types_preserve_enum_and_union_declarations() {
+    for item in [
+        r#"<xs:restriction base="xs:string"><xs:enumeration value="one"/><xs:enumeration value="two"/></xs:restriction>"#,
+        r#"<xs:union memberTypes="xs:int xs:string"/>"#,
+    ] {
+        let xsd = format!(
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:simpleType name="Values"><xs:list><xs:annotation><xs:documentation>items</xs:documentation></xs:annotation><xs:simpleType>{item}</xs:simpleType></xs:list></xs:simpleType></xs:schema>"#
+        );
+        let ir = XsdParser::new().parse_str(&xsd).unwrap();
+        let TypeDef::Simple(values) = &ir.types[&QName::new(None::<String>, "Values")] else {
+            panic!("list");
+        };
+        let TypeRef::List(inner) = &values.base_type else {
+            panic!("list reference");
+        };
+        let TypeRef::Named(name) = inner.as_ref() else {
+            panic!("item declaration");
+        };
+        match &ir.types[name] {
+            TypeDef::Enum(e) => assert_eq!(e.variants.len(), 2),
+            TypeDef::Union(u) => {
+                assert!(u.is_lexical());
+                assert_eq!(u.branches.len(), 2);
+            }
+            other => panic!("unexpected item: {other:?}"),
+        }
+    }
+    for list in ["<xs:list/>", "<xs:list></xs:list>"] {
+        let invalid = format!(
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:simpleType name="Values">{list}</xs:simpleType></xs:schema>"#
+        );
+        assert!(XsdParser::new()
+            .parse_str(&invalid)
+            .unwrap_err()
+            .to_string()
+            .contains("xs:list requires"));
+    }
+}

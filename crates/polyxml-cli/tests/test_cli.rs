@@ -3201,3 +3201,46 @@ fn imported_substitution_helpers_do_not_require_spurious_module_owners() {
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("no owning"));
 }
+
+#[test]
+fn retained_imported_ordered_helpers_belong_to_the_unique_namespace_module() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("common.xsd"), r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:c="urn:common" targetNamespace="urn:common"><xs:complexType name="Head"><xs:attribute name="id" type="xs:string"/></xs:complexType><xs:element name="HeadElement" type="c:Head" abstract="true"/><xs:complexType name="Envelope"><xs:sequence><xs:element ref="c:HeadElement" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
+    fs::write(dir.path().join("client.xsd"), r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:c="urn:common" xmlns:t="urn:client" targetNamespace="urn:client"><xs:import namespace="urn:common" schemaLocation="common.xsd"/><xs:complexType name="Child"><xs:complexContent><xs:extension base="c:Head"/></xs:complexContent></xs:complexType><xs:element name="ChildElement" type="t:Child" substitutionGroup="c:HeadElement"/><xs:complexType name="DerivedEnvelope"><xs:complexContent><xs:extension base="c:Envelope"/></xs:complexContent></xs:complexType><xs:element name="Root" type="t:DerivedEnvelope"/></xs:schema>"#).unwrap();
+    let config = dir.path().join("polyxml.toml");
+    fs::write(&config, "[modules.combined]\nschemas=[\"common.xsd\",\"client.xsd\"]\n[[generate]]\ntarget=\"python\"\noutput=\"generated\"\n").unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config"])
+        .arg(&config)
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let source = fs::read_to_string(dir.path().join("generated/combined/combined.py")).unwrap();
+    assert!(source.contains("EnvelopeItem"), "retained helper missing");
+    // Shared namespaces have no implicit owner: do not pick one arbitrarily.
+    fs::write(dir.path().join("extra.xsd"), r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:common"><xs:complexType name="Extra"/></xs:schema>"#).unwrap();
+    fs::write(&config, "[modules.combined]\nschemas=[\"common.xsd\",\"client.xsd\"]\n[modules.extra]\nschemas=[\"extra.xsd\"]\n").unwrap();
+    let ambiguous = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--dry-run", "--config"])
+        .arg(&config)
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(!ambiguous.status.success());
+    assert!(String::from_utf8_lossy(&ambiguous.stderr).contains("EnvelopeItem"));
+    // A real imported declaration still cannot borrow another namespace's owner.
+    fs::write(&config, "[modules.client]\nschemas=[\"client.xsd\"]\n").unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--dry-run", "--config"])
+        .arg(&config)
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("no owning"));
+}

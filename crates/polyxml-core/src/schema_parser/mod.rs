@@ -350,20 +350,13 @@ impl XsdParser {
                             }
                         }
                         "attribute" => {
-                            if let (Some(name), Some(ty)) =
-                                (get_attr_value(e, "name"), get_attr_value(e, "type"))
-                            {
-                                ir.attributes
-                                    .entry(QName::new(target_namespace.as_deref(), name))
-                                    .or_insert_with(|| {
-                                        resolve_type_ref(
-                                            &ty,
-                                            target_namespace.as_deref(),
-                                            &prefixes,
-                                        )
-                                    });
-                            }
-                            skip_subtree(&mut reader)?;
+                            self.parse_global_attribute(
+                                &mut reader,
+                                e,
+                                target_namespace.as_deref(),
+                                &prefixes,
+                                &mut ir,
+                            )?;
                         }
                         "group" => {
                             // Named model group definition.
@@ -445,18 +438,19 @@ impl XsdParser {
                             }
                         }
                         "attribute" => {
-                            if let (Some(name), Some(ty)) =
-                                (get_attr_value(e, "name"), get_attr_value(e, "type"))
-                            {
-                                ir.attributes
-                                    .entry(QName::new(target_namespace.as_deref(), name))
-                                    .or_insert_with(|| {
+                            if let Some(name) = get_attr_value(e, "name") {
+                                let type_ref = get_attr_value(e, "type")
+                                    .map(|ty| {
                                         resolve_type_ref(
                                             &ty,
                                             target_namespace.as_deref(),
                                             &prefixes,
                                         )
-                                    });
+                                    })
+                                    .unwrap_or_else(TypeRef::string);
+                                ir.attributes
+                                    .entry(QName::new(target_namespace.as_deref(), name))
+                                    .or_insert(type_ref);
                             }
                         }
                         "group" => {
@@ -1225,6 +1219,7 @@ impl XsdParser {
         let mut facets = RestrictionFacets::default();
         let mut enum_values = Vec::new();
         let mut union_branches: Option<Vec<UnionBranch>> = None;
+        let mut list_requires_inline = false;
         let mut documentation = None;
         let mut buf = Vec::new();
 
@@ -1252,13 +1247,29 @@ impl XsdParser {
                                     &item, target_ns, prefixes,
                                 )));
                             } else {
-                                return Err(SchemaError::Malformed(
-                                    "xs:list requires a supported itemType".into(),
-                                ));
+                                list_requires_inline = true;
                             }
                         }
                         "union" => {
                             union_branches = Some(parse_union_members(e, target_ns, prefixes));
+                        }
+                        "simpleType" if list_requires_inline => {
+                            let item_name =
+                                unique_type_name(ir, target_ns, &format!("{}Item", qname.local));
+                            if let Some(item) = self.parse_simple_type(
+                                reader,
+                                e,
+                                target_ns,
+                                prefixes,
+                                Some(item_name),
+                                ir,
+                            )? {
+                                base_type =
+                                    TypeRef::List(Box::new(TypeRef::Named(item.qname().clone())));
+                                ir.add_type(item);
+                                list_requires_inline = false;
+                            }
+                            depth -= 1;
                         }
                         "simpleType" if union_branches.is_some() => {
                             let branch_index = union_branches.as_ref().unwrap().len() + 1;
@@ -1380,7 +1391,12 @@ impl XsdParser {
                         _ => {}
                     }
                 }
-                Event::End(_) => {
+                Event::End(ref e) => {
+                    if strip_prefix(e.name().into_inner()) == "list" && list_requires_inline {
+                        return Err(SchemaError::Malformed(
+                            "xs:list requires itemType or an inline simpleType".into(),
+                        ));
+                    }
                     depth -= 1;
                 }
                 Event::Eof => break,
@@ -1463,6 +1479,46 @@ impl XsdParser {
                 documentation,
             }))))
         }
+    }
+
+    fn parse_global_attribute(
+        &self,
+        reader: &mut Reader<&[u8]>,
+        start: &BytesStart,
+        target_ns: Option<&str>,
+        prefixes: &HashMap<String, String>,
+        ir: &mut SchemaIR,
+    ) -> Result<(), SchemaError> {
+        let Some(name) = get_attr_value(start, "name") else {
+            return skip_subtree(reader);
+        };
+        let mut type_ref = get_attr_value(start, "type")
+            .map(|ty| resolve_type_ref(&ty, target_ns, prefixes))
+            .unwrap_or_else(TypeRef::string);
+        loop {
+            match reader.read_event()? {
+                Event::Start(e) if strip_prefix(e.name().into_inner()) == "simpleType" => {
+                    let anonymous_name =
+                        unique_type_name(ir, target_ns, &format!("{name}AttributeType"));
+                    if let Some(definition) = self.parse_simple_type(
+                        reader,
+                        &e,
+                        target_ns,
+                        prefixes,
+                        Some(anonymous_name),
+                        ir,
+                    )? {
+                        type_ref = TypeRef::Named(definition.qname().clone());
+                        ir.add_type(definition);
+                    }
+                }
+                Event::Start(_) => skip_subtree(reader)?,
+                Event::End(_) | Event::Eof => break,
+                _ => {}
+            }
+        }
+        ir.attributes.insert(QName::new(target_ns, name), type_ref);
+        Ok(())
     }
 
     fn parse_global_element(
@@ -2728,6 +2784,7 @@ fn validate_type_references(ir: &SchemaIR, xml: &str) -> Result<(), SchemaError>
 }
 fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
     let mut reader = Reader::from_str(xml);
+    let mut schema_namespace = None;
     let mut stack = Vec::<(String, HashMap<String, String>)>::new();
     let mut line = 1;
     let mut line_position = 0;
@@ -2754,6 +2811,9 @@ fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
             }
         }
         let local = strip_prefix(element.name().into_inner());
+        if stack.is_empty() && local == "schema" {
+            schema_namespace = get_attr_value(&element, "targetNamespace");
+        }
         let position = reader.buffer_position() as usize;
         line += xml[line_position..position]
             .bytes()
@@ -2804,6 +2864,9 @@ fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
                             )));
                         };
                         if namespace == "http://www.w3.org/2001/XMLSchema"
+                            // The schema-for-schemas declares named types in this
+                            // namespace; the resolved IR validates their existence.
+                            && schema_namespace.as_deref() != Some(namespace.as_str())
                             && attr.key.as_ref() != "ref"
                             && PrimitiveType::from_xsd_name(local).is_none()
                         {
