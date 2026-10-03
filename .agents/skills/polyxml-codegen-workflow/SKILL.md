@@ -8,6 +8,18 @@ description: >-
 
 # PolyXML Polyglot Codegen Development & Verification Playbook
 
+## XSD attribute values
+
+Normalize schema attributes with quick-xml's `normalized_value` before placing
+them in the IR. This resolves built-in/numeric references once and normalizes
+literal XML attribute whitespace while preserving referenced whitespace. Use the
+same decoded values for namespace declarations, QName validation, UPA, facets,
+enumerations and default/fixed constraints. Propagate malformed attributes and
+reference errors; do not turn them into absent values. Validate attributes even
+inside otherwise skipped annotations. Regression fixtures are in
+`research/fixtures/schema_attribute_entities.xsd` and
+`tests/test_schema_attribute_entities.rs` in the core crate.
+
 ## C# runtime availability for smoke checks
 
 The C# execution fixtures target `net8.0`. An installed .NET 10 SDK/runtime

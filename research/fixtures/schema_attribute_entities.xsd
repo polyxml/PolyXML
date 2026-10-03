@@ -1,0 +1,27 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="R&amp;D"/>
+      <xs:enumeration value="R&#38;D"/>
+      <xs:enumeration value="&quot;quoted&quot; &apos;value&apos; &lt;tag&gt;"/>
+      <xs:enumeration value="caf&#xE9; &#128512;"/>
+      <xs:enumeration value="literal &amp;amp;"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="Code">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Z]&amp;[A-Z]"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="RootType">
+    <xs:sequence>
+      <xs:element name="Status" type="Status"/>
+      <xs:element name="Code" type="Code"/>
+      <xs:element name="Fixed" type="xs:string" fixed="R&amp;D"/>
+      <xs:element name="Default" type="xs:string" default="caf&#xE9;"/>
+    </xs:sequence>
+    <xs:attribute name="label" type="xs:string" default="&lt;label&gt;"/>
+    <xs:attribute name="mode" type="xs:string" fixed="R&amp;D"/>
+  </xs:complexType>
+  <xs:element name="Root" type="RootType"/>
+</xs:schema>
