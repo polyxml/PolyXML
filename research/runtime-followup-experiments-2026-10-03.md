@@ -34,6 +34,12 @@ registered reads slowed in all three. Registered writes were noisy (-1.69% to
 tradeoff, not a broad recovery of the historical parsing regression. Keep it
 experimental pending review of the additional synchronization and populated path.
 
+The registry branch passes the complete quality gate: 323 Rust tests, strict
+workspace formatting and Clippy, Ruff, and 112 Python tests with 100% statement
+and branch coverage. An initial gate stopped because the local tsc directory
+was absent from PATH; the complete rerun with the prepared toolchain passed.
+Both logs are retained.
+
 Allocation counts and requested bytes match the baseline for the three plain
 payload sizes. Simulated Callgrind instruction counts change by about -0.12%
 on reads and -0.55% on writes; they are not hardware cycle measurements.

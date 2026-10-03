@@ -27,6 +27,10 @@ separate from the schema-driven `PolyValue` runtime.
   directory can retain another worktree's same-named top-level artifact despite
   a fresh Cargo result. Probe a fixture that distinguishes the revisions and
   record artifact hashes before using companion results as a comparison.
+- Preflight the exact PATH used by the quality gate as well as timing tools.
+  A locally installed TypeScript compiler needs its node_modules/.bin on PATH;
+  having Node available does not make tsc available. Record missing-tool failures
+  and rerun the complete gate with the prepared toolchain environment.
 - Run heavy work serially, with one Cargo worker and the repository memory cap.
   Short comparisons screen hypotheses. Repeat retained improvements with longer
   measurements, alternating revision order and preserving every raw sample.
