@@ -240,6 +240,7 @@ impl XmlSerializer {
         }
     }
 
+    #[inline]
     fn has_lexical_list(ty: &ValueType) -> bool {
         match ty {
             ValueType::Scalar(ScalarType::List(_)) => true,
@@ -343,9 +344,11 @@ impl XmlSerializer {
         };
 
         for (index, field) in schema.fields.iter().enumerate() {
-            if let Some(value) = get_field(index, &field.name) {
-                crate::schema::validate_fixed(field, value)?;
-                Self::validate_lexical_list_items(&field.val_type, value)?;
+            if field.fixed_value.is_some() || Self::has_lexical_list(&field.val_type) {
+                if let Some(value) = get_field(index, &field.name) {
+                    crate::schema::validate_fixed(field, value)?;
+                    Self::validate_lexical_list_items(&field.val_type, value)?;
+                }
             }
         }
 

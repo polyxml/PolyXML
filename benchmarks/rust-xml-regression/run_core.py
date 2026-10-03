@@ -109,6 +109,8 @@ def main():
             ["baseline", "current"] if round_index % 2 == 0 else ["current", "baseline"]
         ):
             crate, executable = executables[label]
+            # A filter must not retain results from earlier unfiltered runs.
+            shutil.rmtree(crate / "target/criterion", ignore_errors=True)
             with (output / f"{label}-{round_index}.txt").open("w") as log:
                 run(
                     [
