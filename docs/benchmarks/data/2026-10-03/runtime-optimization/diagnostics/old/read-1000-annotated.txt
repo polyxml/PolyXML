@@ -1,0 +1,191 @@
+--------------------------------------------------------------------------------
+Profile data file 'benchmarks/rust-runtime-investigation/target/evidence/old/read-1000.callgrind' (creator: callgrind-3.26.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 86391197
+Trigger: Program termination
+Profiled target:  benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics read 1000 25 instructions (PID 341913, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       95
+Include dirs:     
+User annotated:   
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir                   
+--------------------------------------------------------------------------------
+283,054,621 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                   file:function
+--------------------------------------------------------------------------------
+21,680,675 ( 7.66%)  ???:0x0000000000197a00 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+13,926,225 ( 4.92%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/validations.rs:core::str::converts::from_utf8
+11,866,582 ( 4.19%)  ???:0x00000000000b2400 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+10,868,100 ( 3.84%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/events/attributes.rs:<quick_xml::events::attributes::IterState>::next [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+10,402,925 ( 3.68%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/reader/mod.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 8,900,000 ( 3.14%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/sip.rs:<core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 7,927,350 ( 2.80%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 7,802,014 ( 2.76%)  ???:0x00000000000b20e0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 6,602,200 ( 2.33%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/reader/buffered_reader.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 5,426,700 ( 1.92%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/parser/element.rs:<quick_xml::parser::element::ElementParser as quick_xml::parser::Parser>::feed [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 5,127,950 ( 1.81%)  ???:free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 4,625,000 ( 1.63%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/sip.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&[u8]>
+ 4,403,350 ( 1.56%)  ???:malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 4,225,800 ( 1.49%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/adapters/flatten.rs:<core::iter::adapters::flatten::FlattenCompat<quick_xml::events::attributes::Attributes, core::result::IntoIter<quick_xml::events::attributes::Attribute>> as core::iter::traits::iterator::Iterator>::next [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 4,001,000 ( 1.41%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:core::ptr::drop_glue::<core::result::Result<quick_xml::events::Event, quick_xml::errors::Error>> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 3,800,475 ( 1.34%)  ???:0x00000000001972a0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 3,200,000 ( 1.13%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:polyxml::parser::is_nil_element [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 3,176,250 ( 1.12%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+ 3,175,500 ( 1.12%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/events/attributes.rs:<core::iter::adapters::flatten::FlattenCompat<quick_xml::events::attributes::Attributes, core::result::IntoIter<quick_xml::events::attributes::Attribute>> as core::iter::traits::iterator::Iterator>::next
+ 3,150,700 ( 1.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/converts.rs:core::str::converts::from_utf8 [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 3,001,875 ( 1.06%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/x86_64/avx2/memchr.rs:memchr::arch::x86_64::memchr::memchr3_raw::find_avx2 [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 3,000,000 ( 1.06%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/intrinsics/mod.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&[u8]>
+ 2,875,600 ( 1.02%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:core::ptr::drop_glue::<polyxml::value::PolyValue>'2 [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 2,825,875 ( 1.00%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:polyxml::parser::namespace_scope [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 2,800,000 ( 0.99%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/memchr.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+ 2,625,750 ( 0.93%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:core::ptr::drop_glue::<core::iter::adapters::flatten::Flatten<quick_xml::events::attributes::Attributes>> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 2,425,000 ( 0.86%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/converters.rs:<polyxml::converters::ValueConverter>::parse_scalar [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 2,415,742 ( 0.85%)  ???:0x00000000000b0f70 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 2,375,000 ( 0.84%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&[u8]>
+ 2,325,000 ( 0.82%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/events/attributes.rs:<quick_xml::events::attributes::IterState>::check_for_duplicates [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 2,250,000 ( 0.79%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/traits.rs:<core::iter::adapters::flatten::FlattenCompat<quick_xml::events::attributes::Attributes, core::result::IntoIter<quick_xml::events::attributes::Attribute>> as core::iter::traits::iterator::Iterator>::next
+ 2,076,050 ( 0.73%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/utils.rs:<quick_xml::reader::state::ReaderState>::emit_start
+ 2,025,675 ( 0.72%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/reader/state.rs:<quick_xml::reader::state::ReaderState>::emit_end [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 2,025,675 ( 0.72%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/reader/state.rs:<quick_xml::reader::state::ReaderState>::emit_start [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 1,950,800 ( 0.69%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser>
+ 1,948,250 ( 0.69%)  ???:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 1,900,350 ( 0.67%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/non_null.rs:<quick_xml::events::attributes::IterState>::next
+ 1,850,875 ( 0.65%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:<polyxml::parser::XmlDeserializer>::parse_attributes [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 1,558,400 ( 0.55%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lexical-parse-float-1.0.6/src/parse.rs:<polyxml::converters::ValueConverter>::parse_scalar
+ 1,500,300 ( 0.53%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/option.rs:<core::iter::adapters::flatten::FlattenCompat<quick_xml::events::attributes::Attributes, core::result::IntoIter<quick_xml::events::attributes::Attribute>> as core::iter::traits::iterator::Iterator>::next
+ 1,500,150 ( 0.53%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/x86_64/avx2/memchr.rs:memchr::arch::x86_64::memchr::memchr_raw::find_avx2
+ 1,500,000 ( 0.53%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/mod.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&[u8]> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 1,489,425 ( 0.53%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/x86_64/avx2/memchr.rs:memchr::arch::x86_64::memchr::memchr2_raw::find_avx2 [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 1,465,250 ( 0.52%)  ???:0x00000000000b4180 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 1,366,800 ( 0.48%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/iter/macros.rs:<quick_xml::events::attributes::IterState>::next
+ 1,357,775 ( 0.48%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVecInner>::finish_grow [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 1,350,000 ( 0.48%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVec<core::ops::range::Range<usize>>>::grow_one [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+ 1,300,275 ( 0.46%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/reader/buffered_reader.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+ 1,275,425 ( 0.45%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/cmp.rs:<quick_xml::reader::state::ReaderState>::emit_end
+ 1,250,450 ( 0.44%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<smallvec::SmallVec<[core::option::Option<polyxml::value::PolyValue>; 8]>>::from_elem
+ 1,200,400 ( 0.42%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser>
+ 1,199,850 ( 0.42%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/../../stdarch/crates/core_arch/src/x86/avx2.rs:memchr::arch::x86_64::memchr::memchr3_raw::find_avx2
+ 1,175,000 ( 0.42%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/mod.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+ 1,150,300 ( 0.41%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/x86_64/memchr.rs:<quick_xml::parser::element::ElementParser as quick_xml::parser::Parser>::feed
+ 1,075,300 ( 0.38%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/x86_64/memchr.rs:memchr::arch::x86_64::memchr::memchr2_raw::find_avx2
+ 1,050,400 ( 0.37%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/mod.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+ 1,050,300 ( 0.37%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/const_ptr.rs:<quick_xml::parser::element::ElementParser as quick_xml::parser::Parser>::feed
+ 1,050,300 ( 0.37%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/mod.rs:<quick_xml::reader::state::ReaderState>::emit_end
+ 1,050,150 ( 0.37%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/result.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+ 1,000,000 ( 0.35%)  /rust/deps/hashbrown-0.17.1/src/raw.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+ 1,000,000 ( 0.35%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/index.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   975,000 ( 0.34%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<core::option::Option<polyxml::value::PolyValue>> as alloc::vec::spec_from_iter::SpecFromIter<core::option::Option<polyxml::value::PolyValue>, smallvec::IntoIter<[core::option::Option<polyxml::value::PolyValue>; 8]>>>::from_iter
+   950,450 ( 0.34%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/sync.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   950,100 ( 0.34%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/index.rs:<quick_xml::events::attributes::IterState>::next
+   901,650 ( 0.32%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:<polyxml::parser::StackFrame>::finish [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   900,525 ( 0.32%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.16.2/src/lib.rs:<alloc::vec::Vec<core::option::Option<polyxml::value::PolyValue>> as alloc::vec::spec_from_iter::SpecFromIter<core::option::Option<polyxml::value::PolyValue>, smallvec::IntoIter<[core::option::Option<polyxml::value::PolyValue>; 8]>>>::from_iter
+   900,300 ( 0.32%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/index.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser>
+   900,275 ( 0.32%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/traits.rs:<quick_xml::reader::state::ReaderState>::emit_end
+   900,100 ( 0.32%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/generic/memchr.rs:memchr::arch::x86_64::memchr::memchr_raw::find_avx2
+   850,150 ( 0.30%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/index.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   850,000 ( 0.30%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/name.rs:<quick_xml::name::QName>::local_name [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   850,000 ( 0.30%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/memchr.rs:<quick_xml::name::QName>::local_name
+   801,000 ( 0.28%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   800,575 ( 0.28%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<quick_xml::reader::state::ReaderState>::emit_start
+   800,200 ( 0.28%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/reader/buffered_reader.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   750,250 ( 0.27%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/x86_64/memchr.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   750,250 ( 0.27%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/mod.rs:<quick_xml::reader::state::ReaderState>::emit_start
+   750,000 ( 0.26%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/utils.rs:<quick_xml::events::attributes::IterState>::next
+   750,000 ( 0.26%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/intrinsics/mod.rs:<core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write
+   750,000 ( 0.26%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/hash/random.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&[u8]>
+   725,725 ( 0.26%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.16.2/src/lib.rs:<smallvec::SmallVec<[core::option::Option<polyxml::value::PolyValue>; 8]>>::from_elem [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   725,000 ( 0.26%)  /rust/deps/hashbrown-0.17.1/src/control/bitmask.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   700,250 ( 0.25%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<alloc::vec::Vec<core::option::Option<polyxml::value::PolyValue>> as alloc::vec::spec_from_iter::SpecFromIter<core::option::Option<polyxml::value::PolyValue>, smallvec::IntoIter<[core::option::Option<polyxml::value::PolyValue>; 8]>>>::from_iter
+   700,100 ( 0.25%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/index.rs:<polyxml::converters::ValueConverter>::parse_scalar
+   700,000 ( 0.25%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:<polyxml::parser::StackFrame>::new [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   675,675 ( 0.24%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/spec_from_iter_nested.rs:<alloc::vec::Vec<core::option::Option<polyxml::value::PolyValue>> as alloc::vec::spec_from_iter::SpecFromIter<core::option::Option<polyxml::value::PolyValue>, smallvec::IntoIter<[core::option::Option<polyxml::value::PolyValue>; 8]>>>::from_iter
+   675,225 ( 0.24%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/traits.rs:<quick_xml::reader::state::ReaderState>::emit_start
+   675,150 ( 0.24%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:core::str::converts::from_utf8
+   675,000 ( 0.24%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/escape.rs:quick_xml::escape::unescape [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   675,000 ( 0.24%)  /rust/deps/hashbrown-0.17.1/src/map.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   625,000 ( 0.22%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/macros/mod.rs:<polyxml::converters::ValueConverter>::parse_scalar
+   603,525 ( 0.21%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+   600,600 ( 0.21%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser>
+   600,200 ( 0.21%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/result.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser>
+   600,150 ( 0.21%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:core::ptr::drop_glue::<core::iter::adapters::flatten::Flatten<quick_xml::events::attributes::Attributes>>
+   600,000 ( 0.21%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/../../stdarch/crates/core_arch/src/x86/avx2.rs:memchr::arch::x86_64::memchr::memchr2_raw::find_avx2
+   575,250 ( 0.20%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   550,550 ( 0.19%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:polyxml::parser::resolve_record_schema [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   525,200 ( 0.19%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/mem/mod.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   525,175 ( 0.19%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<quick_xml::reader::state::ReaderState>::emit_end
+   525,000 ( 0.19%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<quick_xml::events::attributes::IterState>::check_for_duplicates
+   525,000 ( 0.19%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<quick_xml::events::attributes::IterState>::check_for_duplicates
+   501,000 ( 0.18%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/alloc.rs:__rustc::__rust_alloc
+   501,000 ( 0.18%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/alloc/unix.rs:__rustc::__rust_alloc
+   500,000 ( 0.18%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lexical-parse-float-1.0.6/src/number.rs:<lexical_parse_float::number::Number>::try_fast_path::<f64, 0x0000000000000000000000000c_> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   500,000 ( 0.18%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/reader/state.rs:<quick_xml::reader::state::ReaderState>::emit_text [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   500,000 ( 0.18%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write
+   480,650 ( 0.17%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<polyxml::converters::ValueConverter>::parse_scalar
+   475,475 ( 0.17%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.16.2/src/lib.rs:<smallvec::SmallVec<[core::option::Option<alloc::vec::Vec<polyxml::value::PolyValue>>; 4]> as core::ops::drop::Drop>::drop [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   475,475 ( 0.17%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.16.2/src/lib.rs:<smallvec::SmallVec<[core::option::Option<polyxml::value::PolyValue>; 8]> as core::ops::drop::Drop>::drop [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   466,875 ( 0.16%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/generic/memchr.rs:memchr::arch::x86_64::memchr::memchr2_raw::find_avx2
+   452,375 ( 0.16%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/alloc.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+   451,150 ( 0.16%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.16.2/src/lib.rs:<polyxml::parser::StackFrame>::finish
+   450,425 ( 0.16%)  /home/bailey/github/polyxml-perf-old/crates/polyxml-core/src/parser.rs:<polyxml::parser::StackFrame>::push_list_item [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   450,150 ( 0.16%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/utils.rs:<quick_xml::reader::state::ReaderState>::emit_end
+   450,150 ( 0.16%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/io/impls.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser>
+   450,150 ( 0.16%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/clone.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   450,150 ( 0.16%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<quick_xml::reader::state::ReaderState>::emit_start
+   450,100 ( 0.16%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lexical-util-1.0.7/src/digit.rs:<polyxml::converters::ValueConverter>::parse_scalar
+   450,050 ( 0.16%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/const_ptr.rs:memchr::arch::x86_64::memchr::memchr_raw::find_avx2
+   450,000 ( 0.16%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/result.rs:<polyxml::parser::XmlDeserializer>::parse_attributes
+   425,850 ( 0.15%)  ???:0x00000000000b2300 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+   425,000 ( 0.15%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/mod.rs:<polyxml::converters::ValueConverter>::parse_scalar
+   422,350 ( 0.15%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/const_ptr.rs:memchr::arch::x86_64::memchr::memchr2_raw::find_avx2
+   419,500 ( 0.15%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lexical-parse-integer-1.0.6/src/algorithm.rs:<polyxml::converters::ValueConverter>::parse_scalar
+   400,400 ( 0.14%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/spec_from_iter.rs:<alloc::vec::Vec<core::option::Option<polyxml::value::PolyValue>> as alloc::vec::spec_from_iter::SpecFromIter<core::option::Option<polyxml::value::PolyValue>, smallvec::IntoIter<[core::option::Option<polyxml::value::PolyValue>; 8]>>>::from_iter [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   400,300 ( 0.14%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/const_ptr.rs:memchr::arch::x86_64::memchr::memchr3_raw::find_avx2
+   400,125 ( 0.14%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/src/arch/x86_64/memchr.rs:memchr::arch::x86_64::memchr::memchr3_raw::find_avx2
+   400,100 ( 0.14%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/io/impls.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   400,100 ( 0.14%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/option.rs:<quick_xml::parser::element::ElementParser as quick_xml::parser::Parser>::feed
+   400,000 ( 0.14%)  /rust/deps/hashbrown-0.17.1/src/lib.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   377,250 ( 0.13%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/result.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+   375,425 ( 0.13%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<quick_xml::reader::state::ReaderState>::emit_start
+   375,125 ( 0.13%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/mod.rs:<quick_xml::reader::state::ReaderState>::emit_start
+   375,075 ( 0.13%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mut_ptr.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   350,100 ( 0.12%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/sync/atomic.rs:<quick_xml::parser::element::ElementParser as quick_xml::parser::Parser>::feed
+   350,000 ( 0.12%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<polyxml::parser::StackFrame>>::push_mut [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   350,000 ( 0.12%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write
+   350,000 ( 0.12%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/result.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   325,075 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/sync/atomic.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   300,300 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<core::option::Option<polyxml::value::PolyValue>>>::into_boxed_slice [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   300,100 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<&[u8] as quick_xml::reader::XmlSource<&mut alloc::vec::Vec<u8>>>::read_with::<quick_xml::parser::element::ElementParser>
+   300,100 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/option.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   300,100 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/sync/atomic.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   300,075 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/adapters/flatten.rs:polyxml::parser::namespace_scope
+   300,050 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   300,050 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/mod.rs:<quick_xml::reader::state::ReaderState>::emit_end
+   300,000 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/../../stdarch/crates/core_arch/src/x86/sse2.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   300,000 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/adapters/flatten.rs:polyxml::parser::is_nil_element
+   300,000 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/mod.rs:<core::iter::adapters::flatten::FlattenCompat<quick_xml::events::attributes::Attributes, core::result::IntoIter<quick_xml::events::attributes::Attribute>> as core::iter::traits::iterator::Iterator>::next
+   300,000 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<quick_xml::reader::Reader<&[u8]>>::read_event_impl::<&mut alloc::vec::Vec<u8>>
+   300,000 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mut_ptr.rs:<quick_xml::events::attributes::IterState>::check_for_duplicates
+   300,000 ( 0.11%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/mod.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   291,750 ( 0.10%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/traits/iterator.rs:<quick_xml::events::attributes::IterState>::next
+   275,000 ( 0.10%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lexical-util-1.0.7/src/iterator.rs:<polyxml::converters::ValueConverter>::parse_scalar
+   275,000 ( 0.10%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.16.2/src/lib.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   275,000 ( 0.10%)  /rust/deps/hashbrown-0.17.1/src/control/tag.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   275,000 ( 0.10%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/borrow.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   275,000 ( 0.10%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/cmp.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   250,500 ( 0.09%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/sync/atomic.rs:__rustc::__rust_alloc
+   250,500 ( 0.09%)  benchmarks/rust-runtime-investigation/target/old/src/main.rs:__rustc::__rust_alloc [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics]
+   250,100 ( 0.09%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<polyxml::parser::XmlDeserializer>::deserialize_with_limit
+   250,000 ( 0.09%)  /rust/deps/hashbrown-0.17.1/src/raw.rs:<polyxml::parser::XmlDeserializer>::parse_attributes
+   226,525 ( 0.08%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/intrinsics/mod.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+   225,225 ( 0.08%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/sync/rwlock/futex.rs:polyxml::parser::resolve_record_schema
+

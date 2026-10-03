@@ -1,0 +1,8 @@
+{
+  "revision": "ac485e0421cadd8781e044e1f658932a532b0438",
+  "core_status": "",
+  "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+  "executable": "/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/candidate/target/release/xml-diagnostics",
+  "profile": "release debug=1; allocation instrumentation; not used for latency numbers"
+}

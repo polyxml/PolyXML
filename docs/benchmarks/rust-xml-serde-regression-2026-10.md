@@ -11,6 +11,10 @@ and **12–14% on XML writes** compared with version 0.27.0. These are separate
 execution paths; generated XML methods call quick-xml directly rather than
 building dynamic PolyValue records.
 
+The follow-up [dynamic runtime optimization study](rust-runtime-optimization-2026-10.md)
+records branch experiments and later comparisons; the figures below remain the
+unoptimized release audit.
+
 This comparison ran on October 3, 2026, between
 [`cef575c` (0.27.0, September 27)](https://github.com/polyxml/PolyXML/commit/cef575c11cc4f05e877ced157036f7ff53b8687b)
 and [`bbbd087` (0.34.6)](https://github.com/polyxml/PolyXML/commit/bbbd087a9a8e9838a32912973cd4029c30f29c08).

@@ -1,0 +1,5 @@
+memcap: <=7882 MiB (60% of 13138 MiB available) [systemd MemoryMax, swap off]
+     Locking 1 package to highest compatible version
+ Downgrading polyxml v0.34.6 (/home/bailey/github/polyxml-perf-old/crates/polyxml-core) -> v0.27.0
+   Compiling core-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/core-baseline)
+    Finished `bench` profile [optimized] target(s) in 2.42s

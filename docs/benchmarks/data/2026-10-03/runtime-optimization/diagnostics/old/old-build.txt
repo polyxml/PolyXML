@@ -1,0 +1,35 @@
+memcap: <=7793 MiB (60% of 12989 MiB available) [systemd MemoryMax, swap off]
+     Locking 1 package to highest compatible version
+ Downgrading polyxml v0.34.6 (/home/bailey/github/polyxml-perf-old/crates/polyxml-core) -> v0.27.0
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling syn v3.0.6
+   Compiling serde_core v1.0.229
+   Compiling lexical-util v1.0.7
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling siphasher v1.0.4
+   Compiling zmij v1.0.23
+   Compiling phf_shared v0.14.0
+   Compiling lexical-parse-integer v1.0.6
+   Compiling lexical-write-integer v1.0.6
+   Compiling memchr v2.8.3
+   Compiling serde_json v1.0.151
+   Compiling fastrand v2.5.0
+   Compiling thiserror v2.0.21
+   Compiling phf_generator v0.14.0
+   Compiling lexical-write-float v1.0.6
+   Compiling lexical-parse-float v1.0.6
+   Compiling thiserror-impl v2.0.21
+   Compiling memo-map v0.3.4
+   Compiling itoa v1.0.18
+   Compiling minijinja v2.24.0
+   Compiling lexical-core v1.0.6
+   Compiling phf_codegen v0.14.0
+   Compiling quick-xml v0.42.0
+   Compiling heck v0.5.0
+   Compiling smallvec v1.16.2
+   Compiling polyxml v0.27.0 (/home/bailey/github/polyxml-perf-old/crates/polyxml-core)
+   Compiling xml-diagnostics v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/old)
+    Finished `release` profile [optimized + debuginfo] target(s) in 44.28s

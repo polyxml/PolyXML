@@ -1,0 +1,9 @@
+[package]
+name="xml-diagnostics"
+version="0.0.0"
+edition="2021"
+[workspace]
+[dependencies]
+polyxml={path="/home/bailey/github/polyxml-perf-old/crates/polyxml-core"}
+[profile.release]
+debug=1

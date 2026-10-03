@@ -1,0 +1,5 @@
+{
+  "revision": "bbbd087a9a8e9838a32912973cd4029c30f29c08",
+  "executable": "/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/control/target/release/xml-diagnostics",
+  "profile": "release debug=1; allocation instrumentation; not used for latency numbers"
+}

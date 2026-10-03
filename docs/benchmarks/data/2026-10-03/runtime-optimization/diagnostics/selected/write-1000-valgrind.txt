@@ -1,0 +1,12 @@
+==394749== Callgrind, a call-graph generating cache profiler
+==394749== Copyright (C) 2002-2017, and GNU GPL'd, by Josef Weidendorfer et al.
+==394749== Using Valgrind-3.26.0 and LibVEX; rerun with -h for copyright info
+==394749== Command: benchmarks/rust-runtime-investigation/target/selected/target/release/xml-diagnostics write 1000 25 instructions
+==394749== Parent PID: 388927
+==394749== 
+==394749== For interactive control, run 'callgrind_control -h'.
+==394749== 
+==394749== Events    : Ir
+==394749== Collected : 73268130
+==394749== 
+==394749== I   refs:      73,268,130

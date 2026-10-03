@@ -1,0 +1,8 @@
+memcap: <=7779 MiB (60% of 12966 MiB available) [systemd MemoryMax, swap off]
+Resolved 14 packages in 240ms
+   Building polyxml @ file:///home/bailey/github/PolyXML/crates/polyxml-python
+      Built polyxml @ file:///home/bailey/github/PolyXML/crates/polyxml-python
+Prepared 1 package in 29.94s
+Uninstalled 1 package in 0.39ms
+Installed 1 package in 0.49ms
+ ~ polyxml==0.34.6 (from file:///home/bailey/github/PolyXML/crates/polyxml-python)

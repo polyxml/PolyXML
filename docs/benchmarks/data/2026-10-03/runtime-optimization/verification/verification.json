@@ -1,0 +1,26 @@
+{
+  "archive_hashes": "pass",
+  "criterion_summaries_reconstructed_from_archives": "pass",
+  "shared_dependency_versions": "pass",
+  "generated_model_bytes_identical": "pass",
+  "measured_core_revision": "7f845ae043b68cdb3166d04ce74eaa99bc9c2b0d",
+  "control_revision": "bbbd087a9a8e9838a32912973cd4029c30f29c08",
+  "historical_revision": "cef575c11cc4f05e877ced157036f7ff53b8687b",
+  "rust_tests_passed": 321,
+  "python_tests_passed": 112,
+  "python_statement_and_branch_coverage_percent": 100,
+  "corpus_schema_expectations": [
+    31,
+    31
+  ],
+  "corpus_instance_roundtrips": [
+    23,
+    28
+  ],
+  "corpus_summary_and_group_table_matches_reference": true,
+  "corpus_reference_source_sha": "not recorded in original log",
+  "oom": false,
+  "main_modified": false,
+  "strict_docs_build": "pass",
+  "benchmark_tooling_checks": "pass"
+}

@@ -1,0 +1,37 @@
+memcap: <=7891 MiB (60% of 13151 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-perf-cache/crates/polyxml-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.02s
+     Running unittests src/lib.rs (/home/bailey/github/PolyXML/target/debug/deps/polyxml-14071107435df7a7)
+
+running 16 tests
+test integer::tests::comparison_uses_sign_and_magnitude ... ok
+test ir::root_selection_tests::inherited_base_does_not_select_sibling_types ... ok
+test ir::root_selection_tests::keeps_references_descendants_and_substitutions ... ok
+test ir::root_selection_tests::rejects_missing_and_ambiguous_roots ... ok
+test ir::chunker::tests::test_topological_scc_chunking_dag_invariants ... ok
+test json::tests::test_json_deserialization_accepts_python_field_names ... ok
+test json::tests::test_json_roundtrip_primitives ... ok
+test tests::test_deserialization_does_not_confuse_xmlns_with_attributes ... ok
+test tests::test_nested_elements_and_lists ... ok
+test tests::test_namespaced_serialization ... ok
+test ir::root_selection_tests::field_reference_keeps_substitution_group_members ... ok
+test tests::test_roundtrip_serialization_deserialization ... ok
+test tests::test_streaming_xml_item_stream ... ok
+test pattern::tests::bounded_cache_evicts_and_retains_invalid_results ... ok
+test pattern::tests::cache_matches_uncached_regex_under_churn_and_concurrency ... ok
+test pattern::tests::cyclic_working_set_above_capacity_keeps_reusing_entries ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/test_runtime_fast_paths.rs (/home/bailey/github/PolyXML/target/debug/deps/test_runtime_fast_paths-cb1357dd8af777c0)
+
+running 6 tests
+test repeated_nested_records_validate_their_own_lexical_lists ... ok
+test repeated_lexical_lists_keep_whitespace_validation ... ok
+test lexical_list_formatting_preserves_escaping_empty_lists_and_long_numbers ... ok
+test indexed_scalar_state_preserves_enum_pattern_and_split_text ... ok
+test cached_patterns_keep_raw_restriction_and_trimmed_pattern_semantics ... ok
+test unified_scalar_state_keeps_mixed_branch_order_nil_and_nested_frames ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
