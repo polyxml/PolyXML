@@ -1,0 +1,33 @@
+import dataclasses,hashlib,importlib.util,json,subprocess,sys,tempfile
+from pathlib import Path
+import polyxml
+import polyxml._polyxml as native
+repo=Path('/home/bailey/github/polyxml-runtime-integration')
+cli=Path('/tmp/polyxml-followup-integration-bin/polyxml')
+assert Path(native.__file__).resolve().is_relative_to(repo),native.__file__
+result={"revision":subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),"native_file":native.__file__,"native_sha256":hashlib.sha256(Path(native.__file__).read_bytes()).hexdigest(),"cli_sha256":hashlib.sha256(cli.read_bytes()).hexdigest()}
+with tempfile.TemporaryDirectory(prefix='polyxml-integration-probe-') as directory:
+ tmp=Path(directory)
+ subprocess.run([str(cli),'generate',str(repo/'research/fixtures/default_literal_escaping.xsd'),'--lang','python','--out',str(tmp/'models')],check=True,stdout=sys.stderr)
+ generated=next(p for p in (tmp/'models').rglob('*.py') if p.name!='__init__.py')
+ spec=importlib.util.spec_from_file_location('integration_generated_default',generated);module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)
+ # Independent lexical data, not a value read back from generated code.
+ expected='"quoted"'+chr(92)+'path'+chr(92)+'u000a'+chr(9)+chr(10)+chr(13)+chr(0x85)+chr(0x2028)+'café 😀'
+ model=module.RootType(fixed=expected)
+ assert model.value==expected and model.label==expected
+ fields={field.name:field for field in dataclasses.fields(module.RootType)}
+ assert fields['value'].metadata['default']==expected
+ assert fields['fixed'].metadata['fixed']==expected
+ result['generated_defaults']='passed'
+ entity=polyxml.xml_to_json(b'<Root><Status>R&amp;D</Status><Code>A&amp;B</Code><Fixed/><Default/></Root>',schema_path=repo/'research/fixtures/schema_attribute_entities.xsd',root='Root')
+ assert json.loads(entity)['Status']=='R&D';result['schema_entities']='passed'
+ nsxsd=tmp/'namespace.xsd';nsxsd.write_text("<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema' targetNamespace='urn:integration:A&#x26;B' elementFormDefault='qualified'><xs:element name='Root'><xs:complexType><xs:sequence><xs:element name='Value' type='xs:int'/></xs:sequence></xs:complexType></xs:element></xs:schema>")
+ assert json.loads(polyxml.xml_to_json(b"<Root xmlns='urn:integration:A&amp;B'><Value>7</Value></Root>",schema_path=nsxsd,root='Root'))['Value']==7
+ result['namespace_entities']='passed'
+ mixed=tmp/'mixed.xsd';mixed.write_text("<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'><xs:element name='Root'><xs:complexType mixed='true'><xs:choice minOccurs='0' maxOccurs='unbounded'><xs:element name='Text' type='xs:string' nillable='true'/></xs:choice></xs:complexType></xs:element></xs:schema>")
+ original=polyxml.xml_to_json(b"<Root xmlns:i='http://www.w3.org/2001/XMLSchema-instance'>before<Text i:nil='true'/>after</Root>",schema_path=mixed,root='Root')
+ output=polyxml.json_to_xml(original,schema_path=mixed,root='Root')
+ assert json.loads(original)==json.loads(polyxml.xml_to_json(output,schema_path=mixed,root='Root'))
+ assert b'nil="true"' in output
+ result['mixed_nil_transcode']='passed'
+print(json.dumps(result,indent=2))

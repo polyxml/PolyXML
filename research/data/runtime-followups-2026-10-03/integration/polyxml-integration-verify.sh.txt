@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd /home/bailey/github/polyxml-runtime-integration
+export POLYXML_MEMCAP_BACKEND=systemd CARGO_BUILD_JOBS=1 DOTNET_ROLL_FORWARD=Major
+export PATH=/tmp/polyxml-corpus-tools/node_modules/.bin:$PATH
+root=/home/bailey/github/PolyXML
+ln -s "$root/benchmarks/rust-xml-regression/target" benchmarks/rust-xml-regression/target
+python3 benchmarks/rust-xml-regression/run_core.py --baseline ../polyxml-perf-selected --output "$root/benchmarks/rust-runtime-investigation/target/evidence/runtime-integration-core" --rounds 3 --samples 100 --warmup 3 --measurement 5
+python3 benchmarks/rust-xml-regression/run_core.py --baseline ../polyxml-perf-selected --harness benchmarks/rust-runtime-investigation/mixed_branches.rs --output "$root/benchmarks/rust-runtime-investigation/target/evidence/runtime-integration-branches" --rounds 2 --samples 50 --warmup 1 --measurement 2 --filter '^branch_write/.*/1000$'
+unlink benchmarks/rust-xml-regression/target
+export CARGO_TARGET_DIR="$root/target/followup-runtime-integration-verification"
+ln -s "$CARGO_TARGET_DIR" target
+ln -s "$root/.venv" .venv
+scripts/memcap.sh scripts/gate.sh > /tmp/polyxml-runtime-integration-gate.log 2>&1
+unlink target
+unlink .venv

@@ -1,0 +1,210 @@
+{
+  "branch_write/branches_1/1000": {
+    "baseline_ns": 64328.74713332762,
+    "candidate_ns": 61028.935791734955,
+    "delta_percent": -5.129606107131979,
+    "speedup": 1.054069619579366,
+    "process_deltas_percent": [
+      -4.001836090906141,
+      -6.268627927265181
+    ],
+    "process_estimates": {
+      "baseline": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 63356.84208940396,
+            "upper_bound": 66882.69534519868
+          },
+          "point_estimate": 64648.05940397352,
+          "standard_error": 1008.9430052109713
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 63469.66638368338,
+            "upper_bound": 64631.88791437803
+          },
+          "point_estimate": 64009.43486268172,
+          "standard_error": 297.7645355927075
+        }
+      ],
+      "current": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 61873.18512116564,
+            "upper_bound": 62274.32493941717
+          },
+          "point_estimate": 62060.95003067487,
+          "standard_error": 102.62286776560046
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 59795.200436335406,
+            "upper_bound": 60236.26950310559
+          },
+          "point_estimate": 59996.921552795044,
+          "standard_error": 112.6986931439003
+        }
+      ]
+    }
+  },
+  "branch_write/branches_16/1000": {
+    "baseline_ns": 69788.80172768669,
+    "candidate_ns": 65779.89423701298,
+    "delta_percent": -5.744342059799679,
+    "speedup": 1.0609442678066512,
+    "process_deltas_percent": [
+      -5.661943017448334,
+      -5.826081090040914
+    ],
+    "process_estimates": {
+      "baseline": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 68977.31994502616,
+            "upper_bound": 70162.93964746944
+          },
+          "point_estimate": 69508.17546247819,
+          "standard_error": 305.5510094965081
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 69246.79457282415,
+            "upper_bound": 71176.44141119007
+          },
+          "point_estimate": 70069.4279928952,
+          "standard_error": 499.0342372706271
+        }
+      ],
+      "current": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 65233.60918019481,
+            "upper_bound": 65992.32039204544
+          },
+          "point_estimate": 65572.66217532467,
+          "standard_error": 195.24058330160977
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 65301.794221590906,
+            "upper_bound": 66796.20570616885
+          },
+          "point_estimate": 65987.1262987013,
+          "standard_error": 383.1903178118608
+        }
+      ]
+    }
+  },
+  "branch_write/branches_256/1000": {
+    "baseline_ns": 176019.79193173148,
+    "candidate_ns": 80284.23228507678,
+    "delta_percent": -54.38908806561101,
+    "speedup": 2.1924578079879082,
+    "process_deltas_percent": [
+      -53.94669417036191,
+      -54.83819628151125
+    ],
+    "process_estimates": {
+      "baseline": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 174694.0258913044,
+            "upper_bound": 180836.71660869557
+          },
+          "point_estimate": 177345.4795652174,
+          "standard_error": 1584.1448051598036
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 174225.54936842105,
+            "upper_bound": 175234.65001754387
+          },
+          "point_estimate": 174694.10429824557,
+          "standard_error": 259.50283421567826
+        }
+      ],
+      "current": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 80771.13179207918,
+            "upper_bound": 82778.00618019803
+          },
+          "point_estimate": 81673.45607920788,
+          "standard_error": 514.899994792032
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 78641.46049496983,
+            "upper_bound": 79172.90482193159
+          },
+          "point_estimate": 78895.00849094568,
+          "standard_error": 135.71874370091737
+        }
+      ]
+    }
+  },
+  "branch_write/branches_64/1000": {
+    "baseline_ns": 105048.19752017889,
+    "candidate_ns": 74409.40540644771,
+    "delta_percent": -29.166413929040257,
+    "speedup": 1.4117596686382912,
+    "process_deltas_percent": [
+      -28.258771985868115,
+      -30.059974534272538
+    ],
+    "process_estimates": {
+      "baseline": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 103812.7218193717,
+            "upper_bound": 104748.2042185864
+          },
+          "point_estimate": 104226.9577486911,
+          "standard_error": 241.27708733912684
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 104433.97616796875,
+            "upper_bound": 107785.79860286455
+          },
+          "point_estimate": 105869.43729166666,
+          "standard_error": 865.5421783331225
+        }
+      ],
+      "current": [
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 74421.39472559853,
+            "upper_bound": 75226.79783701658
+          },
+          "point_estimate": 74773.69941068138,
+          "standard_error": 206.43462684982683
+        },
+        {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 73638.917652214,
+            "upper_bound": 74632.85560424355
+          },
+          "point_estimate": 74045.11140221402,
+          "standard_error": 261.14805949482974
+        }
+      ]
+    }
+  }
+}
