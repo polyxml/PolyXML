@@ -1,0 +1,444 @@
+memcap: <=7719 MiB (60% of 12866 MiB available) [systemd MemoryMax, swap off]
+[0;34m==> [1/6] Running Rust format check (cargo fmt)...[0m
+[0;34m==> [2/6] Running Rust Clippy (cargo clippy -D warnings)...[0m
+   Compiling syn v3.0.5
+    Checking serde_core v1.0.229
+    Checking memchr v2.8.3
+   Compiling serde_derive v1.0.229
+    Checking serde v1.0.229
+   Compiling syn v2.0.119
+    Checking lexical-util v1.0.7
+    Checking siphasher v1.0.3
+    Checking phf_shared v0.14.0
+    Checking zmij v1.0.23
+    Checking aho-corasick v1.1.5
+    Checking itoa v1.0.18
+    Checking regex-syntax v0.8.11
+    Checking fastrand v2.5.0
+    Checking regex-automata v0.4.18
+    Checking serde_json v1.0.151
+    Checking lexical-parse-integer v1.0.6
+    Checking lexical-write-integer v1.0.6
+    Checking lexical-write-float v1.0.6
+    Checking lexical-parse-float v1.0.6
+    Checking regex v1.13.1
+    Checking phf_generator v0.14.0
+   Compiling thiserror-impl v2.0.21
+    Checking memo-map v0.3.4
+    Checking minijinja v2.24.0
+    Checking thiserror v2.0.21
+    Checking phf_codegen v0.14.0
+    Checking lexical-core v1.0.6
+    Checking quick-xml v0.42.0
+    Checking heck v0.5.0
+    Checking smallvec v1.16.2
+    Checking once_cell v1.21.4
+    Checking polyxml v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-core)
+    Checking cfg-if v1.0.4
+    Checking libc v0.2.189
+    Checking utf8parse v0.2.2
+    Checking anstyle-parse v1.0.0
+    Checking is_terminal_polyfill v1.70.2
+    Checking colorchoice v1.0.5
+    Checking anstyle-query v1.1.5
+    Checking anstyle v1.0.14
+    Checking anstream v1.0.0
+    Checking strsim v0.11.1
+    Checking clap_lex v1.1.0
+    Checking bitflags v2.13.2
+    Checking clap_builder v4.6.7
+   Compiling clap_derive v4.6.7
+    Checking clap v4.6.7
+   Compiling zerocopy-derive v0.8.57
+    Checking linux-raw-sys v0.12.1
+    Checking rustix v1.1.5
+    Checking zerocopy v0.8.57
+    Checking getrandom v0.4.3
+    Checking tempfile v3.27.0
+    Checking half v2.7.1
+    Checking either v1.18.0
+    Checking ciborium-io v0.2.2
+    Checking ciborium-ll v0.2.2
+    Checking itertools v0.13.0
+    Checking same-file v1.0.6
+    Checking cast v0.3.0
+    Checking criterion-plot v0.8.2
+    Checking walkdir v2.5.0
+    Checking num-traits v0.2.19
+    Checking alloca v0.4.0
+   Compiling phf_macros v0.14.0
+    Checking ciborium v0.2.2
+    Checking page_size v0.6.0
+    Checking tinytemplate v1.2.1
+    Checking anes v0.1.6
+    Checking oorandom v11.1.5
+    Checking yansi v1.0.1
+    Checking diff v0.1.13
+    Checking pretty_assertions v1.4.1
+    Checking criterion v0.8.2
+    Checking phf v0.14.0
+   Compiling target-lexicon v0.13.5
+   Compiling wasm-bindgen-shared v0.2.129
+   Compiling pyo3-build-config v0.29.2
+   Compiling rustversion v1.0.23
+    Checking winnow v1.0.4
+    Checking toml_parser v1.1.3+spec-1.1.0
+   Compiling pyo3-ffi v0.29.2
+    Checking serde_spanned v1.1.1
+    Checking toml_datetime v1.1.1+spec-1.1.0
+    Checking toml_writer v1.1.2+spec-1.1.0
+    Checking toml v1.1.6+spec-1.1.0
+   Compiling bumpalo v3.20.3
+   Compiling unicode-segmentation v1.13.3
+    Checking glob v0.3.4
+   Compiling convert_case v0.6.0
+   Compiling wasm-bindgen-macro-support v0.2.129
+   Compiling wasm-bindgen v0.2.129
+   Compiling pyo3 v0.29.2
+   Compiling pyo3-macros-backend v0.29.2
+    Checking unicode-ident v1.0.24
+   Compiling semver v1.0.28
+   Compiling napi-build v2.5.0
+   Compiling napi-derive-backend v1.0.75
+   Compiling polyxml-js v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-js)
+   Compiling pyo3-macros v0.29.2
+   Compiling wasm-bindgen-macro v0.2.129
+    Checking polyxml-cli v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-cli)
+   Compiling ctor v0.2.9
+    Checking napi-sys v2.4.0
+   Compiling napi-derive v2.16.13
+    Checking napi v2.16.17
+    Checking polyxml-wasm v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-wasm)
+    Checking polyxml-python v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-python)
+    Checking polyxml-c v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-c)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 46.35s
+[0;34m==> [3/6] Running Rust workspace tests (cargo test)...[0m
+   Compiling unicode-ident v1.0.24
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling syn v3.0.5
+   Compiling serde_derive v1.0.229
+   Compiling serde v1.0.229
+   Compiling syn v2.0.119
+   Compiling once_cell v1.21.4
+   Compiling thiserror-impl v2.0.21
+   Compiling minijinja v2.24.0
+   Compiling thiserror v2.0.21
+   Compiling quick-xml v0.42.0
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-core)
+   Compiling clap_derive v4.6.7
+   Compiling clap v4.6.7
+   Compiling zerocopy-derive v0.8.57
+   Compiling zerocopy v0.8.57
+   Compiling tempfile v3.27.0
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling ciborium v0.2.2
+   Compiling phf_macros v0.14.0
+   Compiling tinytemplate v1.2.1
+   Compiling criterion v0.8.2
+   Compiling phf v0.14.0
+   Compiling wasm-bindgen-shared v0.2.129
+   Compiling aho-corasick v1.1.5
+   Compiling wasm-bindgen-macro-support v0.2.129
+   Compiling wasm-bindgen-macro v0.2.129
+   Compiling regex-automata v0.4.18
+   Compiling polyxml-cli v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-cli)
+   Compiling regex v1.13.1
+   Compiling wasm-bindgen v0.2.129
+   Compiling pyo3-macros-backend v0.29.2
+   Compiling napi-derive-backend v1.0.75
+   Compiling polyxml-js v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-js)
+   Compiling pyo3-macros v0.29.2
+   Compiling pyo3-ffi v0.29.2
+   Compiling ctor v0.2.9
+   Compiling napi-sys v2.4.0
+   Compiling napi v2.16.17
+   Compiling pyo3 v0.29.2
+   Compiling napi-derive v2.16.13
+   Compiling polyxml-wasm v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-wasm)
+   Compiling polyxml-python v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-python)
+   Compiling polyxml-c v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-c)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 05s
+     Running unittests src/lib.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/polyxml-675b717e531d04ed)
+
+running 16 tests
+test integer::tests::comparison_uses_sign_and_magnitude ... ok
+test ir::chunker::tests::test_topological_scc_chunking_dag_invariants ... ok
+test ir::root_selection_tests::keeps_references_descendants_and_substitutions ... ok
+test ir::root_selection_tests::rejects_missing_and_ambiguous_roots ... ok
+test ir::root_selection_tests::inherited_base_does_not_select_sibling_types ... ok
+test json::tests::test_json_deserialization_accepts_python_field_names ... ok
+test json::tests::test_json_roundtrip_primitives ... ok
+test tests::test_deserialization_does_not_confuse_xmlns_with_attributes ... ok
+test ir::root_selection_tests::field_reference_keeps_substitution_group_members ... ok
+test tests::test_roundtrip_serialization_deserialization ... ok
+test tests::test_streaming_xml_item_stream ... ok
+test tests::test_namespaced_serialization ... ok
+test tests::test_nested_elements_and_lists ... ok
+test pattern::tests::bounded_cache_evicts_and_retains_invalid_results ... ok
+test pattern::tests::cache_matches_uncached_regex_under_churn_and_concurrency ... ok
+test pattern::tests::cyclic_working_set_above_capacity_keeps_reusing_entries ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/test_adversarial_identifiers.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_adversarial_identifiers-34056256ccaa17cb)
+
+running 7 tests
+test test_rust_adversarial_compilation ... ok
+test test_python_adversarial_compilation ... ok
+test test_go_adversarial_compilation ... ok
+test test_cpp_adversarial_compilation ... ok
+test test_java_adversarial_compilation ... ok
+test test_typescript_adversarial_compilation ... ok
+test test_csharp_adversarial_compilation ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.40s
+
+     Running tests/test_any_attribute.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_any_attribute-d5795d9c5e0fdefd)
+
+running 1 test
+test test_any_attribute_schema_parser_and_runtime_roundtrip ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_any_element.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_any_element-1fb225d6616938e8)
+
+running 2 tests
+test test_any_element_go_codegen ... ok
+test test_any_element_schema_parser_and_runtime_roundtrip ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_conformance.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_conformance-0b37810d65fedfce)
+
+running 4 tests
+test test_atom_feed_conformance ... ok
+test test_soap_envelope_conformance ... ok
+test test_ubl_invoice_conformance ... ok
+test test_streaming_catalog_conformance ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/test_core.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_core-f4cc1079f88df2bc)
+
+running 9 tests
+test integer_mappings_keep_fixed_width_builtins ... ok
+test test_malformed_xml_syntax_error ... ok
+test test_error_handling_invalid_scalars ... ok
+test test_gregorian_partial_date_lexical_validation ... ok
+test test_all_scalar_types ... ok
+test test_xsi_nil_handling ... ok
+test test_roundtrip_serialization_with_indentation ... ok
+test unbounded_integers_round_trip_and_compare_exact_bounds ... ok
+test test_xsd_gregorian_fields_round_trip_and_reject_invalid_dates ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_cpp_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_cpp_codegen-a4cd5571504c64d5)
+
+running 14 tests
+test simple_aliases_follow_their_base_types ... ok
+test test_cpp_cmake_and_meson_generation ... ok
+test test_cpp_cmake_modules_file_set ... ok
+test test_cpp_mode_and_backend_from_str_loose ... ok
+test test_cpp_glaze_backend_meta_generation ... ok
+test test_cpp_sanitization ... ok
+test mixed_content_mutual_cycle_compiles ... ok
+test mixed_content_self_cycle_compiles ... ok
+Inheritance test passed.
+test test_cpp_inheritance_codegen ... ok
+Recursive tree unique_ptr passed.
+test test_cpp_recursive_cycle_unique_ptr ... ok
+Choice pattern matching passed.
+test test_cpp_choice_variant_compilation ... ok
+test test_cpp_modules_compilation ... ok
+All C++20 tests passed successfully.
+test test_cpp_struct_and_enum_codegen_compilation ... ok
+ISO 20022 pacs.008 C++20 test passed.
+test test_cpp_from_xsd_schema ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+     Running tests/test_csharp_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_csharp_codegen-cf32febf6e7f0777)
+
+running 20 tests
+test emits_unrestricted_simple_types_and_validates_empty_records ... ok
+test choice_variants_avoid_record_member_names ... ok
+test test_csharp_any_attribute_codegen ... ok
+test test_csharp_record_kind_from_str_loose ... ok
+test test_csharp_sanitization ... ok
+test test_csharp_sequence_nested_inside_choice_codegen ... ok
+test test_csharp_date_or_datetime_lexical_union ... ok
+test test_csharp_source_gen_context ... ok
+  Determining projects to restore...
+  Restored /tmp/.tmpOfAgf7/PaymentsApp.csproj (in 200 ms).
+  PaymentsApp -> /tmp/.tmpOfAgf7/bin/Debug/net8.0/PaymentsApp.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.28
+Choice pattern matching and XML serialization passed!
+test test_csharp_choice_polymorphic_hierarchy ... ok
+  Determining projects to restore...
+test unbounded_integer_xml_preserves_digits ... ok
+  Restored /tmp/.tmpl2DdoK/TreeApp.csproj (in 174 ms).
+  TreeApp -> /tmp/.tmpl2DdoK/bin/Debug/net8.0/TreeApp.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.10
+Recursive tree C# tests passed cleanly!
+test test_csharp_recursive_cycle ... ok
+  Determining projects to restore...
+  Restored /tmp/.tmpKTKw22/CrmApp.csproj (in 176 ms).
+  CrmApp -> /tmp/.tmpKTKw22/bin/Debug/net8.0/CrmApp.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.09
+Customer C# tests passed cleanly!
+test test_csharp_records_and_enums_generation ... ok
+test test_csharp_mutable_inheritance_roundtrip ... ok
+test test_csharp_mutable_wrappers_and_choices_without_validation ... ok
+test test_csharp_simple_content_class_validator_and_unsealed_records ... ok
+test element_defaults_preserve_absence_and_empty_presence ... ok
+test lexical_union_attributes_round_trip ... ok
+test nillable_enum_collection_round_trips ... ok
+test fixed_values_are_enforced_on_read_and_write ... ok
+test particle_wire_structure_round_trips ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 51.65s
+
+     Running tests/test_default_literal_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_default_literal_codegen-4c3562e7020c30db)
+
+running 1 test
+test generated_string_defaults_and_fixed_values_preserve_xml_characters ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.95s
+
+     Running tests/test_enum_literal_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_enum_literal_codegen-0c92c71c8d4587d6)
+
+running 1 test
+test enum_literals_compile_and_preserve_values_in_all_seven_languages ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 27.76s
+
+     Running tests/test_go_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_go_codegen-005c45ed4341be87)
+
+running 25 tests
+test root_alias_names_are_unique_after_go_normalization ... ok
+test referenced_element_uses_declared_type_after_includes ... ok
+test test_go_any_attribute_codegen ... ok
+test test_go_backend_from_str_loose ... ok
+go: creating new go.mod: module payments
+go: to add module requirements and sums:
+	go mod tidy
+test imported_ordered_types_do_not_add_unused_bytes_import ... ok
+test test_go_date_or_datetime_lexical_union ... ok
+test test_go_easyjson_backend ... ok
+test test_go_enum_only_schema_omits_unused_xml_import ... ok
+test roots_and_union_attributes_round_trip ... ok
+test repeated_choice_branch_rejects_mixed_and_empty_selections ... ok
+test test_go_sanitization ... ok
+test test_go_sonic_backend ... ok
+test abstract_substitution_heads_are_rejected ... ok
+go: creating new go.mod: module tree
+go: to add module requirements and sums:
+	go mod tidy
+test duplicate_choice_names_reject_invalid_branch_shapes ... ok
+test repeated_sequence_groups_enforce_bounds_and_order ... ok
+go: creating new go.mod: module crm
+go: to add module requirements and sums:
+	go mod tidy
+test separate_choices_enforce_each_group ... ok
+test nested_lexical_unions_compile_and_round_trip_in_go ... ok
+test test_go_abstract_xsi_type_dispatch ... ok
+=== RUN   TestChoiceMutualExclusivity
+    payments_test.go:44: Correctly rejected concurrent choice branches: choice ContactChoice mutual exclusivity violation: multiple branches populated (2)
+--- PASS: TestChoiceMutualExclusivity (0.00s)
+PASS
+ok  	payments	0.008s
+test test_go_choice_mutual_exclusivity ... ok
+test temporal_scalars_preserve_xsd_lexical_values ... ok
+test test_go_namespaced_element_ref_matching ... ok
+=== RUN   TestCustomerRoundtrip
+--- PASS: TestCustomerRoundtrip (0.00s)
+PASS
+ok  	crm	0.002s
+=== RUN   TestRecursiveTree
+--- PASS: TestRecursiveTree (0.00s)
+PASS
+ok  	tree	0.002s
+test test_go_struct_and_enum_generation ... ok
+test test_go_recursive_cycle_pointers ... ok
+test unbounded_integer_xml_preserves_digits ... ok
+test ordered_particles_and_choice_branches_round_trip ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.04s
+
+     Running tests/test_inherited_simple_content.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_inherited_simple_content-d6fc3d2c41a57cf3)
+
+running 5 tests
+test cyclic_simple_content_is_a_resolution_error ... ok
+test inherited_text_preserves_enum_union_and_list_names ... ok
+test imported_simple_content_and_parser_cache_keep_terminal_text_types ... ok
+test inherited_text_resolves_terminal_type_without_losing_struct_bases_or_aliases ... ok
+test inherited_text_round_trips_and_keeps_scalar_constraints ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_inherited_text_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_inherited_text_codegen-d4f559319e95524d)
+
+running 1 test
+test inherited_scalar_text_compiles_in_all_seven_languages ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.17s
+
+     Running tests/test_java_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_java_codegen-a6078e165fc64681)
+
+running 17 tests
+test test_java_identifier_sanitization ... ok
+test test_java_jackson_backend_from_str_loose ... ok
+test test_java_jackson_backend_enum_annotations ... ok
+test test_direct_codec_rejects_wildcards_and_name_collisions ... ok
+test test_java_jackson_backend_simple_type_annotations ... ok
+test test_java_jackson_backend_struct_annotations ... ok
+test test_java_jackson_backend_union_annotations ... ok
+test test_java_bean_validation_annotations_are_opt_in ... ok
+test jackson3_preserves_core_annotations_and_maps_record_text ... ok
+test test_java_plain_record_inlines_base_fields ... ok
+test test_java_sealed_interface_choice ... ok
+test test_java_module_container_class ... ok
+test test_java_records_and_enums_generation ... ok
+test test_java_plain_record_extension_javac_execute ... FAILED
+test test_java_record_builder_and_nested_codec_execute ... ok
+test test_java_mutable_builders_and_direct_codecs_execute ... ok
+test test_java_direct_nil_lists_choices_and_namespaces ... ok
+
+failures:
+
+---- test_java_plain_record_extension_javac_execute stdout ----
+
+thread 'test_java_plain_record_extension_javac_execute' (648073) panicked at crates/polyxml-core/tests/test_java_codegen.rs:1088:5:
+Main.java:10: error: incompatible types: Measurement cannot be converted to BigDecimal
+            new Models.Measurement(new java.math.BigDecimal("2.5"), Optional.empty()),
+            ^
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+1 error
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test_java_plain_record_extension_javac_execute
+
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.52s
+
+error: test failed, to rerun pass `-p polyxml --test test_java_codegen`

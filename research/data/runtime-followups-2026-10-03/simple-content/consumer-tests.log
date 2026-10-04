@@ -1,0 +1,21 @@
+memcap: <=7696 MiB (60% of 12826 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.41s
+     Running tests/test_inherited_simple_content.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_inherited_simple_content-5af105f9910ee4ec)
+
+running 5 tests
+test cyclic_simple_content_is_a_resolution_error ... ok
+test imported_simple_content_and_parser_cache_keep_terminal_text_types ... ok
+test inherited_text_preserves_enum_union_and_list_names ... ok
+test inherited_text_resolves_terminal_type_without_losing_struct_bases_or_aliases ... ok
+test inherited_text_round_trips_and_keeps_scalar_constraints ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_inherited_text_codegen.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_inherited_text_codegen-3a3d4752ff1e73d4)
+
+running 1 test
+test inherited_scalar_text_compiles_in_all_seven_languages ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.21s
+

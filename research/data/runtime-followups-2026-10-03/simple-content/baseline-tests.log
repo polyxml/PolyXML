@@ -1,0 +1,124 @@
+memcap: <=7700 MiB (60% of 12834 MiB available) [systemd MemoryMax, swap off]
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling syn v3.0.5
+   Compiling serde_core v1.0.229
+   Compiling syn v2.0.119
+   Compiling siphasher v1.0.3
+   Compiling serde v1.0.229
+   Compiling memchr v2.8.3
+   Compiling serde_derive v1.0.229
+   Compiling cfg-if v1.0.4
+   Compiling libc v0.2.189
+   Compiling zerocopy v0.8.57
+   Compiling zmij v1.0.23
+   Compiling lexical-util v1.0.7
+   Compiling zerocopy-derive v0.8.57
+   Compiling shlex v2.0.1
+   Compiling serde_json v1.0.151
+   Compiling find-msvc-tools v0.1.12
+   Compiling cc v1.4.5
+   Compiling aho-corasick v1.1.5
+   Compiling phf_shared v0.14.0
+   Compiling regex-syntax v0.8.11
+   Compiling autocfg v1.5.1
+   Compiling fastrand v2.5.0
+   Compiling itoa v1.0.18
+   Compiling num-traits v0.2.19
+   Compiling regex-automata v0.4.18
+   Compiling half v2.7.1
+   Compiling alloca v0.4.0
+   Compiling lexical-write-integer v1.0.6
+   Compiling lexical-parse-integer v1.0.6
+   Compiling getrandom v0.4.3
+   Compiling rustix v1.1.5
+   Compiling clap_lex v1.1.0
+   Compiling anstyle v1.0.14
+   Compiling either v1.18.0
+   Compiling thiserror v2.0.21
+   Compiling ciborium-io v0.2.2
+   Compiling ciborium-ll v0.2.2
+   Compiling phf_generator v0.14.0
+   Compiling itertools v0.13.0
+   Compiling clap_builder v4.6.7
+   Compiling lexical-parse-float v1.0.6
+   Compiling lexical-write-float v1.0.6
+   Compiling regex v1.13.1
+   Compiling thiserror-impl v2.0.21
+   Compiling bitflags v2.13.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling same-file v1.0.6
+   Compiling memo-map v0.3.4
+   Compiling cast v0.3.0
+   Compiling criterion-plot v0.8.2
+   Compiling minijinja v2.24.0
+   Compiling walkdir v2.5.0
+   Compiling phf_codegen v0.14.0
+   Compiling lexical-core v1.0.6
+   Compiling clap v4.6.7
+   Compiling phf_macros v0.14.0
+   Compiling ciborium v0.2.2
+   Compiling tinytemplate v1.2.1
+   Compiling page_size v0.6.0
+   Compiling quick-xml v0.42.0
+   Compiling once_cell v1.21.4
+   Compiling heck v0.5.0
+   Compiling yansi v1.0.1
+   Compiling smallvec v1.16.2
+   Compiling diff v0.1.13
+   Compiling anes v0.1.6
+   Compiling oorandom v11.1.5
+   Compiling criterion v0.8.2
+   Compiling pretty_assertions v1.4.1
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-simple-content/crates/polyxml-core)
+   Compiling tempfile v3.27.0
+   Compiling phf v0.14.0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 40.20s
+     Running tests/test_inherited_simple_content.rs (/home/bailey/github/PolyXML/target/followup-simple-content-verification/debug/deps/test_inherited_simple_content-5af105f9910ee4ec)
+
+running 4 tests
+test cyclic_simple_content_is_a_resolution_error ... FAILED
+test imported_simple_content_and_parser_cache_keep_terminal_text_types ... FAILED
+test inherited_text_resolves_terminal_type_without_losing_struct_bases_or_aliases ... FAILED
+test inherited_text_round_trips_and_keeps_scalar_constraints ... FAILED
+
+failures:
+
+---- cyclic_simple_content_is_a_resolution_error stdout ----
+
+thread 'cyclic_simple_content_is_a_resolution_error' (629204) panicked at crates/polyxml-core/tests/test_inherited_simple_content.rs:97:49:
+called `Result::unwrap_err()` on an `Ok` value: SchemaIR { target_namespace: None, namespaces: [], types: {QName { namespace: None, local: "A" }: Struct(StructDef { qname: QName { namespace: None, local: "A" }, base_type: Some(QName { namespace: None, local: "B" }), is_abstract: false, is_mixed: false, fields: [FieldDef { name: "value", xml_name: "value", namespace: None, kind: Text, type_ref: Named(QName { namespace: None, local: "B" }), cardinality: Cardinality { min_occurs: 1, max_occurs: Count(1) }, nillable: false, default_value: None, fixed_value: None, documentation: None, facets: None, is_cycle_cut: false }], documentation: None }), QName { namespace: None, local: "B" }: Struct(StructDef { qname: QName { namespace: None, local: "B" }, base_type: Some(QName { namespace: None, local: "A" }), is_abstract: false, is_mixed: false, fields: [FieldDef { name: "value", xml_name: "value", namespace: None, kind: Text, type_ref: Boxed(Named(QName { namespace: None, local: "A" })), cardinality: Cardinality { min_occurs: 1, max_occurs: Count(1) }, nillable: false, default_value: None, fixed_value: None, documentation: None, facets: None, is_cycle_cut: true }], documentation: None })}, elements: {}, abstract_elements: {}, attributes: {}, substitution_groups: {}, ordered_types: {}, content_models: {}, upa_documents: [Document { namespace: None, groups: {}, named: {QName { namespace: None, local: "A" }: Sequence([]), QName { namespace: None, local: "B" }: Sequence([])}, anonymous: [] }], external_types: {} }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- imported_simple_content_and_parser_cache_keep_terminal_text_types stdout ----
+
+thread 'imported_simple_content_and_parser_cache_keep_terminal_text_types' (629205) panicked at crates/polyxml-core/tests/test_inherited_simple_content.rs:85:5:
+assertion `left == right` failed
+  left: Named(QName { namespace: Some("urn:base"), local: "Base" })
+ right: Primitive(Int)
+
+---- inherited_text_resolves_terminal_type_without_losing_struct_bases_or_aliases stdout ----
+
+thread 'inherited_text_resolves_terminal_type_without_losing_struct_bases_or_aliases' (629206) panicked at crates/polyxml-core/tests/test_inherited_simple_content.rs:31:9:
+assertion `left == right` failed: Leaf
+  left: Named(QName { namespace: None, local: "Middle" })
+ right: Primitive(Int)
+
+---- inherited_text_round_trips_and_keeps_scalar_constraints stdout ----
+
+thread 'inherited_text_round_trips_and_keeps_scalar_constraints' (629207) panicked at crates/polyxml-core/tests/test_inherited_simple_content.rs:57:9:
+assertion `left == right` failed: Root
+  left: None
+ right: Some(Int(7))
+
+
+failures:
+    cyclic_simple_content_is_a_resolution_error
+    imported_simple_content_and_parser_cache_keep_terminal_text_types
+    inherited_text_resolves_terminal_type_without_losing_struct_bases_or_aliases
+    inherited_text_round_trips_and_keeps_scalar_constraints
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p polyxml --test test_inherited_simple_content`

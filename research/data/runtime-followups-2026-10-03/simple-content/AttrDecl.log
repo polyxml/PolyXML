@@ -1,0 +1,23 @@
+memcap: <=7608 MiB (60% of 12681 MiB available) [systemd MemoryMax, swap off]
+╭───────────────────────────────────────────────────────────────────╮
+│ PolyXML W3C XML Schema Conformance Suite                          │
+│ Compiler Binary: /tmp/polyxml-followup-simple-content-bin/polyxml │
+│ W3C Submodule: /home/bailey/github/polyxml-w3c-tests/w3c          │
+│ Selected Suite: AttrDecl                                          │
+╰───────────────────────────────────────────────────────────────────╯
+Executing 50 test group(s)...
+
+  Testing AttrDecl/ad_name00108m5... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+
+       W3C XML Schema Conformance Summary        
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┓
+┃ Category                     ┃ Count ┃   Rate ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━┩
+│ Total Test Groups            │    50 │ 100.0% │
+│ Schema Compilations Passed   │    50 │ 100.0% │
+│ Schema Compilations Failed   │     0 │   0.0% │
+│ Valid Instances Evaluated    │    50 │      - │
+│ Roundtrip Validations Passed │    50 │ 100.0% │
+└──────────────────────────────┴───────┴────────┘
+
+All executed tests passed with 100% compliance!
