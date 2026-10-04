@@ -90,8 +90,15 @@ measurement) gives this complete binary tradeoff:
 
 All three pairs improved reads and slowed writes. Serializer source is unchanged,
 but that does not prove unchanged binary performance. Keep the entire tradeoff;
-do not publish only the favorable reads. A combined registry/attribute prototype
-is pending, since separately measured changes need not combine additively.
+do not publish only the favorable reads. The combined result below also retains its writer tradeoffs.
+
+## Combined registry and attribute guards (`7535885`)
+
+Three process pairs with the same long-run settings improved catalog reads by
+3.53% (1,000 items) and 3.97% (10,000), and sensor reads by 4.08%. Writes changed
+by -1.11%, +1.48% and +3.45%, respectively. These are whole-consumer binary
+results; separate improvements do not combine predictably. This remains a
+prototype with no full quality gate and is not selected for merging.
 
 ## Workspace artifact safeguard
 
