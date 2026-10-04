@@ -93,3 +93,10 @@ description: Use when running, adding, or publishing PolyXML language and runtim
     timed writes when the promised result is a string. Record the actual
     runtime (a net8.0 target rolled forward to .NET 10 measures .NET 10).
     Go full-field assertions belong in preflight, outside measured reads.
+
+    In the October 4 .NET 10 refresh, that longer warmup still left a
+    first-model effect for small operations. Do not call it model overhead:
+    preserve the default runs as diagnostics and use the separate
+    `serializer-comparison/control_csharp.py` full-JIT comparison, which
+    explicitly sets `DOTNET_TieredCompilation=0` in six balanced processes.
+    Label this configuration; it is not a default-tiered-PGO benchmark.

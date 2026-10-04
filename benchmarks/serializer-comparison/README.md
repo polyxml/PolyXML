@@ -84,3 +84,16 @@ processes with model order alternating. Java uses two JMH forks per case,
 three 2-second warmups and five 2-second measurements with GC profiling.
 It returns complete equivalent POJO/JAXB graphs; Panama is excluded. Its
 80-field synthetic projections differ from the sensor batch.
+
+The default-tiering .NET 10 runs showed a first-model timing effect even
+after the longer warmup. Retain them as diagnostics and run this separate
+controlled comparison after every other measured suite has finished:
+
+```bash
+python3 benchmarks/serializer-comparison/control_csharp.py \
+  benchmarks/serializer-comparison/target/model-results
+```
+
+This launches six balanced fresh processes with `DOTNET_TieredCompilation=0`.
+It measures warmed execution under that explicit JIT configuration, not default
+startup or tiered PGO behavior. No build or other benchmark may run concurrently.
