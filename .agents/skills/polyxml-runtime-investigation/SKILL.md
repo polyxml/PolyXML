@@ -47,3 +47,10 @@ separate from the schema-driven `PolyValue` runtime.
 - Publish positive and negative experiments with exact source revisions, raw
   evidence and remaining regressions. Run the full quality gate before pushing
   the experiment branch; a branch request does not authorize a merge to main.
+
+For mixed schemas with many possible child tags, measure the linear branch scan
+with `mixed_branches.rs`, including sparse one-item controls. A temporary index
+can borrow kind keys and branch references for large repeated payloads without
+persisting stale mutable metadata. Preserve the original first-match behavior
+for duplicate kind names; test metadata edits, tagged records, nil and unknown
+kinds. Keep small tables on a linear path and measure the chosen crossover.

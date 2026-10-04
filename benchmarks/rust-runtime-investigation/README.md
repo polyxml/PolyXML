@@ -124,3 +124,11 @@ cases compare the complete ordered value. These cases contain no nil items and
 can compare revisions whose nil writer is broken. Cover nil output separately
 with `test_mixed_nil`; a timing harness must not turn a known correctness
 failure into a performance result.
+
+`mixed_branches.rs` varies the child-tag table across 1, 16, 64 and 256 entries
+and the payload across one or 1,000 items. It checks every kind against its
+expected wire name and every integer before timing, then checks the full
+round trip. Use `^branch_write/.*/1000$` to screen repeated writes; retain sparse
+and read controls before promoting a branch-lookup optimization. A temporary
+index trades a per-container allocation for faster repeated lookup. It must
+preserve first-match behavior and rebuild after mutable metadata edits.
