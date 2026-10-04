@@ -61,3 +61,9 @@ least 64 items and half as many items as branches avoids that observed crossover
 regression. Retain 32/64/128-item controls, and keep the cutoff heuristic separate
 from semantic behavior: duplicate first-match ordering and metadata edits still
 need independent correctness tests.
+
+Also measure concentrated tag reuse and text-heavy content. Even above the
+size cutoff, repeated first-branch hits were 11–20% slower with a hash table.
+A bounded, evenly spaced sample can select linear lookup when the observed
+branch-search work is low. Treat sampling as a performance heuristic only;
+normal writer validation must still examine every item and preserve errors.

@@ -138,3 +138,10 @@ construction cost. The trigger requires at least 64 branches, at least 64 items,
 and items numbering at least half the branch count. This is a measured heuristic,
 not a universal break-even guarantee; tag distribution and text-only content can
 affect how much lookup work is saved.
+
+The final selector samples at most 16 evenly spaced items, requiring at least
+four tagged samples and an average linear-search depth of 16 before indexing.
+This avoids the observed repeated-first-tag regression and skips a table for
+text-only content. It is a heuristic, so retain concentrated/distributed cases
+and the actual sampled payload along with timing evidence. All items still pass
+through the normal writer validation.

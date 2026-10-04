@@ -685,6 +685,7 @@ impl XmlSerializer {
         if mixed.branches.len() >= 64
             && items.len() >= 64
             && items.len() >= mixed.branches.len().div_ceil(2)
+            && Self::mixed_lookup_sample_favors_index(items, mixed)
         {
             let mut index = std::collections::HashMap::with_capacity(mixed.branches.len());
             for branch in &mixed.branches {
@@ -703,6 +704,37 @@ impl XmlSerializer {
                     .find(|branch| branch.variant_name == kind)
             })
         }
+    }
+
+    fn mixed_lookup_sample_favors_index(
+        items: &[PolyValue],
+        mixed: &crate::schema::MixedContentSchema,
+    ) -> bool {
+        // Spread a bounded sample across the payload. Early-branch reuse and
+        // text-only items otherwise pay for an index that saves little work.
+        let stride = items.len() / 16;
+        let mut tagged = 0;
+        let mut comparisons = 0;
+        for sample in 0..16 {
+            let Some(kind) = items[sample * stride]
+                .get("kind")
+                .and_then(PolyValue::as_str)
+            else {
+                continue;
+            };
+            if kind == "#text" {
+                continue;
+            }
+            if let Some(position) = mixed
+                .branches
+                .iter()
+                .position(|branch| branch.variant_name == kind)
+            {
+                tagged += 1;
+                comparisons += position + 1;
+            }
+        }
+        tagged >= 4 && comparisons >= tagged * 16
     }
 
     #[inline(never)]
