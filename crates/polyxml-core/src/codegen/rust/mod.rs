@@ -2218,8 +2218,8 @@ impl RustCodegen {
     /// Decode the simpleContent value field from the element's own text
     /// content. Emitted only when the struct has no child elements (the
     /// element loop already consumes through `End(start)`), and only for
-    /// scalar-backed text: a simpleContent chain whose value is typed as its
-    /// base struct has no scalar form here and keeps its previous behavior.
+    /// scalar-backed text. The schema post-pass resolves inherited simpleContent
+    /// to its terminal scalar while retaining named simple-type constraints.
     fn emit_text_content_parse(
         &self,
         out: &mut String,

@@ -186,6 +186,7 @@ impl XsdParser {
         if self.frame_depth == 0 {
             resolve_global_field_refs(&mut ir);
             validate_type_references(&ir, xml)?;
+            resolve_simple_content_types(&mut ir)?;
             upa::validate(&ir)?;
             ir.content_models.retain(|_, model| {
                 model.has_choice()
@@ -1919,6 +1920,64 @@ fn parse_union_members(
             }
         })
         .collect())
+}
+
+/// Resolve inherited text after imports and includes have been merged. Keep
+/// named scalar types intact so their facets and generated identities survive.
+fn resolve_simple_content_types(ir: &mut SchemaIR) -> Result<(), SchemaError> {
+    let mut resolved: HashMap<QName, TypeRef> = HashMap::new();
+    let mut replacements = Vec::new();
+    for (owner, definition) in &ir.types {
+        let TypeDef::Struct(structure) = definition else {
+            continue;
+        };
+        for (index, field) in structure.fields.iter().enumerate() {
+            if field.kind != FieldKind::Text {
+                continue;
+            }
+            let mut current = &field.type_ref;
+            let mut visited = HashSet::new();
+            let mut path = Vec::new();
+            let terminal = loop {
+                match current {
+                    TypeRef::Boxed(inner) => current = inner,
+                    TypeRef::Named(name) => {
+                        if let Some(terminal) = resolved.get(name) {
+                            break terminal.clone();
+                        }
+                        let Some(TypeDef::Struct(base)) = ir.types.get(name) else {
+                            break current.clone();
+                        };
+                        let Some(text) = base.fields.iter().find(|f| f.kind == FieldKind::Text)
+                        else {
+                            break current.clone();
+                        };
+                        if !visited.insert(name) {
+                            return Err(SchemaError::Resolution(format!(
+                                "cyclic simpleContent base: {}",
+                                name
+                            )));
+                        }
+                        path.push(name.clone());
+                        current = &text.type_ref;
+                    }
+                    _ => break current.clone(),
+                }
+            };
+            for name in path {
+                resolved.insert(name, terminal.clone());
+            }
+            if terminal != field.type_ref {
+                replacements.push((owner.clone(), index, terminal));
+            }
+        }
+    }
+    for (owner, index, terminal) in replacements {
+        if let Some(TypeDef::Struct(structure)) = ir.types.get_mut(&owner) {
+            structure.fields[index].type_ref = terminal;
+        }
+    }
+    Ok(())
 }
 
 /// Replace element-reference placeholders with their global element's declared type.
