@@ -34,6 +34,7 @@ equivalent) and never at this root.
 
 | Suite | Location | Tooling | How to run |
 | :--- | :--- | :--- | :--- |
+| Matched serializer comparison | [`serializer-comparison/`](serializer-comparison/README.md) | Fresh-process Rust/Python, native Go/C#, Java JMH | See suite README |
 | Rust core engine | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) | `cargo bench --bench core_benchmarks` |
 | Rust same-host XML/Serde regression | [`rust-xml-regression/`](rust-xml-regression/README.md) | Generated consumers + Criterion | See suite README |
 | Rust runtime investigation | [`rust-runtime-investigation/`](rust-runtime-investigation/README.md) | Dynamic core constraints, allocations and instruction profiles | See suite README |

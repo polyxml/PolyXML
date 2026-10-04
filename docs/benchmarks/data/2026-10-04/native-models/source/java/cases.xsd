@@ -1,0 +1,11 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:cases" targetNamespace="urn:cases" elementFormDefault="qualified">
+  <xs:simpleType name="Code"><xs:restriction base="xs:string"><xs:minLength value="2"/></xs:restriction></xs:simpleType>
+  <xs:complexType name="Base" abstract="true"><xs:attribute name="id" type="xs:int" use="required"/></xs:complexType>
+  <xs:complexType name="Item"><xs:complexContent><xs:extension base="t:Base"><xs:sequence>
+    <xs:element name="display-name" type="xs:string"/>
+    <xs:element name="active" type="xs:boolean"/>
+    <xs:element name="code" type="t:Code" minOccurs="0"/>
+    <xs:element name="tags" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+    <xs:element name="child" type="t:Item" minOccurs="0"/>
+  </xs:sequence></xs:extension></xs:complexContent></xs:complexType>
+</xs:schema>

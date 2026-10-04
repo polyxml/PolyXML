@@ -1,0 +1,213 @@
+{
+  "started_utc": "2026-10-04T15:23:28.458937+00:00",
+  "revision": "303eacde6db04d29e3044edbace0cafdb8762487",
+  "git_status": "",
+  "polyxml_cli": "polyxml 0.34.8",
+  "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           39 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  12\nOn-line CPU(s) list:                     0-11\nVendor ID:                               GenuineIntel\nModel name:                              11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz\nCPU family:                              6\nModel:                                   167\nThread(s) per core:                      2\nCore(s) per socket:                      6\nSocket(s):                               1\nStepping:                                1\nBogoMIPS:                                7823.99\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc arch_perfmon rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid tsc_known_freq pni pclmulqdq vmx ssse3 fma cx16 pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves vnmi avx512vbmi umip avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid fsrm md_clear flush_l1d arch_capabilities\nVirtualization:                          VT-x\nHypervisor vendor:                       Microsoft\nVirtualization type:                     full\nL1d cache:                               288 KiB (6 instances)\nL1i cache:                               192 KiB (6 instances)\nL2 cache:                                3 MiB (6 instances)\nL3 cache:                                12 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-11\nVulnerability Gather data sampling:      Unknown: Dependent on hypervisor status\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Mitigation; Aligned branch/return thunks\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Mitigation; Clear CPU buffers; SMT Host state unknown\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Mitigation; Enhanced IBRS\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS SW sequence; BHI SW loop, KVM SW loop\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Not affected",
+  "memory": "MemTotal:       16272864 kB\nMemFree:        10153472 kB\nMemAvailable:   12888444 kB\nBuffers:          257688 kB\nCached:          3304012 kB\nSwapCached:         1408 kB\nActive:          1422048 kB\nInactive:        3745564 kB\nActive(anon):      18064 kB\nInactive(anon):  2560436 kB\nActive(file):    1403984 kB\nInactive(file):  1185128 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:       4194304 kB\nSwapFree:        4158072 kB\nDirty:              6288 kB\nWriteback:             0 kB\nAnonPages:       1605036 kB\nMapped:           644052 kB\nShmem:            972796 kB\nKReclaimable:     394416 kB\nSlab:             558940 kB\nSReclaimable:     394416 kB\nSUnreclaim:       164524 kB\nKernelStack:        8772 kB\nPageTables:        29296 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    12330736 kB\nCommitted_AS:    5017392 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       96688 kB\nVmallocChunk:          0 kB\nPercpu:            14272 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:     77824 kB\nFilePmdMapped:         0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       60416 kB\nDirectMap2M:     8220672 kB\nDirectMap1G:    17825792 kB\n",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
+  "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
+  "python": "Python 3.12.15",
+  "python_packages": "annotated-types==0.8.0\ncoverage==7.16.2\niniconfig==2.3.0\nlxml==6.1.3\nmsgspec==0.22.0\npackaging==26.3\npluggy==1.6.0\n-e file:///home/bailey/github/PolyXML/crates/polyxml-python\npydantic==2.13.5\npydantic-core==2.46.5\npydantic-xml==2.21.1\npygments==2.21.0\npytest==9.1.1\npytest-cov==7.1.0\nruff==0.16.10\ntyping-extensions==4.16.0\ntyping-inspection==0.4.4\nxsdata==26.2",
+  "native": {
+    "version": "0.34.8",
+    "path": "/home/bailey/github/PolyXML/crates/polyxml-python/python/polyxml/_polyxml.abi3.so",
+    "sha256": "daa0eb940f00bb93226fd3c64ae05dbd0009cececfae23f712edfc4dd38c3db3"
+  },
+  "rounds": 6,
+  "samples": 5,
+  "millis": 150,
+  "source_sha256": {
+    "borrowed.rs": "f1d1e02e240c185d7580ac9a66f1d4b6ecf5fdab3a77c20651a663d55b9c80a5",
+    "rust-consumer.lock": "d031c729baa20e8a3655e9de74d35593780652b00c0c46df81c4d66c4f7262c0",
+    "owned.rs": "0133908e87f06be43256cd4c137293187dd41e76807a397f5ba788ec1defd86c",
+    "python_bench.py": "e9ab49a46902a41de9974a1954db7a7b49fa4f84e71fbe808eb4eaa9923b22d6",
+    "run.py": "4cb2ca9a66ad32d3ac812677a2491089b4b662d02ebbd4388829d78536b39d6d",
+    "python-models.py": "a3d1d66f6675d11c70848b970f477f387455bc0da77d573dac3e7762c126648a",
+    "rust.rs": "e2d626a1993ce6c7f94f1d25cd245d3317ee35eaaee4c2805e5f40752a148e73",
+    "prepare.py": "8656c908541fca3342810e86d8654cfc4c6bc486a0ecc4d95be8dd0d73222a59",
+    "schema.xsd": "b3e016db29da55b94980d1d38ace7a154699e2c3ee6b94265843af592c8270ae",
+    "Cargo.toml": "00030839117fcf221c97a85fefe1d16a16a604ed93aa214337da7f4cdf18c9e0",
+    "consumer-main.rs": "e2d626a1993ce6c7f94f1d25cd245d3317ee35eaaee4c2805e5f40752a148e73",
+    "summarize.py": "f20d1d55bbb0e634154f4446a8c8b1591e2e648d77df638f80b6d691e6464e9f"
+  },
+  "host_note": "WSL host with IDE services; no concurrent local build or benchmark during measured rounds. No CPU affinity or frequency controls.",
+  "independent_xml_checks": [
+    {
+      "file": "python-lxml_typed_adapter-escaped_1000.xml",
+      "sha256": "ed1c8fd46868b60dab01b14959a13f289e9e29c9f4628eb3bb4776773d66b023",
+      "bytes": 79795
+    },
+    {
+      "file": "python-lxml_typed_adapter-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "python-lxml_typed_adapter-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "python-polyxml_dataclass-escaped_1000.xml",
+      "sha256": "e54ab994fc1a932d4ffa4e0395245f609c7c0ee8094254d58328721d1e047def",
+      "bytes": 89795
+    },
+    {
+      "file": "python-polyxml_dataclass-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "python-polyxml_dataclass-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "python-pydantic_xml-escaped_1000.xml",
+      "sha256": "ed1c8fd46868b60dab01b14959a13f289e9e29c9f4628eb3bb4776773d66b023",
+      "bytes": 79795
+    },
+    {
+      "file": "python-pydantic_xml-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "python-pydantic_xml-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "python-stdlib_elementtree_typed_adapter-escaped_1000.xml",
+      "sha256": "ed1c8fd46868b60dab01b14959a13f289e9e29c9f4628eb3bb4776773d66b023",
+      "bytes": 79795
+    },
+    {
+      "file": "python-stdlib_elementtree_typed_adapter-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "python-stdlib_elementtree_typed_adapter-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "python-xsdata_dataclass-escaped_1000.xml",
+      "sha256": "ed1c8fd46868b60dab01b14959a13f289e9e29c9f4628eb3bb4776773d66b023",
+      "bytes": 79795
+    },
+    {
+      "file": "python-xsdata_dataclass-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "python-xsdata_dataclass-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "rust-polyxml_dynamic-escaped_1000.xml",
+      "sha256": "e54ab994fc1a932d4ffa4e0395245f609c7c0ee8094254d58328721d1e047def",
+      "bytes": 89795
+    },
+    {
+      "file": "rust-polyxml_dynamic-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "rust-polyxml_dynamic-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "rust-polyxml_generated_borrowed-escaped_1000.xml",
+      "sha256": "e54ab994fc1a932d4ffa4e0395245f609c7c0ee8094254d58328721d1e047def",
+      "bytes": 89795
+    },
+    {
+      "file": "rust-polyxml_generated_borrowed-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "rust-polyxml_generated_borrowed-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "rust-polyxml_generated_owned-escaped_1000.xml",
+      "sha256": "e54ab994fc1a932d4ffa4e0395245f609c7c0ee8094254d58328721d1e047def",
+      "bytes": 89795
+    },
+    {
+      "file": "rust-polyxml_generated_owned-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "rust-polyxml_generated_owned-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "rust-quick_xml_serde_borrowed-escaped_1000.xml",
+      "sha256": "ed1c8fd46868b60dab01b14959a13f289e9e29c9f4628eb3bb4776773d66b023",
+      "bytes": 79795
+    },
+    {
+      "file": "rust-quick_xml_serde_borrowed-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "rust-quick_xml_serde_borrowed-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "rust-quick_xml_serde_owned-escaped_1000.xml",
+      "sha256": "ed1c8fd46868b60dab01b14959a13f289e9e29c9f4628eb3bb4776773d66b023",
+      "bytes": 79795
+    },
+    {
+      "file": "rust-quick_xml_serde_owned-sensor_1.xml",
+      "sha256": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+      "bytes": 65
+    },
+    {
+      "file": "rust-quick_xml_serde_owned-sensor_1000.xml",
+      "sha256": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb",
+      "bytes": 53795
+    },
+    {
+      "file": "rust-serde_xml_rs_owned-escaped_1000.xml",
+      "sha256": "64858b9676c569ac1b3e5e61d4ff2aef20425e9fb0bfcc1e0ca76f27c2a1c847",
+      "bytes": 79833
+    },
+    {
+      "file": "rust-serde_xml_rs_owned-sensor_1.xml",
+      "sha256": "9efa4866468487556e4e36a614230274585d78a42ae09b8d550d7d3312c60f23",
+      "bytes": 103
+    },
+    {
+      "file": "rust-serde_xml_rs_owned-sensor_1000.xml",
+      "sha256": "089912bba247a3538e2f30b7cae2015128bd6b42693b7cb9c03e76d65daaa6b7",
+      "bytes": 53833
+    }
+  ],
+  "binary_sha256": {
+    "allocations": "40a77b784be414c75041a5568e96abe0f985f5482a46e717cdb3a43c0752c988",
+    "timing": "e5ee59120a79a2f70c0367d2a90fea1adf5c145c551631665a3473224de5fe11"
+  },
+  "fixture_sha256": {
+    "escaped_1000.xml": "ed1c8fd46868b60dab01b14959a13f289e9e29c9f4628eb3bb4776773d66b023",
+    "sensor_1.xml": "ca3aa1ccee3078aa58729d43190b6e35dbcf4d7cb2ae0834bc04bbf286f02f2e",
+    "sensor_1000.xml": "19ab2189b0bc734cf37390a14d5e080391205abb746b52958c331e1f2aa359bb"
+  },
+  "finished_utc": "2026-10-04T15:32:31.951070+00:00"
+}

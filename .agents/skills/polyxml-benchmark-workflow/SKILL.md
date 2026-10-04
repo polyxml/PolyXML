@@ -72,3 +72,42 @@ description: Use when running, adding, or publishing PolyXML language and runtim
     Its allocation and Callgrind consumers are diagnostic only. Confirm wins
     with the uninstrumented Criterion runner, and anchor write-only filters as
     `^serialization/` because `serialization` also matches deserialization.
+
+12. For matched serializer comparisons, use `benchmarks/serializer-comparison/`.
+    Measure uninstrumented builds; the Rust allocation feature is a separate
+    diagnostic binary, and Python timings must not run under `tracemalloc`.
+    Typed stdlib/DOM adapters must include model construction and integer
+    conversion. Check every decoded field, escaped text, declared XML root,
+    and outputs with an independent XML implementation before publishing.
+    Generated Rust JSON and handwritten Serde JSON use the same `serde_json`
+    engine; Go/C# generated and handwritten models use the same native XML
+    serializer. Label these model comparisons, not separate engine wins.
+    Keep dynamic value graphs and Pydantic validation distinct from dataclass
+    binding. Report medians of process medians and their range; raw samples
+    within one process are correlated. Current and historical host/revision
+    results belong in separate tables.
+
+13. C# `XmlSerializer` timings require enough warmup for tiered compilation:
+    at least 500 read/write pairs and two seconds per model, plus alternating
+    model order in fresh processes. Include `StringWriter.ToString()` in
+    timed writes when the promised result is a string. Record the actual
+    runtime (a net8.0 target rolled forward to .NET 10 measures .NET 10).
+    Go full-field assertions belong in preflight, outside measured reads.
+
+    In the October 4 .NET 10 refresh, that longer warmup still left a
+    first-model effect for small operations. Do not call it model overhead:
+    preserve the default runs as diagnostics and use the separate
+    `serializer-comparison/control_csharp.py` full-JIT comparison, which
+    explicitly sets `DOTNET_TieredCompilation=0` in six balanced processes.
+    Label this configuration; it is not a default-tiered-PGO benchmark.
+
+14. Record the actual StAX providers on the benchmark classpath, not just the
+    JDK version. Jackson brings Woodstox into the shaded JMH jar, and generated
+    `XMLInputFactory.newFactory()` codecs select it through SPI as well. The
+    direct codec uses the JDK API but need not use the JDK default parser.
+    `serializer-comparison/Providers.java` records both factory classes.
+
+15. Retained benchmark-source READMEs contain repository-relative links. Store
+    them byte-for-byte as `.md.txt` inside docs data artifacts so the docs site
+    does not render them in the wrong relative-link context. Keep actual
+    result summaries as Markdown and check the final site strictly.

@@ -1,0 +1,526 @@
+[
+  {
+    "runtime": "csharp",
+    "count": 1,
+    "lane": "baseline",
+    "op": "read",
+    "median_us": 4.0045,
+    "process_us": [
+      3.174,
+      4.703,
+      3.298,
+      4.721,
+      3.437,
+      4.572
+    ],
+    "process_range_us": [
+      3.174,
+      4.721
+    ],
+    "allocated_bytes": 12560.0
+  },
+  {
+    "runtime": "csharp",
+    "count": 1,
+    "lane": "baseline",
+    "op": "write",
+    "median_us": 3.3565,
+    "process_us": [
+      3.535,
+      3.301,
+      3.412,
+      3.255,
+      3.433,
+      3.3
+    ],
+    "process_range_us": [
+      3.255,
+      3.535
+    ],
+    "allocated_bytes": 15512.0
+  },
+  {
+    "runtime": "csharp",
+    "count": 1,
+    "lane": "generated",
+    "op": "read",
+    "median_us": 3.974,
+    "process_us": [
+      4.58,
+      3.379,
+      4.385,
+      3.382,
+      4.384,
+      3.564
+    ],
+    "process_range_us": [
+      3.379,
+      4.58
+    ],
+    "allocated_bytes": 12512.0
+  },
+  {
+    "runtime": "csharp",
+    "count": 1,
+    "lane": "generated",
+    "op": "write",
+    "median_us": 2.786,
+    "process_us": [
+      2.77,
+      2.687,
+      2.712,
+      2.849,
+      2.965,
+      2.802
+    ],
+    "process_range_us": [
+      2.687,
+      2.965
+    ],
+    "allocated_bytes": 15512.0
+  },
+  {
+    "runtime": "csharp",
+    "count": 1000,
+    "lane": "baseline",
+    "op": "read",
+    "median_us": 611.5219999999999,
+    "process_us": [
+      611.038,
+      643.634,
+      612.006,
+      607.644,
+      605.55,
+      621.163
+    ],
+    "process_range_us": [
+      605.55,
+      643.634
+    ],
+    "allocated_bytes": 147568.0
+  },
+  {
+    "runtime": "csharp",
+    "count": 1000,
+    "lane": "baseline",
+    "op": "write",
+    "median_us": 513.221,
+    "process_us": [
+      496.338,
+      530.104,
+      489.583,
+      541.286,
+      491.516,
+      535.787
+    ],
+    "process_range_us": [
+      489.583,
+      541.286
+    ],
+    "allocated_bytes": 330120.0
+  },
+  {
+    "runtime": "csharp",
+    "count": 1000,
+    "lane": "generated",
+    "op": "read",
+    "median_us": 621.4725,
+    "process_us": [
+      623.722,
+      632.476,
+      625.584,
+      602.384,
+      619.223,
+      611.889
+    ],
+    "process_range_us": [
+      602.384,
+      632.476
+    ],
+    "allocated_bytes": 147520.0
+  },
+  {
+    "runtime": "csharp",
+    "count": 1000,
+    "lane": "generated",
+    "op": "write",
+    "median_us": 513.2775,
+    "process_us": [
+      521.986,
+      498.606,
+      529.888,
+      504.569,
+      526.75,
+      495.953
+    ],
+    "process_range_us": [
+      495.953,
+      529.888
+    ],
+    "allocated_bytes": 330120.0
+  },
+  {
+    "runtime": "go",
+    "count": 1,
+    "lane": "baseline",
+    "op": "read",
+    "median_us": 2.737,
+    "process_us": [
+      2.737,
+      2.735,
+      2.76,
+      2.754,
+      2.725
+    ],
+    "process_range_us": [
+      2.725,
+      2.76
+    ],
+    "allocated_bytes": 1912,
+    "allocation_calls": 43
+  },
+  {
+    "runtime": "go",
+    "count": 1,
+    "lane": "baseline",
+    "op": "write",
+    "median_us": 1.771,
+    "process_us": [
+      1.771,
+      1.761,
+      1.778,
+      1.775,
+      1.769
+    ],
+    "process_range_us": [
+      1.761,
+      1.778
+    ],
+    "allocated_bytes": 4832,
+    "allocation_calls": 12
+  },
+  {
+    "runtime": "go",
+    "count": 1,
+    "lane": "generated",
+    "op": "read",
+    "median_us": 2.855,
+    "process_us": [
+      2.849,
+      2.855,
+      2.849,
+      2.864,
+      2.868
+    ],
+    "process_range_us": [
+      2.849,
+      2.868
+    ],
+    "allocated_bytes": 1976,
+    "allocation_calls": 44
+  },
+  {
+    "runtime": "go",
+    "count": 1,
+    "lane": "generated",
+    "op": "write",
+    "median_us": 1.885,
+    "process_us": [
+      1.874,
+      1.885,
+      1.897,
+      1.889,
+      1.853
+    ],
+    "process_range_us": [
+      1.853,
+      1.897
+    ],
+    "allocated_bytes": 5072,
+    "allocation_calls": 15
+  },
+  {
+    "runtime": "go",
+    "count": 1000,
+    "lane": "baseline",
+    "op": "read",
+    "median_us": 1961.176,
+    "process_us": [
+      1961.176,
+      1957.18,
+      1955.987,
+      1968.87,
+      1985.216
+    ],
+    "process_range_us": [
+      1955.987,
+      1985.216
+    ],
+    "allocated_bytes": 1035648,
+    "allocation_calls": 27026
+  },
+  {
+    "runtime": "go",
+    "count": 1000,
+    "lane": "baseline",
+    "op": "write",
+    "median_us": 423.015,
+    "process_us": [
+      420.988,
+      430.161,
+      423.059,
+      423.015,
+      420.26
+    ],
+    "process_range_us": [
+      420.26,
+      430.161
+    ],
+    "allocated_bytes": 134608,
+    "allocation_calls": 916
+  },
+  {
+    "runtime": "go",
+    "count": 1000,
+    "lane": "generated",
+    "op": "read",
+    "median_us": 2031.079,
+    "process_us": [
+      2044.41,
+      2012.771,
+      2031.654,
+      2028.534,
+      2031.079
+    ],
+    "process_range_us": [
+      2012.771,
+      2044.41
+    ],
+    "allocated_bytes": 1035712,
+    "allocation_calls": 27027
+  },
+  {
+    "runtime": "go",
+    "count": 1000,
+    "lane": "generated",
+    "op": "write",
+    "median_us": 486.732,
+    "process_us": [
+      486.732,
+      487.448,
+      487.402,
+      485.583,
+      484.785
+    ],
+    "process_range_us": [
+      484.785,
+      487.448
+    ],
+    "allocated_bytes": 266641,
+    "allocation_calls": 2922
+  },
+  {
+    "runtime": "java",
+    "workload": "settlement",
+    "lane": "direct",
+    "op": "read",
+    "batches_per_second": 380.1360285034425,
+    "jmh_score_error": 4.8455847670692265,
+    "jmh_score_confidence": [
+      375.2904437363733,
+      384.98161327051173
+    ],
+    "fork_means_batches_per_second": [
+      378.1425534265585,
+      382.1295035803265
+    ],
+    "allocated_bytes_per_message": 4520.009248549848
+  },
+  {
+    "runtime": "java",
+    "workload": "telemetry",
+    "lane": "direct",
+    "op": "read",
+    "batches_per_second": 605.3058101221241,
+    "jmh_score_error": 2.467346723576725,
+    "jmh_score_confidence": [
+      602.8384633985473,
+      607.7731568457008
+    ],
+    "fork_means_batches_per_second": [
+      606.1142243864474,
+      604.4973958578006
+    ],
+    "allocated_bytes_per_message": 2720.0058093394005
+  },
+  {
+    "runtime": "java",
+    "workload": "settlement",
+    "lane": "direct",
+    "op": "write",
+    "batches_per_second": 208.08580283623527,
+    "jmh_score_error": 4.253439382611786,
+    "jmh_score_confidence": [
+      203.8323634536235,
+      212.33924221884706
+    ],
+    "fork_means_batches_per_second": [
+      205.49668321985698,
+      210.6749224526136
+    ],
+    "allocated_bytes_per_message": 9456.016890046385
+  },
+  {
+    "runtime": "java",
+    "workload": "telemetry",
+    "lane": "direct",
+    "op": "write",
+    "batches_per_second": 698.8611308742883,
+    "jmh_score_error": 4.591034063787572,
+    "jmh_score_confidence": [
+      694.2700968105007,
+      703.4521649380758
+    ],
+    "fork_means_batches_per_second": [
+      699.2106141072408,
+      698.5116476413358
+    ],
+    "allocated_bytes_per_message": 5856.005029492596
+  },
+  {
+    "runtime": "java",
+    "workload": "settlement",
+    "lane": "jackson",
+    "op": "read",
+    "batches_per_second": 402.5312621500833,
+    "jmh_score_error": 4.929850195532347,
+    "jmh_score_confidence": [
+      397.60141195455094,
+      407.4611123456157
+    ],
+    "fork_means_batches_per_second": [
+      402.5021546820821,
+      402.56036961808456
+    ],
+    "allocated_bytes_per_message": 5040.008722394081
+  },
+  {
+    "runtime": "java",
+    "workload": "telemetry",
+    "lane": "jackson",
+    "op": "read",
+    "batches_per_second": 626.0465431779817,
+    "jmh_score_error": 4.449456760231316,
+    "jmh_score_confidence": [
+      621.5970864177503,
+      630.495999938213
+    ],
+    "fork_means_batches_per_second": [
+      626.2594853214754,
+      625.8336010344881
+    ],
+    "allocated_bytes_per_message": 3240.005616985784
+  },
+  {
+    "runtime": "java",
+    "workload": "settlement",
+    "lane": "jackson",
+    "op": "write",
+    "batches_per_second": 197.94370196911453,
+    "jmh_score_error": 1.6959441622481135,
+    "jmh_score_confidence": [
+      196.24775780686642,
+      199.63964613136264
+    ],
+    "fork_means_batches_per_second": [
+      198.62073096072157,
+      197.26667297750748
+    ],
+    "allocated_bytes_per_message": 6584.017752177451
+  },
+  {
+    "runtime": "java",
+    "workload": "telemetry",
+    "lane": "jackson",
+    "op": "write",
+    "batches_per_second": 490.0843462537705,
+    "jmh_score_error": 3.6110024884390635,
+    "jmh_score_confidence": [
+      486.47334376533144,
+      493.69534874220955
+    ],
+    "fork_means_batches_per_second": [
+      490.6565673937535,
+      489.51212511378736
+    ],
+    "allocated_bytes_per_message": 1728.0071707248123
+  },
+  {
+    "runtime": "java",
+    "workload": "settlement",
+    "lane": "jaxb",
+    "op": "read",
+    "batches_per_second": 173.61133903447976,
+    "jmh_score_error": 3.2974834893983815,
+    "jmh_score_confidence": [
+      170.31385554508137,
+      176.90882252387814
+    ],
+    "fork_means_batches_per_second": [
+      171.60710701414268,
+      175.61557105481683
+    ],
+    "allocated_bytes_per_message": 7096.026292583314
+  },
+  {
+    "runtime": "java",
+    "workload": "telemetry",
+    "lane": "jaxb",
+    "op": "read",
+    "batches_per_second": 238.7707016712467,
+    "jmh_score_error": 1.7356055571595719,
+    "jmh_score_confidence": [
+      237.03509611408714,
+      240.50630722840629
+    ],
+    "fork_means_batches_per_second": [
+      238.42553417103392,
+      239.11586917145945
+    ],
+    "allocated_bytes_per_message": 3496.017720292718
+  },
+  {
+    "runtime": "java",
+    "workload": "settlement",
+    "lane": "jaxb",
+    "op": "write",
+    "batches_per_second": 126.98685594028821,
+    "jmh_score_error": 1.273419719311268,
+    "jmh_score_confidence": [
+      125.71343622097694,
+      128.26027565959947
+    ],
+    "fork_means_batches_per_second": [
+      127.69192300345925,
+      126.28178887711721
+    ],
+    "allocated_bytes_per_message": 28608.027648998082
+  },
+  {
+    "runtime": "java",
+    "workload": "telemetry",
+    "lane": "jaxb",
+    "op": "write",
+    "batches_per_second": 248.78025744908578,
+    "jmh_score_error": 6.879300187438265,
+    "jmh_score_confidence": [
+      241.9009572616475,
+      255.65955763652406
+    ],
+    "fork_means_batches_per_second": [
+      244.68833450726535,
+      252.87218039090615
+    ],
+    "allocated_bytes_per_message": 7328.014125257215
+  }
+]
