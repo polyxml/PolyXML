@@ -673,7 +673,6 @@ impl XmlSerializer {
         Ok(())
     }
 
-    #[inline(never)]
     fn write_mixed_items<W: std::io::Write>(
         writer: &mut Writer<W>,
         items: &[PolyValue],
@@ -681,6 +680,39 @@ impl XmlSerializer {
         mixed: &crate::schema::MixedContentSchema,
         ns_ctx: Option<&NamespaceContext>,
     ) -> Result<()> {
+        // Amortize the temporary index only for sufficiently large schemas and
+        // repeated payloads. References avoid cloning keys or branch metadata.
+        if mixed.branches.len() >= 64 && items.len() >= 64 {
+            let mut index = std::collections::HashMap::with_capacity(mixed.branches.len());
+            for branch in &mixed.branches {
+                // Preserve the linear lookup's first-match behavior for public
+                // metadata containing duplicate variant names.
+                index.entry(branch.variant_name.as_str()).or_insert(branch);
+            }
+            Self::write_mixed_items_using(writer, items, schema, ns_ctx, |kind| {
+                index.get(kind).copied()
+            })
+        } else {
+            Self::write_mixed_items_using(writer, items, schema, ns_ctx, |kind| {
+                mixed
+                    .branches
+                    .iter()
+                    .find(|branch| branch.variant_name == kind)
+            })
+        }
+    }
+
+    #[inline(never)]
+    fn write_mixed_items_using<'a, W: std::io::Write, F>(
+        writer: &mut Writer<W>,
+        items: &[PolyValue],
+        schema: &ModelSchema,
+        ns_ctx: Option<&NamespaceContext>,
+        lookup: F,
+    ) -> Result<()>
+    where
+        F: Fn(&str) -> Option<&'a crate::schema::MixedBranchSchema>,
+    {
         for item in items {
             let tagged_field = |name: &str| -> Option<&PolyValue> {
                 match item {
@@ -715,11 +747,7 @@ impl XmlSerializer {
                     .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                 continue;
             }
-            let Some(branch) = mixed
-                .branches
-                .iter()
-                .find(|branch| branch.variant_name == kind)
-            else {
+            let Some(branch) = lookup(kind) else {
                 return Err(PolyXmlError::SerializationError(format!(
                     "Unknown mixed content kind: {kind}"
                 )));
