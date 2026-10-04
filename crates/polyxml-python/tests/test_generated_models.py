@@ -1,4 +1,5 @@
 import importlib.util
+import os
 import pathlib
 import shutil
 import subprocess
@@ -262,17 +263,20 @@ def _load_module_from_file(module_name: str, file_path: pathlib.Path):
 def _get_polyxml_bin() -> pathlib.Path:
     repo_root = pathlib.Path(__file__).parent.parent.parent.parent
     exe_name = "polyxml.exe" if sys.platform == "win32" else "polyxml"
-    candidates = [
-        repo_root / "target" / "debug" / exe_name,
-        repo_root / "target" / "release" / exe_name,
-    ]
+    configured_target = os.environ.get("CARGO_TARGET_DIR")
+    target_dir = pathlib.Path(configured_target or "target")
+    if not target_dir.is_absolute():
+        target_dir = repo_root / target_dir
+    target_dir = target_dir.resolve()
+    candidates = [target_dir / profile / exe_name for profile in ("debug", "release")]
     for c in candidates:
         if c.exists():
             return c
 
-    which_path = shutil.which(exe_name) or shutil.which("polyxml")
-    if which_path:
-        return pathlib.Path(which_path)
+    if not configured_target:
+        which_path = shutil.which(exe_name) or shutil.which("polyxml")
+        if which_path:
+            return pathlib.Path(which_path)
 
     # Attempt on-the-fly compilation via cargo if not found
     subprocess.run(
@@ -286,6 +290,52 @@ def _get_polyxml_bin() -> pathlib.Path:
             return c
 
     raise FileNotFoundError(f"polyxml CLI binary could not be found or built at {candidates}")
+
+
+@pytest.mark.parametrize("relative", [False, True])
+def test_cli_discovery_respects_cargo_target_directory(tmp_path, monkeypatch, relative):
+    repo_root = tmp_path / "repo"
+    monkeypatch.setitem(
+        _get_polyxml_bin.__globals__,
+        "__file__",
+        str(repo_root / "crates/polyxml-python/tests/test_generated_models.py"),
+    )
+    exe_name = "polyxml.exe" if sys.platform == "win32" else "polyxml"
+    stale = repo_root / "target/debug" / exe_name
+    stale.parent.mkdir(parents=True)
+    stale.write_text("old revision")
+    matching = repo_root / "custom-target/debug" / exe_name
+    matching.parent.mkdir(parents=True)
+    matching.write_text("matching revision")
+    monkeypatch.setenv(
+        "CARGO_TARGET_DIR", "custom-target" if relative else str(matching.parent.parent)
+    )
+    monkeypatch.setattr(shutil, "which", lambda _: str(stale))
+    assert _get_polyxml_bin() == matching
+
+
+def test_configured_target_builds_matching_cli_instead_of_using_global(tmp_path, monkeypatch):
+    repo_root = tmp_path / "repo"
+    monkeypatch.setitem(
+        _get_polyxml_bin.__globals__,
+        "__file__",
+        str(repo_root / "crates/polyxml-python/tests/test_generated_models.py"),
+    )
+    exe_name = "polyxml.exe" if sys.platform == "win32" else "polyxml"
+    matching = repo_root / "custom-target/debug" / exe_name
+    monkeypatch.setenv("CARGO_TARGET_DIR", str(matching.parent.parent))
+    monkeypatch.setattr(shutil, "which", lambda _: str(tmp_path / "old-global-cli"))
+    builds = []
+
+    def build(command, *, cwd, check, capture_output):
+        builds.append((command, cwd))
+        assert check and capture_output
+        matching.parent.mkdir(parents=True)
+        matching.write_text("matching revision")
+
+    monkeypatch.setattr(subprocess, "run", build)
+    assert _get_polyxml_bin() == matching
+    assert builds == [(["cargo", "build", "-p", "polyxml-cli"], repo_root)]
 
 
 @pytest.fixture(scope="module")

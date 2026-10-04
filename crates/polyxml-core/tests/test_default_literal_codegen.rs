@@ -100,10 +100,22 @@ int main() {
 "#,
     )
     .unwrap();
-    run(&cpp, "g++", &["-std=c++20", "main.cpp", "-o", "check"]);
+    run(
+        &cpp,
+        "g++",
+        &[
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "main.cpp",
+            "-o",
+            "check",
+        ],
+    );
     run(&cpp, "./check", &[]);
     let csharp = consumer("csharp");
-    fs::write(csharp.join("Check.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>").unwrap();
+    fs::write(csharp.join("Check.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup></Project>").unwrap();
     fs::write(
         csharp.join("Models.cs"),
         CSharpCodegen::new(CSharpOptions {

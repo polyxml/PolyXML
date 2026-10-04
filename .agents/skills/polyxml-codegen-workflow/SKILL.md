@@ -970,3 +970,11 @@ owned/borrowed XML and JSON round trips, use the declared root name explicitly
 when it differs from its type name, and distinguish C++/TypeScript model-only
 generation from their runtime binding schemas. Strict docs builds catch broken
 anchors and misplaced code fences, including guides appended after old fences.
+
+When Python generated-model tests use an isolated absolute CARGO_TARGET_DIR,
+resolve the CLI under that target, not the checkout's default target directory
+or an unrelated global executable. Relative target values resolve from the
+checkout because the helper builds with that cwd. The generated-model test
+helper now honors this override and builds the matching CLI if needed. Keep
+workspace targets owned by one worktree; switching checkouts in a shared target
+can leave stale unchanged executables even after a core compile message.
