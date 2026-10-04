@@ -1,0 +1,57 @@
+memcap: <=7778 MiB (60% of 12963 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-namespace-entities/crates/polyxml-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.35s
+     Running tests/test_any_attribute.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_any_attribute-f8564805a9b9d00f)
+
+running 1 test
+test test_any_attribute_schema_parser_and_runtime_roundtrip ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_any_element.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_any_element-48a6e5ab2c28f2fe)
+
+running 2 tests
+test test_any_element_go_codegen ... ok
+test test_any_element_schema_parser_and_runtime_roundtrip ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_namespace_entities.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_namespace_entities-4bd83b729ca4f37e)
+
+running 4 tests
+test namespace_entity_values_are_decoded_once ... ok
+test undefined_entities_cannot_form_namespace_bindings ... ok
+test entity_decoding_applies_to_inherited_and_local_xsi_type_bindings ... ok
+test escaped_namespace_bindings_match_strict_root_and_round_trip ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_security.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_security-e324fcc17a7a8524)
+
+running 6 tests
+test test_malformed_unclosed_cdata_rejection ... ok
+test test_cdata_section_handling ... ok
+test test_numeric_character_references ... ok
+test test_max_depth_recursion_limit ... ok
+test test_xml_entity_roundtrip_escaping ... ok
+test unsupported_general_entities_are_rejected ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_xsi_type.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_xsi_type-c45053350e445953)
+
+running 11 tests
+test abstract_type_without_derivations_errors ... ok
+test plain_type_attribute_is_not_mistaken_for_dispatch ... ok
+test from_ir_flattens_base_fields_and_registers_variants ... ok
+test abstract_type_requires_concrete_selector ... ok
+test iterparse_dispatches_each_streamed_item ... ok
+test root_xsi_type_dispatch_including_empty_element ... ok
+test nil_abstract_complex_type_skips_concrete_dispatch ... ok
+test xsi_type_resolves_namespace_inherited_from_parent ... ok
+test unknown_xsi_type_on_abstract_type_errors ... ok
+test variant_serialization_requires_namespaces ... ok
+test nested_xsi_type_dispatch_and_round_trip ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
