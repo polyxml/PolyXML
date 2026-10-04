@@ -1,0 +1,53 @@
+memcap: <=7722 MiB (60% of 12871 MiB available) [systemd MemoryMax, swap off]
+╭────────────────────────────────────────────────────────────╮
+│ PolyXML W3C XML Schema Conformance Suite                   │
+│ Compiler Binary: /tmp/polyxml-followup-default-bin/polyxml │
+│ W3C Submodule: /home/bailey/github/polyxml-w3c-tests/w3c   │
+│ Selected Suite: CType                                      │
+╰────────────────────────────────────────────────────────────╯
+Executing 31 test group(s)...
+
+  Testing CType/targetns00101m... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+
+       W3C XML Schema Conformance Summary        
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┓
+┃ Category                     ┃ Count ┃   Rate ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━┩
+│ Total Test Groups            │    31 │ 100.0% │
+│ Schema Compilations Passed   │    31 │ 100.0% │
+│ Schema Compilations Failed   │     0 │   0.0% │
+│ Valid Instances Evaluated    │    28 │      - │
+│ Roundtrip Validations Passed │    23 │  82.1% │
+└──────────────────────────────┴───────┴────────┘
+
+Failures & Exceptions (5 groups):
+┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┓
+┃                    ┃               ┃     Instances      ┃ Error / First      ┃
+┃ Suite/Group        ┃ Schema Status ┃    (Pass/Total)    ┃ Failure            ┃
+┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━┩
+│ CType/basetd00101… │ PASS          │        0/1         │ Positive: FAIL -   │
+│                    │               │                    │ Root.__init__()    │
+│                    │               │                    │ missing 1 required │
+│                    │               │                    │ keyword-only       │
+│                    │               │                    │ argument: 'valu    │
+│ CType/basetd00101… │ PASS          │        0/1         │ Positive: FAIL -   │
+│                    │               │                    │ Root.__init__()    │
+│                    │               │                    │ missing 1 required │
+│                    │               │                    │ keyword-only       │
+│                    │               │                    │ argument: 'valu    │
+│ CType/derivationm… │ PASS          │        0/1         │ Positive: FAIL -   │
+│                    │               │                    │ B.__init__()       │
+│                    │               │                    │ missing 1 required │
+│                    │               │                    │ keyword-only       │
+│                    │               │                    │ argument: 'value'  │
+│ CType/psubstituti… │ PASS          │        1/2         │ pSubstitutions001… │
+│                    │               │                    │ FAIL - Schema      │
+│                    │               │                    │ error: Unexpected  │
+│                    │               │                    │ root element       │
+│                    │               │                    │ {pSubstitu         │
+│ CType/psubstituti… │ PASS          │        1/2         │ pSubstitutions001… │
+│                    │               │                    │ FAIL - Schema      │
+│                    │               │                    │ error: Unexpected  │
+│                    │               │                    │ root element       │
+│                    │               │                    │ {pSubstitu         │
+└────────────────────┴───────────────┴────────────────────┴────────────────────┘

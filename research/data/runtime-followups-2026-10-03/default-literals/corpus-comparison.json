@@ -1,0 +1,11 @@
+{
+  "CType": {
+    "identical_summary_and_failures": true
+  },
+  "AttrDecl": {
+    "identical_summary_and_failures": true
+  },
+  "NIST": {
+    "identical_summary_and_failures": true
+  }
+}

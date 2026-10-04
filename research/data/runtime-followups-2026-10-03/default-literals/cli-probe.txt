@@ -1,0 +1,9 @@
+Parsing schema: research/fixtures/default_literal_escaping.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+{
+  "expected": "\"quoted\"\\path\\u000a\t\n\r\u0085\u2028caf\u00e9 \ud83d\ude00",
+  "default": "\"quoted\"\\path\\u000a\t\n\r\u0085\u2028caf\u00e9 \ud83d\ude00",
+  "cli_sha256": "55da9bccc0425fe2c1300c98e1123717f2e61a815567ba3939de0ef50c6c7565"
+}
