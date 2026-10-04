@@ -1,0 +1,30 @@
+memcap: <=7766 MiB (60% of 12944 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-mixed-writer/crates/polyxml-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.08s
+     Running tests/test_mixed_nil.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_mixed_nil-1aec7ae934470d6f)
+
+running 2 tests
+test nil_scalar_and_nested_items_keep_order_and_differ_from_empty_strings ... FAILED
+test nil_instance_prefix_does_not_rebind_the_element_namespace ... FAILED
+
+failures:
+
+---- nil_scalar_and_nested_items_keep_order_and_differ_from_empty_strings stdout ----
+
+thread 'nil_scalar_and_nested_items_keep_order_and_differ_from_empty_strings' (503936) panicked at crates/polyxml-core/tests/test_mixed_nil.rs:41:63:
+called `Result::unwrap()` on an `Err` value: SerializationError("Invalid mixed content value for text")
+
+---- nil_instance_prefix_does_not_rebind_the_element_namespace stdout ----
+
+thread 'nil_instance_prefix_does_not_rebind_the_element_namespace' (503935) panicked at crates/polyxml-core/tests/test_mixed_nil.rs:61:10:
+called `Result::unwrap()` on an `Err` value: SerializationError("Invalid mixed content value for text")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    nil_instance_prefix_does_not_rebind_the_element_namespace
+    nil_scalar_and_nested_items_keep_order_and_differ_from_empty_strings
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p polyxml --test test_mixed_nil`

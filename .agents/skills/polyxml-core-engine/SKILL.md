@@ -267,6 +267,13 @@ randomized hasher and an eviction nonce; FIFO would miss on every access for a
 cycle of 17 patterns. Public schema metadata remains mutable before sharing,
 so avoid cached flags that become stale after edits.
 
+The `xsi:type` variant registry shares an atomic populated flag with its locked
+vector across schema clones. Update the flag under the write lock in
+`set_variants`, including when clearing the registry; empty dispatch checks can
+then avoid a read lock. Nonempty vector snapshots and QName lookups remain
+locked. Preserve sequential clone/update tests, concurrent snapshots, and full
+`test_xsi_type` dispatch/error/round-trip coverage when changing the registry.
+
 The serializer writes directly into an append-only byte vector and checks for
 lexical-list obligations before traversing repeated values. Ordinary nested
 records validate their own fields. Lexical lists append tokens to one string;

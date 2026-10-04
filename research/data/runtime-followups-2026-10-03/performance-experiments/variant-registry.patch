@@ -1,0 +1,197 @@
+diff --git a/crates/polyxml-core/src/schema.rs b/crates/polyxml-core/src/schema.rs
+index 920a2a1..8724531 100644
+--- a/crates/polyxml-core/src/schema.rs
++++ b/crates/polyxml-core/src/schema.rs
+@@ -1,4 +1,5 @@
+ use std::collections::HashMap;
++use std::sync::atomic::{AtomicBool, Ordering};
+ use std::sync::{Arc, RwLock};
+ 
+ #[derive(Debug, Clone, PartialEq, Eq)]
+@@ -106,6 +107,12 @@ impl FieldSchema {
+     }
+ }
+ 
++#[derive(Debug, Default)]
++struct VariantRegistry {
++    schemas: RwLock<Vec<Arc<ModelSchema>>>,
++    populated: AtomicBool,
++}
++
+ #[derive(Debug, Clone)]
+ pub struct ModelSchema {
+     pub name: String,
+@@ -125,7 +132,7 @@ pub struct ModelSchema {
+     pub content_pattern: Option<regex::Regex>,
+     /// Concrete derivations eligible for `xsi:type` dispatch. Python may
+     /// refresh this registry when subclasses are defined after first use.
+-    variants: Arc<RwLock<Vec<Arc<ModelSchema>>>>,
++    variants: Arc<VariantRegistry>,
+ }
+ 
+ impl ModelSchema {
+@@ -136,12 +143,27 @@ impl ModelSchema {
+     /// Register the concrete derivations eligible for `xsi:type` dispatch.
+     /// Replaces the registry when subclasses are discovered after first use.
+     pub fn set_variants(&self, variants: Vec<Arc<ModelSchema>>) {
+-        *self.variants.write().unwrap_or_else(|p| p.into_inner()) = variants;
++        let mut registered = self
++            .variants
++            .schemas
++            .write()
++            .unwrap_or_else(|p| p.into_inner());
++        *registered = variants;
++        // Publish emptiness while holding the registry lock. Cloned schemas
++        // share this flag, so later registration/clearing cannot leave a stale
++        // per-schema dispatch plan. Nonempty lookups still use the lock.
++        self.variants
++            .populated
++            .store(!registered.is_empty(), Ordering::Release);
+     }
+ 
+     /// Registered derivations for `xsi:type` dispatch (empty when none).
+     pub fn variants(&self) -> Vec<Arc<ModelSchema>> {
++        if !self.has_variants() {
++            return Vec::new();
++        }
+         self.variants
++            .schemas
+             .read()
+             .unwrap_or_else(|p| p.into_inner())
+             .clone()
+@@ -149,16 +171,16 @@ impl ModelSchema {
+ 
+     /// Whether any `xsi:type` derivations are registered for this type.
+     pub fn has_variants(&self) -> bool {
+-        !self
+-            .variants
+-            .read()
+-            .unwrap_or_else(|p| p.into_inner())
+-            .is_empty()
++        self.variants.populated.load(Ordering::Acquire)
+     }
+ 
+     /// Look up a derivation by the QName local part of an `xsi:type` value.
+     pub fn find_variant(&self, local: &[u8]) -> Option<Arc<ModelSchema>> {
++        if !self.has_variants() {
++            return None;
++        }
+         self.variants
++            .schemas
+             .read()
+             .unwrap_or_else(|p| p.into_inner())
+             .iter()
+@@ -168,7 +190,11 @@ impl ModelSchema {
+ 
+     /// Look up a derivation by its complete QName.
+     pub fn find_variant_qname(&self, namespace: &str, local: &[u8]) -> Option<Arc<ModelSchema>> {
++        if !self.has_variants() {
++            return None;
++        }
+         self.variants
++            .schemas
+             .read()
+             .unwrap_or_else(|p| p.into_inner())
+             .iter()
+@@ -180,7 +206,11 @@ impl ModelSchema {
+ 
+     /// Whether `candidate` is a registered derivation of `self`.
+     pub fn matches_variant(&self, candidate: &ModelSchema) -> bool {
++        if !self.has_variants() {
++            return false;
++        }
+         self.variants
++            .schemas
+             .read()
+             .unwrap_or_else(|p| p.into_inner())
+             .iter()
+@@ -655,7 +685,7 @@ impl ModelSchemaBuilder {
+             is_abstract: self.is_abstract,
+             strict_root: self.strict_root,
+             content_pattern: self.content_pattern,
+-            variants: Arc::new(RwLock::new(Vec::new())),
++            variants: Arc::new(VariantRegistry::default()),
+         })
+     }
+ }
+diff --git a/crates/polyxml-core/tests/test_variant_registry.rs b/crates/polyxml-core/tests/test_variant_registry.rs
+new file mode 100644
+index 0000000..9502c68
+--- /dev/null
++++ b/crates/polyxml-core/tests/test_variant_registry.rs
+@@ -0,0 +1,75 @@
++use std::sync::Arc;
++
++use polyxml::schema::ModelSchema;
++
++#[test]
++fn registration_and_clearing_are_visible_to_schema_clones() {
++    let base = ModelSchema::builder("Base").build();
++    let clone = (*base).clone();
++    let derived = ModelSchema::builder("Derived")
++        .namespace("urn:derived")
++        .build();
++    assert!(!clone.has_variants());
++    assert!(clone.variants().is_empty());
++    base.set_variants(vec![Arc::clone(&derived)]);
++    assert!(clone.has_variants());
++    assert!(Arc::ptr_eq(&clone.variants()[0], &derived));
++    assert!(Arc::ptr_eq(
++        &clone.find_variant(b"Derived").unwrap(),
++        &derived
++    ));
++    assert!(clone.find_variant_qname("urn:other", b"Derived").is_none());
++    assert!(Arc::ptr_eq(
++        &clone.find_variant_qname("urn:derived", b"Derived").unwrap(),
++        &derived
++    ));
++    assert!(clone.matches_variant(&derived));
++    clone.set_variants(Vec::new());
++    assert!(!base.has_variants());
++    assert!(base.variants().is_empty());
++    assert!(base.find_variant(b"Derived").is_none());
++    assert!(!base.matches_variant(&derived));
++    clone.set_variants(vec![Arc::clone(&derived)]);
++    assert!(base.has_variants());
++    assert!(base.matches_variant(&derived));
++}
++
++#[test]
++fn concurrent_registry_updates_keep_complete_variant_snapshots() {
++    let base = ModelSchema::builder("Base").build();
++    let derived = ModelSchema::builder("Derived").build();
++    std::thread::scope(|scope| {
++        scope.spawn(|| {
++            for index in 0..4096 {
++                base.set_variants(if index % 2 == 0 {
++                    Vec::new()
++                } else {
++                    vec![Arc::clone(&derived)]
++                });
++            }
++            base.set_variants(vec![Arc::clone(&derived)]);
++        });
++        for _ in 0..4 {
++            scope.spawn(|| {
++                for _ in 0..4096 {
++                    // These calls can observe different registry revisions.
++                    // Each populated snapshot must contain the original Arc.
++                    let _ = base.has_variants();
++                    let variants = base.variants();
++                    assert!(variants.len() <= 1);
++                    for variant in variants {
++                        assert!(Arc::ptr_eq(&variant, &derived));
++                    }
++                    if let Some(variant) = base.find_variant(b"Derived") {
++                        assert!(Arc::ptr_eq(&variant, &derived));
++                    }
++                }
++            });
++        }
++    });
++    assert!(base.has_variants());
++    assert!(Arc::ptr_eq(&base.variants()[0], &derived));
++    base.set_variants(Vec::new());
++    assert!(!base.has_variants());
++    assert!(base.variants().is_empty());
++}

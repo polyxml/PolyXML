@@ -1,0 +1,17 @@
+diff --git a/crates/polyxml-core/src/parser.rs b/crates/polyxml-core/src/parser.rs
+index afc027e..8c91b0f 100644
+--- a/crates/polyxml-core/src/parser.rs
++++ b/crates/polyxml-core/src/parser.rs
+@@ -123,8 +123,10 @@ impl StackFrame {
+         }
+ 
+         for (index, field) in self.schema.fields.iter().enumerate() {
+-            if let Some(value) = self.values[index].as_ref() {
+-                crate::schema::validate_fixed(field, value)?;
++            if field.fixed_value.is_some() {
++                if let Some(value) = self.values[index].as_ref() {
++                    crate::schema::validate_fixed(field, value)?;
++                }
+             }
+         }
+         Ok(PolyValue::Record {

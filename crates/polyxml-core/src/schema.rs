@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,6 +107,12 @@ impl FieldSchema {
     }
 }
 
+#[derive(Debug, Default)]
+struct VariantRegistry {
+    schemas: RwLock<Vec<Arc<ModelSchema>>>,
+    populated: AtomicBool,
+}
+
 #[derive(Debug, Clone)]
 pub struct ModelSchema {
     pub name: String,
@@ -125,7 +132,7 @@ pub struct ModelSchema {
     pub content_pattern: Option<regex::Regex>,
     /// Concrete derivations eligible for `xsi:type` dispatch. Python may
     /// refresh this registry when subclasses are defined after first use.
-    variants: Arc<RwLock<Vec<Arc<ModelSchema>>>>,
+    variants: Arc<VariantRegistry>,
 }
 
 impl ModelSchema {
@@ -136,12 +143,27 @@ impl ModelSchema {
     /// Register the concrete derivations eligible for `xsi:type` dispatch.
     /// Replaces the registry when subclasses are discovered after first use.
     pub fn set_variants(&self, variants: Vec<Arc<ModelSchema>>) {
-        *self.variants.write().unwrap_or_else(|p| p.into_inner()) = variants;
+        let mut registered = self
+            .variants
+            .schemas
+            .write()
+            .unwrap_or_else(|p| p.into_inner());
+        *registered = variants;
+        // Publish emptiness while holding the registry lock. Cloned schemas
+        // share this flag, so later registration/clearing cannot leave a stale
+        // per-schema dispatch plan. Nonempty lookups still use the lock.
+        self.variants
+            .populated
+            .store(!registered.is_empty(), Ordering::Release);
     }
 
     /// Registered derivations for `xsi:type` dispatch (empty when none).
     pub fn variants(&self) -> Vec<Arc<ModelSchema>> {
+        if !self.has_variants() {
+            return Vec::new();
+        }
         self.variants
+            .schemas
             .read()
             .unwrap_or_else(|p| p.into_inner())
             .clone()
@@ -149,16 +171,16 @@ impl ModelSchema {
 
     /// Whether any `xsi:type` derivations are registered for this type.
     pub fn has_variants(&self) -> bool {
-        !self
-            .variants
-            .read()
-            .unwrap_or_else(|p| p.into_inner())
-            .is_empty()
+        self.variants.populated.load(Ordering::Acquire)
     }
 
     /// Look up a derivation by the QName local part of an `xsi:type` value.
     pub fn find_variant(&self, local: &[u8]) -> Option<Arc<ModelSchema>> {
+        if !self.has_variants() {
+            return None;
+        }
         self.variants
+            .schemas
             .read()
             .unwrap_or_else(|p| p.into_inner())
             .iter()
@@ -168,7 +190,11 @@ impl ModelSchema {
 
     /// Look up a derivation by its complete QName.
     pub fn find_variant_qname(&self, namespace: &str, local: &[u8]) -> Option<Arc<ModelSchema>> {
+        if !self.has_variants() {
+            return None;
+        }
         self.variants
+            .schemas
             .read()
             .unwrap_or_else(|p| p.into_inner())
             .iter()
@@ -180,7 +206,11 @@ impl ModelSchema {
 
     /// Whether `candidate` is a registered derivation of `self`.
     pub fn matches_variant(&self, candidate: &ModelSchema) -> bool {
+        if !self.has_variants() {
+            return false;
+        }
         self.variants
+            .schemas
             .read()
             .unwrap_or_else(|p| p.into_inner())
             .iter()
@@ -655,7 +685,7 @@ impl ModelSchemaBuilder {
             is_abstract: self.is_abstract,
             strict_root: self.strict_root,
             content_pattern: self.content_pattern,
-            variants: Arc::new(RwLock::new(Vec::new())),
+            variants: Arc::new(VariantRegistry::default()),
         })
     }
 }
