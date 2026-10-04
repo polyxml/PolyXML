@@ -1,3 +1,33 @@
+## [0.34.7](https://github.com/polyxml/PolyXML/compare/v0.34.6...v0.34.7) (2026-10-04)
+
+
+### Bug Fixes
+
+* **codegen:** preserve defaults and fixed strings in Python C++ and C# ([cb041c0](https://github.com/polyxml/PolyXML/commit/cb041c08761cb10241068b0c19ffeafd44a3be65))
+* escape decoded enum values in every generated language ([dc38fde](https://github.com/polyxml/PolyXML/commit/dc38fde3bcbe36261aee1ecd0e0aaf4835d730ea))
+* normalize XSD attribute references consistently across parser passes ([2a0a664](https://github.com/polyxml/PolyXML/commit/2a0a6646da437aced40b9c795f28fb461e409c3e))
+* preserve explicit nil elements in ordered mixed content ([f97ed4a](https://github.com/polyxml/PolyXML/commit/f97ed4a4d0434c0aa8fca02db2f0236ac25f31d6))
+* **schema:** resolve inherited simple-content scalar text ([6d3092f](https://github.com/polyxml/PolyXML/commit/6d3092f860bf21a05a5dcb8d5ca1dab849f24e9a))
+* **xml:** decode namespace attribute entities before QName resolution ([ad9282e](https://github.com/polyxml/PolyXML/commit/ad9282efd583b3138838e960221e662534519a75))
+
+
+### Performance Improvements
+
+* append XML events directly to the output byte vector ([7f50cbd](https://github.com/polyxml/PolyXML/commit/7f50cbd42f4036ef243f3de1c6dc1396c3346660))
+* avoid cyclic scalar-pattern cache misses with salted victim selection ([c2ea06b](https://github.com/polyxml/PolyXML/commit/c2ea06b867337097091663bb522922ea583bd2db))
+* avoid lexical-list scans over ordinary repeated records ([0d7a16c](https://github.com/polyxml/PolyXML/commit/0d7a16c0ac5d7246af41a43e02e6ef9da7c410e9))
+* retain scalar field indices instead of cloning schema metadata ([a6ecc08](https://github.com/polyxml/PolyXML/commit/a6ecc085af3bac14e39f9d193b8d500d9c974dd5))
+* reuse anchored scalar regexes in a bounded concurrent cache ([dd3bbc7](https://github.com/polyxml/PolyXML/commit/dd3bbc796af62703432f8baa2bd16eb9ca342e58))
+* select constrained fields before serializer prevalidation ([246fcf5](https://github.com/polyxml/PolyXML/commit/246fcf5df2b643812beee7b30be4a03dbf197664))
+* stream lexical-list formatting into one output string ([dafb7dd](https://github.com/polyxml/PolyXML/commit/dafb7ddb91251f85a8b9b5c114b01c387b613385))
+* unify scalar parsing around indices into frame-owned schemas ([d682520](https://github.com/polyxml/PolyXML/commit/d682520d52d3c1983af1167018772a0e98f9fc1d))
+* **xml:** avoid choice-cycle aliasing in lookup sampling ([58cb346](https://github.com/polyxml/PolyXML/commit/58cb346f964b5196dfad62e8a62a8aa4beb9beef))
+* **xml:** index large repeated mixed branch tables per write ([6965d33](https://github.com/polyxml/PolyXML/commit/6965d332c428025b93b4478bd1ad2d6ce03abe40))
+* **xml:** isolate the ordered mixed item writer ([39ed448](https://github.com/polyxml/PolyXML/commit/39ed44899b3dcd9104a7acd09be20269f98dd1eb))
+* **xml:** keep mixed nil output on the scalar failure path ([121ac4b](https://github.com/polyxml/PolyXML/commit/121ac4b888fd434060d13fc886835a2fd46d684c))
+* **xml:** sample mixed lookup work before building an index ([081683a](https://github.com/polyxml/PolyXML/commit/081683a9c4cdc9fded04e8e5d195ba74659c4a24))
+* **xml:** scale mixed index trigger with branch count ([ba6fd98](https://github.com/polyxml/PolyXML/commit/ba6fd98d252fd736d9ecc9a78c3f372b75f4b118))
+
 ## [0.34.6](https://github.com/polyxml/PolyXML/compare/v0.34.5...v0.34.6) (2026-10-03)
 
 
