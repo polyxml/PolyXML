@@ -1,0 +1,21 @@
+{
+  "revision": "47d12f352b0641221a5298871536f9ca3d79398b",
+  "status": "",
+  "go": "go version go1.26.0 linux/amd64",
+  "dotnet": ".NET SDK:\n Version:           10.0.112\n Commit:            95017c711e\n Workload version:  10.0.100-manifests.63b36e85\n MSBuild version:   18.0.11+95017c711\n\nRuntime Environment:\n OS Name:     ubuntu\n OS Version:  26.04\n OS Platform: Linux\n RID:         ubuntu.26.04-x64\n Base Path:   /usr/lib/dotnet/sdk/10.0.112/\n\n.NET workloads installed:\nThere are no installed workloads to display.\nConfigured to use workload sets when installing new manifests.\nNo workload sets are installed. Run \"dotnet workload restore\" to install a workload set.\n\nHost:\n  Version:      10.0.12\n  Architecture: x64\n  Commit:       95017c711e\n\n.NET SDKs installed:\n  10.0.112 [/usr/lib/dotnet/sdk]\n\n.NET runtimes installed:\n  Microsoft.AspNetCore.App 10.0.12 [/usr/lib/dotnet/shared/Microsoft.AspNetCore.App]\n  Microsoft.NETCore.App 10.0.12 [/usr/lib/dotnet/shared/Microsoft.NETCore.App]\n\nOther architectures found:\n  None\n\nEnvironment variables:\n  DOTNET_BUNDLE_EXTRACT_BASE_DIR           [/home/bailey/.cache/dotnet_bundle_extract]\n  DOTNET_ROLL_FORWARD                      [Major]\n\nglobal.json file:\n  Not found\n\nLearn more:\n  https://aka.ms/dotnet/info\n\nDownload .NET:\n  https://aka.ms/dotnet/download",
+  "java": "openjdk version \"25.0.4.1\" 2026-08-18\nOpenJDK Runtime Environment (build 25.0.4.1+1-1-26.04.4-Ubuntu)\nOpenJDK 64-Bit Server VM (build 25.0.4.1+1-1-26.04.4-Ubuntu, mixed mode, sharing)",
+  "maven": "Apache Maven 3.10.0 (c43a36b8d67be7e0805a411bc0898af1a51f5472)\nMaven home: /home/bailey/github/PolyXML/benchmarks/serializer-comparison/target/tools/apache-maven-3.10.0\nJava version: 25.0.4.1, vendor: Ubuntu, runtime: /usr/lib/jvm/java-25-openjdk-amd64\nDefault locale: en, platform encoding: UTF-8, time zone: America/Chicago\nOS name: \"linux\", version: \"6.18.40.1-microsoft-standard-wsl2\", arch: \"amd64\", family: \"unix\"",
+  "cli": "polyxml 0.34.8",
+  "settings": {
+    "go_processes": 5,
+    "go_benchtime": "2s",
+    "csharp_processes": 5,
+    "csharp_iterations": 1000,
+    "csharp_min_warmup_pairs": 500,
+    "csharp_min_warmup_ms": 2000,
+    "java_batch_size": 1000,
+    "java_forks": 2,
+    "java_warmup": "3 x 2s",
+    "java_measurement": "5 x 2s"
+  }
+}

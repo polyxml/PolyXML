@@ -10,6 +10,11 @@ and CLI startup. The suites answer different questions, so compare numbers
 **within the same workload and runtime**. A quick smoke run confirms that a
 suite works; it is not a performance result.
 
+For a direct native/competitor/PolyXML view, start with the
+[October 2026 serializer comparison tables](serializer-comparison-2026-10.md).
+They separate XML from JSON, typed results from dynamic graphs, and generated
+models using native serializers from independent binding engines.
+
 ## Choose a benchmark
 
 | Target | What it measures | Suite and instructions | Published results |
@@ -37,6 +42,10 @@ lists every entry point.
     PolyXML provides a native C++20 binding (`polyxml.hpp`) over the Rust C ABI supporting dynamic nested and list schemas and mapping to generated C++20 models. A separate legacy narrow adapter is retained purely as a fixture sanity check. Keep their timings separate; do not cite the string-search adapter as XML parser throughput.
 
 ## Published studies
+
+- [October 2026 serializer comparisons](serializer-comparison-2026-10.md): fresh
+  Rust/Python comparisons, Go/C# native model overhead, Java JMH, allocation
+  diagnostics, and explicit C++/TypeScript coverage gaps.
 
 - [October 2026 dynamic Rust XML optimization](rust-runtime-optimization-2026-10.md):
   branch experiments, allocation diagnostics and same-host confirmation.

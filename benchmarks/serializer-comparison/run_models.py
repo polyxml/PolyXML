@@ -81,6 +81,8 @@ def main():
             source / runtime,
             ignore=shutil.ignore_patterns("target", "bin", "obj", "__pycache__"),
         )
+    for markdown in source.rglob("*.md"):
+        markdown.rename(markdown.with_suffix(".md.txt"))
     for repeat in range(5):
         print(f"Go process {repeat + 1}/5", flush=True)
         current = dict(
@@ -159,6 +161,24 @@ def main():
         env,
         out,
         "java-dependencies.txt",
+    )
+    run(
+        [
+            "java",
+            "--class-path",
+            "benchmarks/java/target/benchmarks.jar",
+            ROOT / "benchmarks/serializer-comparison/Providers.java",
+        ],
+        env,
+        out,
+        "java-stax-providers.txt",
+    )
+    shutil.copyfile(
+        ROOT / "benchmarks/serializer-comparison/Providers.java",
+        source / "Providers.java",
+    )
+    shutil.copyfile(
+        ROOT / "benchmarks/java/target/workload.xsd", source / "java-workload.xsd"
     )
     print("Java JMH: two forks per case", flush=True)
     run(

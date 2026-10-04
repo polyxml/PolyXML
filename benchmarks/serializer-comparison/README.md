@@ -97,3 +97,15 @@ python3 benchmarks/serializer-comparison/control_csharp.py \
 This launches six balanced fresh processes with `DOTNET_TieredCompilation=0`.
 It measures warmed execution under that explicit JIT configuration, not default
 startup or tiered PGO behavior. No build or other benchmark may run concurrently.
+
+Summarize the native runs after the control finishes:
+
+```bash
+python3 benchmarks/serializer-comparison/summarize_models.py \
+  benchmarks/serializer-comparison/target/model-results
+```
+
+`render.py` builds the dated documentation page from summaries retained under
+`docs/benchmarks/data/2026-10-04/{serializer-comparison,native-models}/`. It keeps
+the displayed values tied to the raw measurements. Java records its actual
+StAX provider: the shaded benchmark uses Woodstox, not the JDK default provider.

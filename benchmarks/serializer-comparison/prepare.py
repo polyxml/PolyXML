@@ -8,11 +8,23 @@ import subprocess
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+import tomllib
+
 ROOT = Path(__file__).resolve().parents[2]
 SUITE = ROOT / "benchmarks/serializer-comparison"
 
 
 def prepare(output: Path, cli: Path) -> None:
+    expected_version = tomllib.loads(
+        (ROOT / "crates/polyxml-python/pyproject.toml").read_text()
+    )["project"]["version"]
+    version = subprocess.run(
+        [str(cli), "--version"], check=True, capture_output=True, text=True
+    ).stdout.strip()
+    if version != f"polyxml {expected_version}":
+        raise RuntimeError(
+            f"Rebuild the local CLI: expected {expected_version}, got {version}"
+        )
     output.mkdir(parents=True, exist_ok=True)
     fixtures = output / "fixtures"
     fixtures.mkdir(exist_ok=True)

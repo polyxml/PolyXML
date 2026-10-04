@@ -100,3 +100,14 @@ description: Use when running, adding, or publishing PolyXML language and runtim
     `serializer-comparison/control_csharp.py` full-JIT comparison, which
     explicitly sets `DOTNET_TieredCompilation=0` in six balanced processes.
     Label this configuration; it is not a default-tiered-PGO benchmark.
+
+14. Record the actual StAX providers on the benchmark classpath, not just the
+    JDK version. Jackson brings Woodstox into the shaded JMH jar, and generated
+    `XMLInputFactory.newFactory()` codecs select it through SPI as well. The
+    direct codec uses the JDK API but need not use the JDK default parser.
+    `serializer-comparison/Providers.java` records both factory classes.
+
+15. Retained benchmark-source READMEs contain repository-relative links. Store
+    them byte-for-byte as `.md.txt` inside docs data artifacts so the docs site
+    does not render them in the wrong relative-link context. Keep actual
+    result summaries as Markdown and check the final site strictly.

@@ -1,0 +1,2 @@
+input=com.ctc.wstx.stax.WstxInputFactory
+output=com.ctc.wstx.stax.WstxOutputFactory

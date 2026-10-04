@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import polyxml
+import tomllib
 from lxml import etree
 from pydantic_xml import BaseXmlModel, element
 from xsdata.formats.dataclass.parsers import XmlParser
@@ -128,7 +129,14 @@ def measure(writer, lane, case, op, input_size, output_size, fn):
 
 
 def main():
-    assert polyxml.__version__ == "0.34.8", polyxml.__version__
+    root = Path(__file__).resolve().parents[2]
+    expected_version = tomllib.loads(
+        (root / "crates/polyxml-python/pyproject.toml").read_text()
+    )["project"]["version"]
+    assert polyxml.__version__ == expected_version, (
+        polyxml.__version__,
+        expected_version,
+    )
     xp = XmlParser()
     xs = XmlSerializer(config=SerializerConfig(xml_declaration=False))
     jp = JsonParser()
