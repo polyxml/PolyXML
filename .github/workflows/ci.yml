@@ -34,6 +34,34 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Prepare Python generated-consumer environment
+        run: |
+          uv venv --python python .venv
+          uv pip install --python .venv/bin/python -e "./crates/polyxml-python[dev]"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Set up generated-consumer Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install generated-consumer TypeScript compiler
+        run: npm install --global typescript@5.9.3
+
+      - name: Set up generated-consumer Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: "temurin"
+          java-version: "25"
+
+      - name: Set up generated-consumer Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.x"
+
       - name: Verify Multi-Language Version Parity
         run: python scripts/sync_version.py --check
 
