@@ -1,0 +1,4 @@
+memcap: <=7687 MiB (60% of 12811 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-combined-read/crates/polyxml-core)
+   Compiling core-regression v0.0.0 (/home/bailey/github/polyxml-combined-read/benchmarks/rust-xml-regression/target/core-current)
+    Finished `bench` profile [optimized] target(s) in 26.55s
