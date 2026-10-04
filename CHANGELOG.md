@@ -1,3 +1,11 @@
+## [0.34.8](https://github.com/polyxml/PolyXML/compare/v0.34.7...v0.34.8) (2026-10-04)
+
+
+### Bug Fixes
+
+* **ci:** provision generated-consumer test dependencies ([10913f8](https://github.com/polyxml/PolyXML/commit/10913f8e03aef3cbd18b99cb038ab05e60386f54))
+* **ci:** provision generated-consumer test dependencies ([3be0428](https://github.com/polyxml/PolyXML/commit/3be04288f0687f531ed6657639d08cef7879a931))
+
 ## [0.34.7](https://github.com/polyxml/PolyXML/compare/v0.34.6...v0.34.7) (2026-10-04)
 
 
