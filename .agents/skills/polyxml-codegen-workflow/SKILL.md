@@ -8,6 +8,17 @@ description: >-
 
 # PolyXML Polyglot Codegen Development & Verification Playbook
 
+## CI generated-consumer prerequisites
+
+The Rust core tests execute Python dataclass/Pydantic models and call PolyXML XML
+codecs. In the Rust CI job, install the editable Python extension with `[dev]`
+extras into a dedicated Python 3.12+ venv **before** `cargo test`; prepend that
+venv to `GITHUB_PATH` so subprocess `python3` uses the same interpreter. A local
+gate's existing venv can hide this missing CI dependency. New all-seven consumer
+tests require actual Java, Go, C++20, .NET and TypeScript tools; provision Node,
+TypeScript, Java and Go explicitly rather than relying on the runner image.
+Do not skip consumers to work around missing prerequisites.
+
 ## Inherited simpleContent
 
 Normalize synthetic text fields only after root-level import/include merging and
