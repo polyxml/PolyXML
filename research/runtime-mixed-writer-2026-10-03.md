@@ -203,3 +203,11 @@ allocation diagnostics, source patches for each prototype, instruction profiles,
 both final/initial gates and the rejected preflights. SHA256SUMS covers all files.
 The final selector is `58cb346`; historical sections identify their older source.
 All heavy work ran serially under the memory cap with one Cargo worker.
+
+Criterion process directories are stored in each experiment's
+`criterion-results.tar.gz` to keep thousands of small JSON files out of the code
+diff. `criterion-SHA256SUMS` records every original path and checksum. Packaging
+checked the original manifest, then read the archive back and verified every
+member before removing the loose copies. Extract into a scratch directory with
+the adjacent metadata.json to rerun summarize.py; all original raw bytes remain.
+The verified packaging script is retained as archive-criterion.py.txt.

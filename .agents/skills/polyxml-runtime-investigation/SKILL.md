@@ -71,3 +71,9 @@ normal writer validation must still examine every item and preserve errors.
 Offset samples within their bins and include a power-of-two item count: a
 strictly evenly spaced sample can repeatedly hit the first tag when the choice
 cycle divides its stride, overlooking a distributed payload's lookup work.
+
+For large investigations, retain Criterion process directories in per-experiment
+archives rather than thousands of loose JSON files in a PR. Verify the original
+manifest, archive every file with its relative path, read back and compare each
+member's checksum before removing loose copies, and retain member/top-level
+manifests plus the packaging script. Extract into scratch to rerun summaries.
