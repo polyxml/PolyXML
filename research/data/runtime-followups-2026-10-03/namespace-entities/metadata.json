@@ -1,0 +1,8 @@
+{
+  "baseline": "1819c91",
+  "implementation": "ad9282e",
+  "rust_tests": 325,
+  "workspace_target": "/home/bailey/github/PolyXML/target/followup-namespace-verification",
+  "command": "PATH=/tmp/polyxml-corpus-tools/node_modules/.bin:$PATH CARGO_TARGET_DIR=/home/bailey/github/PolyXML/target/followup-namespace-verification POLYXML_MEMCAP_BACKEND=systemd CARGO_BUILD_JOBS=1 DOTNET_ROLL_FORWARD=Major scripts/memcap.sh scripts/gate.sh",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n"
+}
