@@ -11,7 +11,7 @@
     "sha256": "ddf82c002fd4720aafe8d74fa0d49f09619193d2a92ec23183e5dbab2fa1a709",
     "bytes": 2994
   },
-  "baseline-generated.py": {
+  "baseline-generated.py.txt": {
     "sha256": "c66125c0928585c0bd40817717fb9fb268d3d879350dc677bcb814e2fda49fdd",
     "bytes": 2206
   },
@@ -19,7 +19,7 @@
     "sha256": "01223a5bcb064d6c146bacce42196f6aad63b98f5a3aafcf446dea4665c3118d",
     "bytes": 503
   },
-  "candidate-generated.py": {
+  "candidate-generated.py.txt": {
     "sha256": "94fe949fe13914d18a6fc1349ec08d139d6782fda534c637508c170f8d05fbaf",
     "bytes": 2224
   },
