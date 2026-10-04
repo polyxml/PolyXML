@@ -100,11 +100,6 @@ polyxml generate schemas/uci.xsd --lang rust \
 polyxml build --config polyxml.toml
 ```
 
-For Spring Boot 4, use `--backend jackson3`; `--backend jackson` retains Jackson 2
-for Spring Boot 3 applications. See the [Java guide](docs/languages/java.md#spring-boot-4-and-jackson-3)
-for Boot-managed dependencies and the XML-text record customizer. Generated
-models are verified on Java 25 with Spring Boot 4.1.1 in a dedicated CI job.
-
 All 7 targets are declared in a single [`polyxml.toml` workspace manifest](docs/guides/compiler.md).
 
 ### Consume the Generated Models Instantly
