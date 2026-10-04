@@ -77,3 +77,10 @@ archives rather than thousands of loose JSON files in a PR. Verify the original
 manifest, archive every file with its relative path, read back and compare each
 member's checksum before removing loose copies, and retain member/top-level
 manifests plus the packaging script. Extract into scratch to rerun summaries.
+
+For an integration branch containing merge commits, use `git pull --rebase=merges
+origin main` before pushing so synchronization preserves the reviewed branch
+history. Ordinary rebase flattens merges even when main has not advanced. If the
+repository has no committer identity configured, pass the maintainer identity via
+per-command `git -c user.name=... -c user.email=...`; do not change global config.
+Stop a publish sequence if pull fails, and check the tested source tree afterward.
