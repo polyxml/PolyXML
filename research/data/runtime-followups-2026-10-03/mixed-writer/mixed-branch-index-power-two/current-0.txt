@@ -1,0 +1,22 @@
+memcap: <=7686 MiB (60% of 12810 MiB available) [systemd MemoryMax, swap off]
+Benchmarking branch_write/branches_64/1024
+Benchmarking branch_write/branches_64/1024: Warming up for 1.0000 s
+Benchmarking branch_write/branches_64/1024: Collecting 50 samples in estimated 2.0016 s (26k iterations)
+Benchmarking branch_write/branches_64/1024: Analyzing
+branch_write/branches_64/1024
+                        time:   [75.101 µs 76.041 µs 77.222 µs]
+                        thrpt:  [172.19 MiB/s 174.87 MiB/s 177.06 MiB/s]
+Found 9 outliers among 50 measurements (18.00%)
+  2 (4.00%) high mild
+  7 (14.00%) high severe
+Benchmarking branch_write/branches_256/1024
+Benchmarking branch_write/branches_256/1024: Warming up for 1.0000 s
+Benchmarking branch_write/branches_256/1024: Collecting 50 samples in estimated 2.0003 s (24k iterations)
+Benchmarking branch_write/branches_256/1024: Analyzing
+branch_write/branches_256/1024
+                        time:   [80.753 µs 81.027 µs 81.353 µs]
+                        thrpt:  [180.89 MiB/s 181.62 MiB/s 182.24 MiB/s]
+Found 3 outliers among 50 measurements (6.00%)
+  2 (4.00%) high mild
+  1 (2.00%) high severe
+

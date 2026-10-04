@@ -1,0 +1,42 @@
+memcap: <=7722 MiB (60% of 12870 MiB available) [systemd MemoryMax, swap off]
+Benchmarking branch_write/branches_1/1000
+Benchmarking branch_write/branches_1/1000: Warming up for 3.0000 s
+Benchmarking branch_write/branches_1/1000: Collecting 100 samples in estimated 5.0040 s (83k iterations)
+Benchmarking branch_write/branches_1/1000: Analyzing
+branch_write/branches_1/1000
+                        time:   [58.968 µs 59.325 µs 59.746 µs]
+                        thrpt:  [190.00 MiB/s 191.35 MiB/s 192.50 MiB/s]
+Found 11 outliers among 100 measurements (11.00%)
+  2 (2.00%) high mild
+  9 (9.00%) high severe
+Benchmarking branch_write/branches_16/1000
+Benchmarking branch_write/branches_16/1000: Warming up for 3.0000 s
+Benchmarking branch_write/branches_16/1000: Collecting 100 samples in estimated 5.0040 s (75k iterations)
+Benchmarking branch_write/branches_16/1000: Analyzing
+branch_write/branches_16/1000
+                        time:   [64.883 µs 65.136 µs 65.449 µs]
+                        thrpt:  [184.28 MiB/s 185.17 MiB/s 185.89 MiB/s]
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) high mild
+  6 (6.00%) high severe
+Benchmarking branch_write/branches_64/1000
+Benchmarking branch_write/branches_64/1000: Warming up for 3.0000 s
+Benchmarking branch_write/branches_64/1000: Collecting 100 samples in estimated 5.0002 s (67k iterations)
+Benchmarking branch_write/branches_64/1000: Analyzing
+branch_write/branches_64/1000
+                        time:   [72.944 µs 73.385 µs 73.962 µs]
+                        thrpt:  [175.14 MiB/s 176.52 MiB/s 177.58 MiB/s]
+Found 12 outliers among 100 measurements (12.00%)
+  7 (7.00%) high mild
+  5 (5.00%) high severe
+Benchmarking branch_write/branches_256/1000
+Benchmarking branch_write/branches_256/1000: Warming up for 3.0000 s
+Benchmarking branch_write/branches_256/1000: Collecting 100 samples in estimated 5.0044 s (63k iterations)
+Benchmarking branch_write/branches_256/1000: Analyzing
+branch_write/branches_256/1000
+                        time:   [77.461 µs 77.858 µs 78.312 µs]
+                        thrpt:  [182.95 MiB/s 184.02 MiB/s 184.96 MiB/s]
+Found 11 outliers among 100 measurements (11.00%)
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+

@@ -1,0 +1,345 @@
+diff --git a/crates/polyxml-core/src/serializer.rs b/crates/polyxml-core/src/serializer.rs
+index f68ba99..6021d08 100644
+--- a/crates/polyxml-core/src/serializer.rs
++++ b/crates/polyxml-core/src/serializer.rs
+@@ -523,93 +523,7 @@ impl XmlSerializer {
+             if let Some(PolyValue::List(items)) =
+                 get_field(mixed.items_index, &schema.fields[mixed.items_index].name)
+             {
+-                for item in items {
+-                    let tagged_field = |name: &str| -> Option<&PolyValue> {
+-                        match item {
+-                            PolyValue::Object(tagged) => tagged.get(name),
+-                            PolyValue::Record { schema, values } => schema
+-                                .fields
+-                                .iter()
+-                                .position(|field| field.name == name)
+-                                .and_then(|idx| values.get(idx))
+-                                .and_then(Option::as_ref),
+-                            _ => None,
+-                        }
+-                    };
+-                    let Some(kind) = tagged_field("kind").and_then(PolyValue::as_str) else {
+-                        return Err(PolyXmlError::SerializationError(
+-                            "Mixed content item has no kind".into(),
+-                        ));
+-                    };
+-                    let Some(content) = tagged_field("value") else {
+-                        return Err(PolyXmlError::SerializationError(
+-                            "Mixed content item has no value".into(),
+-                        ));
+-                    };
+-                    if kind == "#text" {
+-                        let Some(text) = content.as_str() else {
+-                            return Err(PolyXmlError::SerializationError(
+-                                "Mixed text item must be a string".into(),
+-                            ));
+-                        };
+-                        writer
+-                            .write_event(Event::Text(BytesText::new(text)))
+-                            .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+-                        continue;
+-                    }
+-                    let Some(branch) = mixed
+-                        .branches
+-                        .iter()
+-                        .find(|branch| branch.variant_name == kind)
+-                    else {
+-                        return Err(PolyXmlError::SerializationError(format!(
+-                            "Unknown mixed content kind: {kind}"
+-                        )));
+-                    };
+-                    let local_name = std::str::from_utf8(&branch.xml_name)?;
+-                    let qualified = if let Some(ctx) = ns_ctx {
+-                        ctx.qualify_element(
+-                            local_name,
+-                            branch.namespace.as_deref().or(schema.namespace.as_deref()),
+-                        )
+-                    } else {
+-                        Cow::Borrowed(local_name)
+-                    };
+-                    match &branch.val_type {
+-                        ValueType::Scalar(_) => {
+-                            let mut buf = [0u8; lexical_core::BUFFER_SIZE];
+-                            let Some(text) = Self::format_scalar_to(content, &mut buf) else {
+-                                return Err(PolyXmlError::SerializationError(format!(
+-                                    "Invalid mixed content value for {kind}"
+-                                )));
+-                            };
+-                            Self::validate_scalar(&branch.val_type, &text, kind)?;
+-                            writer
+-                                .write_event(Event::Start(BytesStart::new(qualified.as_ref())))
+-                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+-                            writer
+-                                .write_event(Event::Text(BytesText::new(&text)))
+-                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+-                            writer
+-                                .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
+-                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+-                        }
+-                        ValueType::Nested(nested) => Self::write_model(
+-                            writer,
+-                            &branch.xml_name,
+-                            content,
+-                            nested,
+-                            ns_ctx,
+-                            false,
+-                            branch.namespace.as_deref().or(nested.namespace.as_deref()),
+-                        )?,
+-                        ValueType::List(_) => {
+-                            return Err(PolyXmlError::SerializationError(
+-                                "Nested lists are invalid mixed content branches".into(),
+-                            ))
+-                        }
+-                    }
+-                }
++                Self::write_mixed_items(writer, items, schema, mixed, ns_ctx)?;
+             }
+         } else {
+             for (idx, field) in schema.fields.iter().enumerate() {
+@@ -759,6 +673,132 @@ impl XmlSerializer {
+         Ok(())
+     }
+ 
++    #[inline(never)]
++    fn write_mixed_items<W: std::io::Write>(
++        writer: &mut Writer<W>,
++        items: &[PolyValue],
++        schema: &ModelSchema,
++        mixed: &crate::schema::MixedContentSchema,
++        ns_ctx: Option<&NamespaceContext>,
++    ) -> Result<()> {
++        for item in items {
++            let tagged_field = |name: &str| -> Option<&PolyValue> {
++                match item {
++                    PolyValue::Object(tagged) => tagged.get(name),
++                    PolyValue::Record { schema, values } => schema
++                        .fields
++                        .iter()
++                        .position(|field| field.name == name)
++                        .and_then(|idx| values.get(idx))
++                        .and_then(Option::as_ref),
++                    _ => None,
++                }
++            };
++            let Some(kind) = tagged_field("kind").and_then(PolyValue::as_str) else {
++                return Err(PolyXmlError::SerializationError(
++                    "Mixed content item has no kind".into(),
++                ));
++            };
++            let Some(content) = tagged_field("value") else {
++                return Err(PolyXmlError::SerializationError(
++                    "Mixed content item has no value".into(),
++                ));
++            };
++            if kind == "#text" {
++                let Some(text) = content.as_str() else {
++                    return Err(PolyXmlError::SerializationError(
++                        "Mixed text item must be a string".into(),
++                    ));
++                };
++                writer
++                    .write_event(Event::Text(BytesText::new(text)))
++                    .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
++                continue;
++            }
++            let Some(branch) = mixed
++                .branches
++                .iter()
++                .find(|branch| branch.variant_name == kind)
++            else {
++                return Err(PolyXmlError::SerializationError(format!(
++                    "Unknown mixed content kind: {kind}"
++                )));
++            };
++            let local_name = std::str::from_utf8(&branch.xml_name)?;
++            let qualified = if let Some(ctx) = ns_ctx {
++                ctx.qualify_element(
++                    local_name,
++                    branch.namespace.as_deref().or(schema.namespace.as_deref()),
++                )
++            } else {
++                Cow::Borrowed(local_name)
++            };
++            match &branch.val_type {
++                ValueType::Scalar(_) => {
++                    let mut buf = [0u8; lexical_core::BUFFER_SIZE];
++                    let Some(text) = Self::format_scalar_to(content, &mut buf) else {
++                        if content.is_null() {
++                            Self::write_mixed_nil(writer, qualified.as_ref())?;
++                            continue;
++                        }
++                        return Err(PolyXmlError::SerializationError(format!(
++                            "Invalid mixed content value for {kind}"
++                        )));
++                    };
++                    Self::validate_scalar(&branch.val_type, &text, kind)?;
++                    writer
++                        .write_event(Event::Start(BytesStart::new(qualified.as_ref())))
++                        .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
++                    writer
++                        .write_event(Event::Text(BytesText::new(&text)))
++                        .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
++                    writer
++                        .write_event(Event::End(BytesEnd::new(qualified.as_ref())))
++                        .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
++                }
++                ValueType::Nested(nested) => {
++                    if content.is_null() {
++                        Self::write_mixed_nil(writer, qualified.as_ref())?;
++                    } else {
++                        Self::write_model(
++                            writer,
++                            &branch.xml_name,
++                            content,
++                            nested,
++                            ns_ctx,
++                            false,
++                            branch.namespace.as_deref().or(nested.namespace.as_deref()),
++                        )?;
++                    }
++                }
++                ValueType::List(_) => {
++                    return Err(PolyXmlError::SerializationError(
++                        "Nested lists are invalid mixed content branches".into(),
++                    ))
++                }
++            }
++        }
++        Ok(())
++    }
++
++    // A tagged null is a present nil element, unlike an absent ordinary field.
++    // Bind the instance prefix locally without shadowing the element's QName.
++    // Scalar callers reach this through their existing failed-format path.
++    #[cold]
++    fn write_mixed_nil<W: std::io::Write>(writer: &mut Writer<W>, qualified: &str) -> Result<()> {
++        let (declaration, attribute) = if qualified.starts_with("xsi:") {
++            ("xmlns:xsi1", "xsi1:nil")
++        } else {
++            ("xmlns:xsi", "xsi:nil")
++        };
++        let mut element = BytesStart::new(qualified);
++        element.push_attribute((declaration, XSI_NS));
++        element.push_attribute((attribute, "true"));
++        writer
++            .write_event(Event::Empty(element))
++            .map_err(|error| PolyXmlError::SerializationError(error.to_string()))
++    }
++
+     fn write_any_wildcard_element<W: std::io::Write>(
+         writer: &mut quick_xml::Writer<W>,
+         val: &PolyValue,
+diff --git a/crates/polyxml-core/tests/test_mixed_nil.rs b/crates/polyxml-core/tests/test_mixed_nil.rs
+new file mode 100644
+index 0000000..95cc765
+--- /dev/null
++++ b/crates/polyxml-core/tests/test_mixed_nil.rs
+@@ -0,0 +1,93 @@
++use std::collections::HashMap;
++use std::sync::Arc;
++
++use polyxml::schema::ModelSchema;
++use polyxml::schema_parser::XsdParser;
++use polyxml::serializer::XmlSerializer;
++use polyxml::{deserialize, serialize, PolyValue};
++
++fn schema(namespace: Option<&str>) -> Arc<ModelSchema> {
++    let declaration = namespace
++        .map(|ns| format!("targetNamespace='{ns}' xmlns:t='{ns}' elementFormDefault='qualified'"))
++        .unwrap_or_default();
++    let xsd = format!("<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema' {declaration}>
++      <xs:element name='Root'><xs:complexType mixed='true'><xs:choice minOccurs='0' maxOccurs='unbounded'>
++        <xs:element name='Text' type='xs:string' nillable='true'/>
++        <xs:element name='Number' type='xs:int' nillable='true'/>
++        <xs:element name='Child' nillable='true'><xs:complexType><xs:sequence>
++          <xs:element name='Value' type='xs:string'/>
++        </xs:sequence></xs:complexType></xs:element>
++      </xs:choice></xs:complexType></xs:element></xs:schema>");
++    let ir = XsdParser::new().parse_str(&xsd).unwrap();
++    ModelSchema::from_ir(&ir, Some("Root")).unwrap()
++}
++
++#[test]
++fn nil_scalar_and_nested_items_keep_order_and_differ_from_empty_strings() {
++    let schema = schema(None);
++    for nil in [
++        "<Text i:nil='true'/>",
++        "<Text i:nil='1'></Text>",
++        "<Number i:nil='true'/>",
++        "<Child i:nil='true'/>",
++    ] {
++        let xml = format!("<Root xmlns:i='http://www.w3.org/2001/XMLSchema-instance'>before{nil}<Text/><Child><Value>nested</Value></Child>{nil}<Text>after</Text></Root>");
++        let value = deserialize(xml.as_bytes(), Arc::clone(&schema)).unwrap();
++        let items_field = &schema.fields[schema.mixed_content.as_ref().unwrap().items_index].name;
++        let items = value.get(items_field).and_then(PolyValue::as_list).unwrap();
++        assert!(items[1].get("value").unwrap().is_null());
++        assert_eq!(items[2].get("value").and_then(PolyValue::as_str), Some(""));
++        assert!(items[4].get("value").unwrap().is_null());
++        let output = serialize("Root", &value, &schema, None).unwrap();
++        assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());
++    }
++}
++
++#[test]
++fn nil_instance_prefix_does_not_rebind_the_element_namespace() {
++    let schema = schema(Some("urn:document"));
++    let xml = b"<Root xmlns='urn:document' xmlns:i='http://www.w3.org/2001/XMLSchema-instance'><Text i:nil='true'/><Number i:nil='true'/><Child i:nil='true'/><Text>after</Text></Root>";
++    let value = deserialize(xml, Arc::clone(&schema)).unwrap();
++    for prefix in ["", "doc", "xsi", "xsi1"] {
++        let ns_map = HashMap::from([(prefix.to_owned(), "urn:document".to_owned())]);
++        let output = XmlSerializer::serialize_with_options(
++            "Root",
++            &value,
++            &schema,
++            None,
++            Some(true),
++            Some(&ns_map),
++        )
++        .unwrap();
++        let mut reader = quick_xml::NsReader::from_reader(output.as_slice());
++        let mut nils = 0;
++        loop {
++            let (namespace, event) = reader.read_resolved_event().unwrap();
++            match event {
++                quick_xml::events::Event::Empty(element) => {
++                    assert!(
++                        matches!(namespace, quick_xml::name::ResolveResult::Bound(uri) if uri.as_ref() == "urn:document")
++                    );
++                    for attribute in element.attributes() {
++                        let attribute = attribute.unwrap();
++                        if attribute.key.local_name().as_ref() == "nil" {
++                            let (namespace, _) = reader.resolver().resolve_attribute(attribute.key);
++                            assert!(
++                                matches!(namespace, quick_xml::name::ResolveResult::Bound(uri) if uri.as_ref() == "http://www.w3.org/2001/XMLSchema-instance")
++                            );
++                            nils += 1;
++                        }
++                    }
++                }
++                quick_xml::events::Event::Eof => break,
++                _ => {}
++            }
++        }
++        assert_eq!(nils, 3);
++        assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());
++    }
++    let output =
++        XmlSerializer::serialize_with_options("Root", &value, &schema, None, Some(false), None)
++            .unwrap();
++    assert_eq!(value, deserialize(&output, schema).unwrap());
++}
+diff --git a/crates/polyxml-core/tests/test_runtime_fast_paths.rs b/crates/polyxml-core/tests/test_runtime_fast_paths.rs
+index c0f13f1..07aa439 100644
+--- a/crates/polyxml-core/tests/test_runtime_fast_paths.rs
++++ b/crates/polyxml-core/tests/test_runtime_fast_paths.rs
+@@ -239,6 +239,8 @@ fn unified_scalar_state_keeps_mixed_branch_order_nil_and_nested_frames() {
+         assert_eq!(value,deserialize(&output,Arc::clone(&schema)).unwrap());
+     }
+     let nil_document = b"<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Text xsi:nil='true'/><State>Ready</State></Root>";
+-    assert!(deserialize(nil_document, Arc::clone(&schema)).is_ok());
++    let value = deserialize(nil_document, Arc::clone(&schema)).unwrap();
++    let output = serialize("Root", &value, &schema, None).unwrap();
++    assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());
+     assert!(deserialize(b"<Root><State>invalid</State></Root>", schema).is_err());
+ }

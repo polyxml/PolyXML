@@ -1,0 +1,3 @@
+memcap: <=7766 MiB (60% of 12943 MiB available) [systemd MemoryMax, swap off]
+   Compiling mixed-profile v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline)
+    Finished `release` profile [optimized + debuginfo] target(s) in 1.04s

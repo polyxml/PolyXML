@@ -1,0 +1,9 @@
+memcap: <=7672 MiB (60% of 12786 MiB available) [systemd MemoryMax, swap off]
+branches=1,items=1,allocations=1,reallocations=0,requested_bytes=512,output_bytes=23
+branches=1,items=1000,allocations=1,reallocations=5,requested_bytes=32256,output_bytes=11903
+branches=16,items=1,allocations=1,reallocations=0,requested_bytes=512,output_bytes=23
+branches=16,items=1000,allocations=1,reallocations=5,requested_bytes=32256,output_bytes=12647
+branches=64,items=1,allocations=1,reallocations=0,requested_bytes=512,output_bytes=23
+branches=64,items=1000,allocations=1,reallocations=5,requested_bytes=32256,output_bytes=13583
+branches=256,items=1,allocations=1,reallocations=0,requested_bytes=512,output_bytes=23
+branches=256,items=1000,allocations=1,reallocations=5,requested_bytes=32256,output_bytes=15023

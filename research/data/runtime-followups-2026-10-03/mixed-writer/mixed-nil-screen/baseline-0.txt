@@ -1,0 +1,93 @@
+memcap: <=7728 MiB (60% of 12880 MiB available) [systemd MemoryMax, swap off]
+Benchmarking mixed_read/text/1000
+Benchmarking mixed_read/text/1000: Warming up for 1.0000 s
+Benchmarking mixed_read/text/1000: Collecting 50 samples in estimated 2.0182 s (2800 iterations)
+Benchmarking mixed_read/text/1000: Analyzing
+mixed_read/text/1000    time:   [716.46 µs 720.10 µs 724.23 µs]
+                        thrpt:  [38.060 MiB/s 38.278 MiB/s 38.472 MiB/s]
+Found 5 outliers among 50 measurements (10.00%)
+  3 (6.00%) high mild
+  2 (4.00%) high severe
+Benchmarking mixed_read/scalar/1000
+Benchmarking mixed_read/scalar/1000: Warming up for 1.0000 s
+Benchmarking mixed_read/scalar/1000: Collecting 50 samples in estimated 2.0165 s (5100 iterations)
+Benchmarking mixed_read/scalar/1000: Analyzing
+mixed_read/scalar/1000  time:   [391.70 µs 396.29 µs 401.43 µs]
+                        thrpt:  [99.549 MiB/s 100.84 MiB/s 102.02 MiB/s]
+Found 7 outliers among 50 measurements (14.00%)
+  3 (6.00%) high mild
+  4 (8.00%) high severe
+Benchmarking mixed_read/enum/1000
+Benchmarking mixed_read/enum/1000: Warming up for 1.0000 s
+Benchmarking mixed_read/enum/1000: Collecting 50 samples in estimated 2.0086 s (6200 iterations)
+Benchmarking mixed_read/enum/1000: Analyzing
+mixed_read/enum/1000    time:   [320.82 µs 322.58 µs 324.73 µs]
+                        thrpt:  [58.775 MiB/s 59.167 MiB/s 59.491 MiB/s]
+Found 5 outliers among 50 measurements (10.00%)
+  1 (2.00%) high mild
+  4 (8.00%) high severe
+Benchmarking mixed_read/pattern/1000
+Benchmarking mixed_read/pattern/1000: Warming up for 1.0000 s
+Benchmarking mixed_read/pattern/1000: Collecting 50 samples in estimated 2.0036 s (4900 iterations)
+Benchmarking mixed_read/pattern/1000: Analyzing
+mixed_read/pattern/1000 time:   [404.01 µs 408.17 µs 413.51 µs]
+                        thrpt:  [43.850 MiB/s 44.423 MiB/s 44.881 MiB/s]
+Found 6 outliers among 50 measurements (12.00%)
+  3 (6.00%) high mild
+  3 (6.00%) high severe
+Benchmarking mixed_read/nested/1000
+Benchmarking mixed_read/nested/1000: Warming up for 1.0000 s
+Benchmarking mixed_read/nested/1000: Collecting 50 samples in estimated 2.0104 s (3200 iterations)
+Benchmarking mixed_read/nested/1000: Analyzing
+mixed_read/nested/1000  time:   [625.21 µs 630.25 µs 636.19 µs]
+                        thrpt:  [56.818 MiB/s 57.354 MiB/s 57.816 MiB/s]
+Found 7 outliers among 50 measurements (14.00%)
+  1 (2.00%) high mild
+  6 (12.00%) high severe
+
+Benchmarking mixed_write/text/1000
+Benchmarking mixed_write/text/1000: Warming up for 1.0000 s
+Benchmarking mixed_write/text/1000: Collecting 50 samples in estimated 2.0044 s (14k iterations)
+Benchmarking mixed_write/text/1000: Analyzing
+mixed_write/text/1000   time:   [145.41 µs 146.06 µs 146.80 µs]
+                        thrpt:  [187.76 MiB/s 188.72 MiB/s 189.56 MiB/s]
+Found 3 outliers among 50 measurements (6.00%)
+  2 (4.00%) high mild
+  1 (2.00%) high severe
+Benchmarking mixed_write/scalar/1000
+Benchmarking mixed_write/scalar/1000: Warming up for 1.0000 s
+Benchmarking mixed_write/scalar/1000: Collecting 50 samples in estimated 2.0001 s (18k iterations)
+Benchmarking mixed_write/scalar/1000: Analyzing
+mixed_write/scalar/1000 time:   [111.10 µs 111.87 µs 112.82 µs]
+                        thrpt:  [354.20 MiB/s 357.23 MiB/s 359.70 MiB/s]
+Found 2 outliers among 50 measurements (4.00%)
+  2 (4.00%) high severe
+Benchmarking mixed_write/enum/1000
+Benchmarking mixed_write/enum/1000: Warming up for 1.0000 s
+Benchmarking mixed_write/enum/1000: Collecting 50 samples in estimated 2.0040 s (25k iterations)
+Benchmarking mixed_write/enum/1000: Analyzing
+mixed_write/enum/1000   time:   [79.632 µs 80.086 µs 80.639 µs]
+                        thrpt:  [236.68 MiB/s 238.32 MiB/s 239.68 MiB/s]
+Found 7 outliers among 50 measurements (14.00%)
+  2 (4.00%) high mild
+  5 (10.00%) high severe
+Benchmarking mixed_write/pattern/1000
+Benchmarking mixed_write/pattern/1000: Warming up for 1.0000 s
+Benchmarking mixed_write/pattern/1000: Collecting 50 samples in estimated 2.0008 s (13k iterations)
+Benchmarking mixed_write/pattern/1000: Analyzing
+mixed_write/pattern/1000
+                        time:   [144.18 µs 144.94 µs 145.90 µs]
+                        thrpt:  [124.28 MiB/s 125.10 MiB/s 125.76 MiB/s]
+Found 5 outliers among 50 measurements (10.00%)
+  1 (2.00%) high mild
+  4 (8.00%) high severe
+Benchmarking mixed_write/nested/1000
+Benchmarking mixed_write/nested/1000: Warming up for 1.0000 s
+Benchmarking mixed_write/nested/1000: Collecting 50 samples in estimated 2.0046 s (20k iterations)
+Benchmarking mixed_write/nested/1000: Analyzing
+mixed_write/nested/1000 time:   [98.154 µs 98.777 µs 99.555 µs]
+                        thrpt:  [363.09 MiB/s 365.95 MiB/s 368.27 MiB/s]
+Found 6 outliers among 50 measurements (12.00%)
+  3 (6.00%) high mild
+  3 (6.00%) high severe
+

@@ -1,0 +1,81 @@
+--------------------------------------------------------------------------------
+Profile data file '/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/evidence/mixed-nil-instructions/baseline-scalar.callgrind' (creator: callgrind-3.26.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 16065486
+Trigger: Program termination
+Profiled target:  /home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile scalar (PID 502766, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       95
+Include dirs:     
+User annotated:   
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir                  
+--------------------------------------------------------------------------------
+51,672,474 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                  file:function
+--------------------------------------------------------------------------------
+4,584,725 ( 8.87%)  ???:0x00000000000b20e0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+4,139,550 ( 8.01%)  ???:0x00000000000b2400 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+2,950,000 ( 5.71%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/sip.rs:<core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+2,239,000 ( 4.33%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/escape.rs:quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+2,185,675 ( 4.23%)  ???:0x0000000000197a00 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+2,126,300 ( 4.11%)  /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/writer.rs:<quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+2,027,600 ( 3.92%)  /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/serializer.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+1,755,950 ( 3.40%)  ???:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+1,689,000 ( 3.27%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/iter/macros.rs:quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str>
+1,600,000 ( 3.10%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/sip.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&str>
+1,496,250 ( 2.90%)  ???:0x00000000000b4180 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+1,462,400 ( 2.83%)  ???:0x00000000001972a0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+1,275,925 ( 2.47%)  ???:free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+1,200,000 ( 2.32%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/intrinsics/mod.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&str>
+1,100,000 ( 2.13%)  /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/serializer.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5} [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+1,051,100 ( 2.03%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/validations.rs:core::str::converts::from_utf8
+  941,750 ( 1.82%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/non_null.rs:quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str>
+  919,875 ( 1.78%)  ???:malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  900,200 ( 1.74%)  /rust/deps/hashbrown-0.17.1/src/raw.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+  861,700 ( 1.67%)  ???:0x00000000000b0f70 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  800,000 ( 1.55%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&str>
+  750,000 ( 1.45%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/iter/macros.rs:<core::slice::iter::Iter<polyxml::schema::MixedBranchSchema> as core::iter::traits::iterator::Iterator>::find::<<polyxml::serializer::XmlSerializer>::write_model<&mut alloc::vec::Vec<u8>>::{closure#7}> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  650,700 ( 1.26%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:<quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event>
+  650,000 ( 1.26%)  /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/serializer.rs:<polyxml::serializer::XmlSerializer>::format_scalar_to [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  628,750 ( 1.22%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  601,425 ( 1.16%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event>
+  575,000 ( 1.11%)  /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/serializer.rs:<polyxml::serializer::XmlSerializer>::validate_scalar [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  550,000 ( 1.06%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/mod.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&str> [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  500,000 ( 0.97%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str>
+  475,400 ( 0.92%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:<quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event>
+  427,550 ( 0.83%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs:<alloc::raw_vec::RawVecInner>::finish_grow [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  425,250 ( 0.82%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/result.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>
+  385,050 ( 0.75%)  ???:0x00000000000b2300 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  375,000 ( 0.73%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs:quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str>
+  352,100 ( 0.68%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_realloc
+  350,350 ( 0.68%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/converts.rs:core::str::converts::from_utf8 [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  350,000 ( 0.68%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/traits.rs:quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str>
+  350,000 ( 0.68%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/hash/random.rs:<std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&str>
+  300,800 ( 0.58%)  /rust/deps/hashbrown-0.17.1/src/control/bitmask.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+  300,000 ( 0.58%)  /rust/deps/hashbrown-0.17.1/src/map.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+  300,000 ( 0.58%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs:quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str>
+  275,225 ( 0.53%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/option.rs:<quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event>
+  250,200 ( 0.48%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/cmp.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+  226,350 ( 0.44%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+  225,150 ( 0.44%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/convert/mod.rs:<quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event>
+  201,200 ( 0.39%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/alloc.rs:__rustc::__rdl_realloc [/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile]
+  200,200 ( 0.39%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc
+  150,300 ( 0.29%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mut_ptr.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+  150,125 ( 0.29%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs:<quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event>
+  150,000 ( 0.29%)  /rust/deps/hashbrown-0.17.1/src/control/tag.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+  150,000 ( 0.29%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/../../stdarch/crates/core_arch/src/x86/sse2.rs:<polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+  150,000 ( 0.29%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/cmp.rs:<core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write
+  150,000 ( 0.29%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/cmp.rs:<core::slice::iter::Iter<polyxml::schema::MixedBranchSchema> as core::iter::traits::iterator::Iterator>::find::<<polyxml::serializer::XmlSerializer>::write_model<&mut alloc::vec::Vec<u8>>::{closure#7}>
+  125,750 ( 0.24%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/alloc.rs:<alloc::raw_vec::RawVecInner>::finish_grow
+  125,750 ( 0.24%)  /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/cmp.rs:<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>
+
