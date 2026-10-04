@@ -1,0 +1,9 @@
+[
+  {
+    "pid": 499097,
+    "executable": "/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/core-baseline/target/release/deps/xml-ca09edc26c8ac4cc",
+    "cpu_affinity": [
+      4
+    ]
+  }
+]

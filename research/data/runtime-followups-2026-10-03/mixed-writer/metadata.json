@@ -1,0 +1,11 @@
+{
+  "baseline": "1819c91",
+  "implementation": "58cb346",
+  "harness_revision": "58cb346",
+  "rust_tests": 324,
+  "rejected_preflights": [
+    "mixed-nil-instructions-empty-profile: missed marker and zero collected instructions",
+    "mixed-writer-tests.log: shared workspace target linked stale test binary"
+  ],
+  "workspace_target": "/home/bailey/github/PolyXML/target/followup-mixed-index-verification"
+}

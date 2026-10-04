@@ -1,0 +1,9 @@
+[package]
+name="mixed-profile"
+version="0.0.0"
+edition="2021"
+[workspace]
+[dependencies]
+polyxml={path="/home/bailey/github/polyxml-mixed-nil/crates/polyxml-core"}
+[profile.release]
+debug=1

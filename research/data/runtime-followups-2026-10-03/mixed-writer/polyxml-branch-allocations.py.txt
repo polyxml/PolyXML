@@ -1,0 +1,29 @@
+from pathlib import Path
+import json,os,subprocess,shutil,sys
+root=Path('/home/bailey/github/PolyXML');repo=Path(sys.argv[1]).resolve();label=sys.argv[2];out=Path(sys.argv[3]);out.mkdir(parents=True,exist_ok=True)
+crate=root/'benchmarks/rust-runtime-investigation/target'/('branch-allocations-'+label);(crate/'src').mkdir(parents=True,exist_ok=True)
+source=Path('/home/bailey/github/polyxml-mixed-index/benchmarks/rust-runtime-investigation/mixed_branches.rs').read_text()
+fixture=source[source.index('fn fixture('):source.index('fn benchmarks(')]
+allocator=(root/'benchmarks/rust-runtime-investigation/diagnostics.rs').read_text();allocator=allocator[allocator.index('use std::alloc'):allocator.index('fn main()')]
+harness='use polyxml::schema::ModelSchema;\nuse polyxml::schema_parser::XsdParser;\nuse polyxml::{deserialize,serialize,PolyValue};\nuse std::{hint::black_box,sync::Arc};\n'+allocator+fixture+r'''
+fn main() {
+ for branches in [1,16,64,256] { for count in [1,1000] {
+  let (schema,xml)=fixture(branches,count);
+  let value=deserialize(&xml,Arc::clone(&schema)).unwrap();
+  for _ in 0..3 { black_box(serialize("Root",&value,&schema,None).unwrap()); }
+  ALLOCATIONS.store(0,Ordering::Relaxed);REALLOCATIONS.store(0,Ordering::Relaxed);BYTES.store(0,Ordering::Relaxed);
+  COUNTING.store(true,Ordering::Relaxed);
+  let output=serialize("Root",&value,&schema,None).unwrap();
+  COUNTING.store(false,Ordering::Relaxed);
+  println!("branches={branches},items={count},allocations={},reallocations={},requested_bytes={},output_bytes={}",ALLOCATIONS.load(Ordering::Relaxed),REALLOCATIONS.load(Ordering::Relaxed),BYTES.load(Ordering::Relaxed),output.len());
+ } }
+}
+'''
+(crate/'src/main.rs').write_text(harness)
+(crate/'Cargo.toml').write_text('[package]\nname="branch-allocations"\nversion="0.0.0"\nedition="2021"\n[workspace]\n[dependencies]\npolyxml={path='+json.dumps(str(repo/'crates/polyxml-core'))+'}\n')
+shutil.copy2(root/'benchmarks/rust-runtime-investigation/target/selected/Cargo.lock',crate/'Cargo.lock')
+env=os.environ|{'CARGO_BUILD_JOBS':'1','POLYXML_MEMCAP_BACKEND':'systemd'}
+with (out/(label+'-build.txt')).open('w') as log:subprocess.run([str(root/'scripts/memcap.sh'),'cargo','build','--release','--manifest-path',str(crate/'Cargo.toml')],env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
+for name,path in [('harness.rs',crate/'src/main.rs'),('Cargo.toml',crate/'Cargo.toml'),('Cargo.lock',crate/'Cargo.lock')]:shutil.copy2(path,out/(label+'-'+name))
+with (out/(label+'-allocations.txt')).open('w') as log:subprocess.run([str(root/'scripts/memcap.sh'),str(crate/'target/release/branch-allocations')],env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
+(out/(label+'-metadata.json')).write_text(json.dumps({'revision':subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),'items':[1,1000],'branches':[1,16,64,256],'operations':1,'warmup_operations':3,'rustc':subprocess.check_output(['rustc','-Vv'],text=True)},indent=2)+'\n')

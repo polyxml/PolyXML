@@ -1,0 +1,12 @@
+==502846== Callgrind, a call-graph generating cache profiler
+==502846== Copyright (C) 2002-2017, and GNU GPL'd, by Josef Weidendorfer et al.
+==502846== Using Valgrind-3.26.0 and LibVEX; rerun with -h for copyright info
+==502846== Command: /home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-current/target/release/mixed-profile pattern
+==502846== Parent PID: 502780
+==502846== 
+==502846== For interactive control, run 'callgrind_control -h'.
+==502846== 
+==502846== Events    : Ir
+==502846== Collected : 61654974
+==502846== 
+==502846== I   refs:      61,654,974

@@ -126,7 +126,7 @@ with `test_mixed_nil`; a timing harness must not turn a known correctness
 failure into a performance result.
 
 `mixed_branches.rs` varies the child-tag table across 1, 16, 64 and 256 entries
-and the payload across one or 1,000 items. It checks every kind against its
+and the payload across 1, 32, 64, 128, 1,000 and 1,024 items. It checks every kind against its
 expected wire name and every integer before timing, then checks the full
 round trip. Use `^branch_write/.*/1000$` to screen repeated writes; retain sparse
 and read controls before promoting a branch-lookup optimization. A temporary
@@ -139,7 +139,7 @@ and items numbering at least half the branch count. This is a measured heuristic
 not a universal break-even guarantee; tag distribution and text-only content can
 affect how much lookup work is saved.
 
-The final selector samples at most 16 evenly spaced items, requiring at least
+The final selector samples at most 16 items spread across the payload, requiring at least
 four tagged samples and an average linear-search depth of 16 before indexing.
 This avoids the observed repeated-first-tag regression and skips a table for
 text-only content. It is a heuristic, so retain concentrated/distributed cases

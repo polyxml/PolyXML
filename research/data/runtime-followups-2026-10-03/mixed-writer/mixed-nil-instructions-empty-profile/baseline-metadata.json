@@ -1,0 +1,11 @@
+{
+  "revision": "1819c91b0808b9242c642d82350d2b657b60108c",
+  "kind": [
+    "scalar",
+    "pattern"
+  ],
+  "items": 1000,
+  "operations": 25,
+  "warmup_operations": 3,
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n"
+}
