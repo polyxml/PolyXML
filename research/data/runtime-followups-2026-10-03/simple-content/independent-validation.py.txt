@@ -1,0 +1,8 @@
+from lxml import etree
+schema=etree.XMLSchema(etree.parse('research/fixtures/inherited_simple_content.xsd'))
+for xml in ['<Root unit="m" rank="4" tag="T">7</Root>','<CodeRoot label="code">AB</CodeRoot>','<BoundedRoot>7</BoundedRoot>']:
+    schema.assertValid(etree.fromstring(xml.encode()))
+for xml in ['<Root unit="m" rank="4" tag="T">bad</Root>','<CodeRoot label="code">X</CodeRoot>','<BoundedRoot>0</BoundedRoot>']:
+    assert not schema.validate(etree.fromstring(xml.encode())),xml
+print('Independent libxml2 validation: 3 valid accepted, 3 invalid rejected')
+print('lxml',etree.LXML_VERSION,'libxml2',etree.LIBXML_VERSION)

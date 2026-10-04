@@ -1,0 +1,10 @@
+memcap: <=7617 MiB (60% of 12695 MiB available) [systemd MemoryMax, swap off]
+🍹 Building a mixed python/rust project
+🐍 Found CPython 3.14 at /home/bailey/github/polyxml-w3c-tests/.venv/bin/python
+🔗 Found pyo3 bindings with abi3-py3.12 support
+📡 Using build options features from pyproject.toml
+Checked 6 packages in 0.44ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
+📦 Built wheel for abi3 Python ≥ 3.12 to /tmp/.tmpDvDhMI/polyxml-0.34.6-cp312-abi3-linux_x86_64.whl
+✏️ Setting installed package as editable
+🛠 Installed polyxml-0.34.6

@@ -610,7 +610,12 @@ impl TypeScriptCodegen {
             self.emit_docstring(out, doc, "");
         }
 
-        let base_name = s.base_type.as_ref().map(type_ident);
+        // Scalar simpleContent bases are text types, not object inheritance.
+        let base_name = s
+            .base_type
+            .as_ref()
+            .filter(|name| matches!(ir.types.get(*name), Some(TypeDef::Struct(_))))
+            .map(type_ident);
         let mut inherited_fields = HashSet::new();
         let mut current_base = s.base_type.as_ref();
         let mut visited_bases = HashSet::new();

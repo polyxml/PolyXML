@@ -1069,8 +1069,9 @@ public class Main {
         if (m.count().orElse(-1) != 3) throw new AssertionError("own count lost");
         var p = new Models.PreciseMeasurement(
             Optional.of("km"),
-            new Models.Measurement(new java.math.BigDecimal("2.5"), Optional.empty()),
+            new java.math.BigDecimal("2.5"),
             Optional.of(3));
+        if (p.value().compareTo(new java.math.BigDecimal("2.5")) != 0) throw new AssertionError("inherited scalar text lost");
         if (!p.unit().orElse("").equals("km")) throw new AssertionError("inherited unit lost");
         if (p.precision().orElse(-1) != 3) throw new AssertionError("own precision lost");
     }

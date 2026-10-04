@@ -1,0 +1,21 @@
+memcap: <=7702 MiB (60% of 12838 MiB available) [systemd MemoryMax, swap off]
+[0;34m==> Building polyxml CLI binary...[0m
+[0;34m==> Testing code generation across all 7 target ecosystems...[0m
+  • Rust (--feature zero-copy,rkyv,phf)... [0;32mOK[0m
+  • Python (dataclasses)... [0;32mOK[0m
+  • Python (pydantic-v2)... [0;32mOK[0m
+  • C++20 (headers + glaze)... [0;32mOK[0m
+  • C++20 (modules)... [0;32mOK[0m
+  • Java 22+ (standard records)... [0;32mOK[0m
+  • Java 22+ (jackson)... [0;32mOK[0m
+  • Java (POJO + builder + direct codec)... [0;32mOK[0m
+  • TypeScript (zod)... [0;32mOK[0m
+  • TypeScript (valibot)... [0;32mOK[0m
+  • TypeScript (typebox)... [0;32mOK[0m
+  • Go (standard)... [0;32mOK[0m
+  • Go (sonic)... [0;32mOK[0m
+  • Go (easyjson)... [0;32mOK[0m
+  • C# (record class)... [0;32mOK[0m
+  • C# (record struct + source-gen)... [0;32mOK[0m
+  • C# (mutable class + source-gen)... [0;32mOK[0m
+[0;32m✨ Multi-target smoke verification passed completely across all 7 ecosystems![0m

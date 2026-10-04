@@ -433,8 +433,17 @@ impl ModelSchema {
                     _ => break,
                 }
             }
+            // A simpleContent derivation redeclares its text slot. Retain only
+            // the most-derived slot; inherited attributes still precede it.
+            let has_own_text = s
+                .fields
+                .iter()
+                .any(|f| f.kind == crate::ir::FieldKind::Text);
             for base_s in chain.into_iter().rev() {
                 for f in &base_s.fields {
+                    if has_own_text && f.kind == crate::ir::FieldKind::Text {
+                        continue;
+                    }
                     builder = builder.field(build_field(f, ir, visited));
                 }
             }

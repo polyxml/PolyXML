@@ -7,6 +7,25 @@ description: >-
 
 # PolyXML Pure Rust Core Engine Architecture & Patterns
 
+## Inherited simpleContent
+
+Normalize synthetic text fields only after root-level import/include merging and
+reference validation. Follow complex bases iteratively with a cycle guard and
+memoized terminal types; keep the complex `base_type` for inherited attributes.
+Preserve named simple aliases, enums, unions and lists rather than flattening away
+their identities or constraints. Imported frames can contain boxed references
+from cycle cutting; unwrap those only while resolving text inheritance.
+
+Runtime schema flattening must retain one most-derived text slot, otherwise
+record lookup finds an inherited empty slot and writing can duplicate text.
+TypeScript object inheritance applies only to complex bases, never builtin or
+named scalar types. Run `test_inherited_simple_content` and the seven-language
+`test_inherited_text_codegen` consumers, including Rust owned/borrowed XML and
+Serde, Python dataclass/Pydantic, and strict C# record/class execution. Named
+simple-type facets are preserved; this does not implement additional facets
+written directly inside a simpleContent restriction or empty/list text codecs.
+
+
 This skill documents the high-performance design patterns and strict constraints for
 `crates/polyxml-core`.
 
