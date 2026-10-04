@@ -113,3 +113,35 @@ For the generated sensor control, run the XML/Serde regression runner and use
 its output directory. This computes each process's median of seven timing
 samples, then the median across processes; it retains the process deltas. The
 statistic differs from the Criterion process means above.
+
+## Ordered mixed content
+
+Use `--harness benchmarks/rust-runtime-investigation/mixed.rs` for 1,000
+text, scalar, enum, warm-pattern or nested mixed items. Every decoded payload
+is checked before timing. Adjacent text events can be coalesced on output, so
+the text case compares the concatenated text value after a round trip; element
+cases compare the complete ordered value. These cases contain no nil items and
+can compare revisions whose nil writer is broken. Cover nil output separately
+with `test_mixed_nil`; a timing harness must not turn a known correctness
+failure into a performance result.
+
+`mixed_branches.rs` varies the child-tag table across 1, 16, 64 and 256 entries
+and the payload across one or 1,000 items. It checks every kind against its
+expected wire name and every integer before timing, then checks the full
+round trip. Use `^branch_write/.*/1000$` to screen repeated writes; retain sparse
+and read controls before promoting a branch-lookup optimization. A temporary
+index trades a per-container allocation for faster repeated lookup. It must
+preserve first-match behavior and rebuild after mutable metadata edits.
+
+The mixed branch consumer also includes 32, 64 and 128 items to check index
+construction cost. The trigger requires at least 64 branches, at least 64 items,
+and items numbering at least half the branch count. This is a measured heuristic,
+not a universal break-even guarantee; tag distribution and text-only content can
+affect how much lookup work is saved.
+
+The final selector samples at most 16 evenly spaced items, requiring at least
+four tagged samples and an average linear-search depth of 16 before indexing.
+This avoids the observed repeated-first-tag regression and skips a table for
+text-only content. It is a heuristic, so retain concentrated/distributed cases
+and the actual sampled payload along with timing evidence. All items still pass
+through the normal writer validation.

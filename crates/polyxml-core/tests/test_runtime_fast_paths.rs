@@ -239,6 +239,8 @@ fn unified_scalar_state_keeps_mixed_branch_order_nil_and_nested_frames() {
         assert_eq!(value,deserialize(&output,Arc::clone(&schema)).unwrap());
     }
     let nil_document = b"<Root xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Text xsi:nil='true'/><State>Ready</State></Root>";
-    assert!(deserialize(nil_document, Arc::clone(&schema)).is_ok());
+    let value = deserialize(nil_document, Arc::clone(&schema)).unwrap();
+    let output = serialize("Root", &value, &schema, None).unwrap();
+    assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());
     assert!(deserialize(b"<Root><State>invalid</State></Root>", schema).is_err());
 }

@@ -30,6 +30,11 @@ separate from the schema-driven `PolyValue` runtime.
   also matches deserialization. Remove stale results only in the runner's owned
   scratch directory before measurement, not from retained raw evidence.
 - Check rich enums, patterns, lists and mixed branches alongside plain records.
+  The `mixed.rs` consumer checks text/scalar/enum/pattern/nested ordered items.
+  Text/GeneralRef/CData boundaries may coalesce when written: compare adjacent
+  text's concatenated value, rather than treating token segmentation as XML
+  semantics. Keep nil correctness tests separate from baseline timing consumers
+  when the baseline cannot serialize nil.
   Warm pattern-cache gains do not establish cold-start, churn or concurrent
   throughput. Entry/key bounds do not constitute a compiled-regex byte budget.
 - Preserve validation, errors, split Text/CData/GeneralRef handling, nil reads,
@@ -42,3 +47,27 @@ separate from the schema-driven `PolyValue` runtime.
 - Publish positive and negative experiments with exact source revisions, raw
   evidence and remaining regressions. Run the full quality gate before pushing
   the experiment branch; a branch request does not authorize a merge to main.
+
+For mixed schemas with many possible child tags, measure the linear branch scan
+with `mixed_branches.rs`, including sparse one-item controls. A temporary index
+can borrow kind keys and branch references for large repeated payloads without
+persisting stale mutable metadata. Preserve the original first-match behavior
+for duplicate kind names; test metadata edits, tagged records, nil and unknown
+kinds. Keep small tables on a linear path and measure the chosen crossover.
+
+Check the indexing cutoff with short documents too. A 256-branch table built for
+64 mixed items was 30% slower, despite a 54% gain at 1,000 items. Requiring at
+least 64 items and half as many items as branches avoids that observed crossover
+regression. Retain 32/64/128-item controls, and keep the cutoff heuristic separate
+from semantic behavior: duplicate first-match ordering and metadata edits still
+need independent correctness tests.
+
+Also measure concentrated tag reuse and text-heavy content. Even above the
+size cutoff, repeated first-branch hits were 11–20% slower with a hash table.
+A bounded, evenly spaced sample can select linear lookup when the observed
+branch-search work is low. Treat sampling as a performance heuristic only;
+normal writer validation must still examine every item and preserve errors.
+
+Offset samples within their bins and include a power-of-two item count: a
+strictly evenly spaced sample can repeatedly hit the first tag when the choice
+cycle divides its stride, overlooking a distributed payload's lookup work.
