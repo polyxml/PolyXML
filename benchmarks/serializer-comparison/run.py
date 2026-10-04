@@ -120,6 +120,7 @@ def main():
         with (output / f"build-{name}.log").open("w") as log:
             command(build, env=env, stdout=log, stderr=subprocess.STDOUT)
         shutil.copyfile(binary, binaries / name)
+        (binaries / name).chmod(0o755)
     for path in (TARGET / "rust-consumer/src").iterdir():
         shutil.copyfile(
             path,
