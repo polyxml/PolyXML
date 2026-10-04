@@ -44,7 +44,7 @@ fn benchmarks(c: &mut Criterion) {
         let mut group = c.benchmark_group(operation);
         group.sampling_mode(SamplingMode::Flat);
         for branches in [1, 16, 64, 256] {
-            for count in [1, 1000] {
+            for count in [1, 32, 64, 128, 1000] {
                 let (schema, xml) = fixture(branches, count);
                 let value = deserialize(&xml, Arc::clone(&schema)).unwrap();
                 group.throughput(Throughput::Bytes(xml.len() as u64));

@@ -54,3 +54,10 @@ can borrow kind keys and branch references for large repeated payloads without
 persisting stale mutable metadata. Preserve the original first-match behavior
 for duplicate kind names; test metadata edits, tagged records, nil and unknown
 kinds. Keep small tables on a linear path and measure the chosen crossover.
+
+Check the indexing cutoff with short documents too. A 256-branch table built for
+64 mixed items was 30% slower, despite a 54% gain at 1,000 items. Requiring at
+least 64 items and half as many items as branches avoids that observed crossover
+regression. Retain 32/64/128-item controls, and keep the cutoff heuristic separate
+from semantic behavior: duplicate first-match ordering and metadata edits still
+need independent correctness tests.

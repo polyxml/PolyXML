@@ -132,3 +132,9 @@ round trip. Use `^branch_write/.*/1000$` to screen repeated writes; retain spars
 and read controls before promoting a branch-lookup optimization. A temporary
 index trades a per-container allocation for faster repeated lookup. It must
 preserve first-match behavior and rebuild after mutable metadata edits.
+
+The mixed branch consumer also includes 32, 64 and 128 items to check index
+construction cost. The trigger requires at least 64 branches, at least 64 items,
+and items numbering at least half the branch count. This is a measured heuristic,
+not a universal break-even guarantee; tag distribution and text-only content can
+affect how much lookup work is saved.

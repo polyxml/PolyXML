@@ -682,7 +682,10 @@ impl XmlSerializer {
     ) -> Result<()> {
         // Amortize the temporary index only for sufficiently large schemas and
         // repeated payloads. References avoid cloning keys or branch metadata.
-        if mixed.branches.len() >= 64 && items.len() >= 64 {
+        if mixed.branches.len() >= 64
+            && items.len() >= 64
+            && items.len() >= mixed.branches.len().div_ceil(2)
+        {
             let mut index = std::collections::HashMap::with_capacity(mixed.branches.len());
             for branch in &mixed.branches {
                 // Preserve the linear lookup's first-match behavior for public
