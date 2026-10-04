@@ -1,0 +1,7 @@
+[package]
+name="branch-allocations"
+version="0.0.0"
+edition="2021"
+[workspace]
+[dependencies]
+polyxml={path="/home/bailey/github/polyxml-perf-selected/crates/polyxml-core"}

@@ -577,7 +577,7 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
                         let variants = enumeration
                             .variants
                             .iter()
-                            .map(|v| format!("{:?}", v.value))
+                            .map(|v| super::string_literal(&v.value))
                             .collect::<Vec<_>>()
                             .join(",");
                         writeln!(out,"switch string(value) {{case {variants}: default:return fmt.Errorf(\"invalid enum list item\")}}").unwrap();
@@ -670,8 +670,10 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
             }
             writeln!(
                 out,
-                "    {} {} = \"{}\"",
-                const_name, enum_name, variant.value
+                "    {} {} = {}",
+                const_name,
+                enum_name,
+                super::string_literal(&variant.value)
             )
             .unwrap();
         }
@@ -925,7 +927,7 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
                     let comparisons = def
                         .variants
                         .iter()
-                        .map(|v| format!("value == {:?}", v.value))
+                        .map(|v| format!("value == {}", super::string_literal(&v.value)))
                         .collect::<Vec<_>>()
                         .join(" || ");
                     let _ = writeln!(

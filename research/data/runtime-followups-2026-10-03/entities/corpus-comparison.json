@@ -1,0 +1,53 @@
+{
+  "CType": {
+    "identical_results": true,
+    "baseline_summary": [
+      "\u2502 Total Test Groups            \u2502    31 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Passed   \u2502    31 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Failed   \u2502     0 \u2502   0.0% \u2502",
+      "\u2502 Valid Instances Evaluated    \u2502    28 \u2502      - \u2502",
+      "\u2502 Roundtrip Validations Passed \u2502    23 \u2502  82.1% \u2502"
+    ],
+    "candidate_summary": [
+      "\u2502 Total Test Groups            \u2502    31 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Passed   \u2502    31 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Failed   \u2502     0 \u2502   0.0% \u2502",
+      "\u2502 Valid Instances Evaluated    \u2502    28 \u2502      - \u2502",
+      "\u2502 Roundtrip Validations Passed \u2502    23 \u2502  82.1% \u2502"
+    ]
+  },
+  "AttrDecl": {
+    "identical_results": true,
+    "baseline_summary": [
+      "\u2502 Total Test Groups            \u2502    50 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Passed   \u2502    50 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Failed   \u2502     0 \u2502   0.0% \u2502",
+      "\u2502 Valid Instances Evaluated    \u2502    50 \u2502      - \u2502",
+      "\u2502 Roundtrip Validations Passed \u2502    50 \u2502 100.0% \u2502"
+    ],
+    "candidate_summary": [
+      "\u2502 Total Test Groups            \u2502    50 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Passed   \u2502    50 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Failed   \u2502     0 \u2502   0.0% \u2502",
+      "\u2502 Valid Instances Evaluated    \u2502    50 \u2502      - \u2502",
+      "\u2502 Roundtrip Validations Passed \u2502    50 \u2502 100.0% \u2502"
+    ]
+  },
+  "NIST": {
+    "identical_results": true,
+    "baseline_summary": [
+      "\u2502 Total Test Groups            \u2502   100 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Passed   \u2502   100 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Failed   \u2502     0 \u2502   0.0% \u2502",
+      "\u2502 Valid Instances Evaluated    \u2502   452 \u2502      - \u2502",
+      "\u2502 Roundtrip Validations Passed \u2502   447 \u2502  98.9% \u2502"
+    ],
+    "candidate_summary": [
+      "\u2502 Total Test Groups            \u2502   100 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Passed   \u2502   100 \u2502 100.0% \u2502",
+      "\u2502 Schema Compilations Failed   \u2502     0 \u2502   0.0% \u2502",
+      "\u2502 Valid Instances Evaluated    \u2502   452 \u2502      - \u2502",
+      "\u2502 Roundtrip Validations Passed \u2502   447 \u2502  98.9% \u2502"
+    ]
+  }
+}

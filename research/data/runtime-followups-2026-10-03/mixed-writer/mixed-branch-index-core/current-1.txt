@@ -1,0 +1,63 @@
+memcap: <=7732 MiB (60% of 12887 MiB available) [systemd MemoryMax, swap off]
+Benchmarking deserialization/sensor_micro
+Benchmarking deserialization/sensor_micro: Warming up for 1.0000 s
+Benchmarking deserialization/sensor_micro: Collecting 50 samples in estimated 2.0011 s (2.0M iterations)
+Benchmarking deserialization/sensor_micro: Analyzing
+deserialization/sensor_micro
+                        time:   [988.68 ns 1.0005 µs 1.0197 µs]
+                        thrpt:  [87.914 MiB/s 89.598 MiB/s 90.672 MiB/s]
+Found 6 outliers among 50 measurements (12.00%)
+  1 (2.00%) high mild
+  5 (10.00%) high severe
+Benchmarking deserialization/catalog_items/1000
+Benchmarking deserialization/catalog_items/1000: Warming up for 1.0000 s
+Benchmarking deserialization/catalog_items/1000: Collecting 50 samples in estimated 2.0425 s (2550 iterations)
+Benchmarking deserialization/catalog_items/1000: Analyzing
+deserialization/catalog_items/1000
+                        time:   [794.18 µs 798.28 µs 802.74 µs]
+                        thrpt:  [75.928 MiB/s 76.352 MiB/s 76.746 MiB/s]
+Found 3 outliers among 50 measurements (6.00%)
+  3 (6.00%) high mild
+Benchmarking deserialization/catalog_items/10000
+Benchmarking deserialization/catalog_items/10000: Warming up for 1.0000 s
+Benchmarking deserialization/catalog_items/10000: Collecting 50 samples in estimated 2.0081 s (250 iterations)
+Benchmarking deserialization/catalog_items/10000: Analyzing
+deserialization/catalog_items/10000
+                        time:   [7.9953 ms 8.0362 ms 8.0851 ms]
+                        thrpt:  [78.901 MiB/s 79.381 MiB/s 79.788 MiB/s]
+Found 5 outliers among 50 measurements (10.00%)
+  4 (8.00%) high mild
+  1 (2.00%) high severe
+
+Benchmarking serialization/sensor_micro
+Benchmarking serialization/sensor_micro: Warming up for 1.0000 s
+Benchmarking serialization/sensor_micro: Collecting 50 samples in estimated 2.0000 s (9.0M iterations)
+Benchmarking serialization/sensor_micro: Analyzing
+serialization/sensor_micro
+                        time:   [220.20 ns 221.59 ns 223.58 ns]
+                        thrpt:  [400.96 MiB/s 404.56 MiB/s 407.10 MiB/s]
+Found 4 outliers among 50 measurements (8.00%)
+  4 (8.00%) high severe
+Benchmarking serialization/catalog_items/1000
+Benchmarking serialization/catalog_items/1000: Warming up for 1.0000 s
+Benchmarking serialization/catalog_items/1000: Collecting 50 samples in estimated 2.0338 s (11k iterations)
+Benchmarking serialization/catalog_items/1000: Analyzing
+serialization/catalog_items/1000
+                        time:   [176.18 µs 178.21 µs 180.77 µs]
+                        thrpt:  [334.53 MiB/s 339.34 MiB/s 343.26 MiB/s]
+Found 6 outliers among 50 measurements (12.00%)
+  4 (8.00%) high mild
+  2 (4.00%) high severe
+Benchmarking serialization/catalog_items/10000
+Benchmarking serialization/catalog_items/10000: Warming up for 1.0000 s
+
+Warning: Unable to complete 50 samples in 2.0s. You may wish to increase target time to 2.3s, enable flat sampling, or reduce sample count to 30.
+Benchmarking serialization/catalog_items/10000: Collecting 50 samples in estimated 2.2881 s (1275 iterations)
+Benchmarking serialization/catalog_items/10000: Analyzing
+serialization/catalog_items/10000
+                        time:   [1.7861 ms 1.8084 ms 1.8365 ms]
+                        thrpt:  [344.76 MiB/s 350.11 MiB/s 354.49 MiB/s]
+Found 8 outliers among 50 measurements (16.00%)
+  4 (8.00%) high mild
+  4 (8.00%) high severe
+

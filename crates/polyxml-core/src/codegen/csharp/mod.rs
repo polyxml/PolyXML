@@ -618,7 +618,13 @@ impl CSharpCodegen {
                 self.emit_docstring(out, doc, &format!("{}    ", indent));
             }
             if self.options.emit_xml_attributes {
-                writeln!(out, "{}    [XmlEnum(\"{}\")]", indent, variant.value).unwrap();
+                writeln!(
+                    out,
+                    "{}    [XmlEnum({})]",
+                    indent,
+                    super::string_literal(&variant.value)
+                )
+                .unwrap();
             }
             writeln!(out, "{}    {},", indent, variant_name).unwrap();
         }
@@ -659,8 +665,11 @@ impl CSharpCodegen {
         for (variant, variant_name) in e.variants.iter().zip(&variant_names) {
             writeln!(
                 out,
-                "{}        {}.{} => \"{}\",",
-                indent, enum_name, variant_name, variant.value
+                "{}        {}.{} => {},",
+                indent,
+                enum_name,
+                variant_name,
+                super::string_literal(&variant.value)
             )
             .unwrap();
         }
@@ -1295,10 +1304,10 @@ impl CSharpCodegen {
             if let Some(kind) = integer_kind {
                 return format!("PolyxmlIntegerLexical.Validate({text},{kind})");
             }
-            format!("({base})new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape({text}) + \"</value>\"))!")
+            format!("({base})new XmlSerializer(typeof({base}), new XmlRootAttribute(\"value\")).Deserialize(new System.IO.StringReader(\"<value>\" + System.Security.SecurityElement.Escape({text}).Replace(\"\\r\", \"&#13;\") + \"</value>\"))!")
         };
         if let Some(fixed) = &field.fixed_value {
-            let expected = parse(&format!("{fixed:?}"));
+            let expected = parse(&super::string_literal(fixed));
             let initial = if field.cardinality.is_optional() && field.kind == FieldKind::Element {
                 "default!".to_string()
             } else {
@@ -1318,7 +1327,7 @@ impl CSharpCodegen {
 {indent}    [XmlIgnore] public {ty} {name} {{ get => _{name}; set {{ if ({present}!({equal})) throw new System.ComponentModel.DataAnnotations.ValidationException(\"Fixed value constraint violated for {name}\"); _{name} = value; }} }}").unwrap();
         } else {
             let initial = if field.kind == FieldKind::Attribute {
-                parse(&format!("{default:?}"))
+                parse(&super::string_literal(default))
             } else {
                 "default!".to_string()
             };
@@ -1352,7 +1361,10 @@ impl CSharpCodegen {
         let text = if field.kind == FieldKind::Attribute {
             "value".into()
         } else {
-            format!("value.Length == 0 ? {default:?} : value")
+            format!(
+                "value.Length == 0 ? {} : value",
+                super::string_literal(default)
+            )
         };
         let parsed = parse("text");
         writeln!(out, "{indent}        set {{ if (value is null) {{ {name} = default!; return; }} var text = {text}; {name} = {parsed}; }}

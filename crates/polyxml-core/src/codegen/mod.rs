@@ -24,6 +24,40 @@ pub use python::{
 pub use rust::{RustCodegen, RustOptions};
 pub use typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 
+/// JSON string escapes are also valid in Python, Go, Java, C# and TypeScript
+/// string literals. Rust and C++ need their own escapes for control characters.
+pub(crate) fn string_literal(value: &str) -> String {
+    serde_json::to_string(value)
+        .expect("serializing a string cannot fail")
+        // C# treats these Unicode characters as source line terminators even
+        // inside quoted strings; JSON permits their literal forms.
+        .replace('\u{85}', "\\u0085")
+        .replace('\u{2028}', "\\u2028")
+        .replace('\u{2029}', "\\u2029")
+}
+
+pub(crate) fn cpp_string_literal(value: &str) -> String {
+    use std::fmt::Write;
+    let mut literal = String::from("\"");
+    for character in value.chars() {
+        match character {
+            '\\' => literal.push_str("\\\\"),
+            '"' => literal.push_str("\\\""),
+            '\n' => literal.push_str("\\n"),
+            '\r' => literal.push_str("\\r"),
+            '\t' => literal.push_str("\\t"),
+            c if c.is_ascii_control() => {
+                // Three octal digits prevent a following digit from extending
+                // the escape; universal character names cannot encode these.
+                write!(literal, "\\{:03o}", c as u32).unwrap();
+            }
+            c => literal.push(c),
+        }
+    }
+    literal.push('"');
+    literal
+}
+
 /// Prefix every physical XSD documentation line so embedded newlines cannot
 /// escape a generated source comment.
 pub(crate) fn write_documentation_lines(out: &mut String, prefix: &str, doc: &str) {

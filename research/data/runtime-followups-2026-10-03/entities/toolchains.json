@@ -1,0 +1,66 @@
+{
+  "rust": {
+    "command": [
+      "rustc",
+      "-Vv"
+    ],
+    "output": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+    "exit_code": 0
+  },
+  "python": {
+    "command": [
+      "python3",
+      "--version"
+    ],
+    "output": "Python 3.14.4\n",
+    "exit_code": 0
+  },
+  "cpp": {
+    "command": [
+      "c++",
+      "--version"
+    ],
+    "output": "c++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0\nCopyright (C) 2025 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+    "exit_code": 0
+  },
+  "go": {
+    "command": [
+      "go",
+      "version"
+    ],
+    "output": "go version go1.26.0 linux/amd64\n",
+    "exit_code": 0
+  },
+  "java": {
+    "command": [
+      "javac",
+      "-version"
+    ],
+    "output": "javac 25.0.4.1\n",
+    "exit_code": 0
+  },
+  "csharp": {
+    "command": [
+      "dotnet",
+      "--list-runtimes"
+    ],
+    "output": "Microsoft.AspNetCore.App 10.0.12 [/usr/lib/dotnet/shared/Microsoft.AspNetCore.App]\nMicrosoft.NETCore.App 10.0.12 [/usr/lib/dotnet/shared/Microsoft.NETCore.App]\n",
+    "exit_code": 0
+  },
+  "node": {
+    "command": [
+      "node",
+      "--version"
+    ],
+    "output": "v24.21.0\n",
+    "exit_code": 0
+  },
+  "typescript": {
+    "command": [
+      "/tmp/polyxml-corpus-tools/node_modules/.bin/tsc",
+      "--version"
+    ],
+    "output": "Version 5.9.3\n",
+    "exit_code": 0
+  }
+}

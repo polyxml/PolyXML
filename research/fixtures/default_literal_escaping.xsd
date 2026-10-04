@@ -1,0 +1,7 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+ <xs:complexType name="RootType"><xs:sequence>
+  <xs:element name="Value" type="xs:string" default="&quot;quoted&quot;\path\u000a&#9;&#10;&#13;&#x85;&#x2028;café 😀"/>
+  <xs:element name="Fixed" type="xs:string" fixed="&quot;quoted&quot;\path\u000a&#9;&#10;&#13;&#x85;&#x2028;café 😀"/>
+ </xs:sequence><xs:attribute name="Label" type="xs:string" default="&quot;quoted&quot;\path\u000a&#9;&#10;&#13;&#x85;&#x2028;café 😀"/>
+ </xs:complexType><xs:element name="Root" type="RootType"/>
+</xs:schema>

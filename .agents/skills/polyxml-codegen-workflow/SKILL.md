@@ -8,6 +8,42 @@ description: >-
 
 # PolyXML Polyglot Codegen Development & Verification Playbook
 
+## XSD attribute values
+
+Use separate `CARGO_TARGET_DIR` paths for revision-specific CLI/native-binding
+verification. A shared debug target can leave another checkout's same-named
+top-level binary or cdylib in place even when Cargo reports a fresh build. Probe
+a discriminating fixture before claiming a baseline comparison, record the
+executable/binding hashes, and retain rejected preflights separately. The runtime
+comparison runners already isolate baseline and candidate consumer targets.
+
+Normalize schema attributes with quick-xml's `normalized_value` before placing
+them in the IR. This resolves built-in/numeric references once and normalizes
+literal XML attribute whitespace while preserving referenced whitespace. Use the
+same decoded values for namespace declarations, QName validation, UPA, facets,
+enumerations and default/fixed constraints. Propagate malformed attributes and
+reference errors; do not turn them into absent values. Validate attributes even
+inside otherwise skipped annotations. Regression fixtures are in
+`research/fixtures/schema_attribute_entities.xsd` and
+`tests/test_schema_attribute_entities.rs` in the core crate.
+
+Decoded enum values need target-language string literal escaping at every output
+site: metadata attributes, constants, conversion tables and parse matches. Rust
+debug string formatting is suitable for Rust, but its `\u{...}` escapes are not
+portable to other targets. The shared JSON-compatible literal helper also
+escapes U+0085/U+2028/U+2029 because C# treats them as source line terminators;
+C++ uses fixed-width octal escapes for ASCII controls. Execute
+`test_enum_literal_codegen` with all seven toolchains to verify exact runtime
+values and Rust Serde round trips, not just whether generated files exist.
+
+Schema defaults and fixed values need the same literal escaping as enums.
+Python metadata must not use Rust Debug escapes, and C++ defaults need C++
+control-character escapes. C# defaults parsed through an internal XML element
+must encode carriage returns as `&#13;` after escaping XML markup; otherwise XML
+line-ending normalization changes the lexical value. Execute generated consumers
+against independent UTF-8 expected data, including backslash-u text, referenced
+whitespace, Unicode line separators, empty-element defaults and fixed rejection.
+
 ## C# runtime availability for smoke checks
 
 The C# execution fixtures target `net8.0`. An installed .NET 10 SDK/runtime
@@ -934,3 +970,11 @@ owned/borrowed XML and JSON round trips, use the declared root name explicitly
 when it differs from its type name, and distinguish C++/TypeScript model-only
 generation from their runtime binding schemas. Strict docs builds catch broken
 anchors and misplaced code fences, including guides appended after old fences.
+
+When Python generated-model tests use an isolated absolute CARGO_TARGET_DIR,
+resolve the CLI under that target, not the checkout's default target directory
+or an unrelated global executable. Relative target values resolve from the
+checkout because the helper builds with that cwd. The generated-model test
+helper now honors this override and builds the matching CLI if needed. Keep
+workspace targets owned by one worktree; switching checkouts in a shared target
+can leave stale unchanged executables even after a core compile message.

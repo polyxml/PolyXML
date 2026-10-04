@@ -1,0 +1,121 @@
+memcap: <=7731 MiB (60% of 12886 MiB available) [systemd MemoryMax, swap off]
+Benchmarking branch_read/branches_1/1
+Benchmarking branch_read/branches_1/1: Warming up for 1.0000 s
+Benchmarking branch_read/branches_1/1: Collecting 50 samples in estimated 2.0000 s (3.0M iterations)
+Benchmarking branch_read/branches_1/1: Analyzing
+branch_read/branches_1/1
+                        time:   [620.79 ns 623.26 ns 626.19 ns]
+                        thrpt:  [35.029 MiB/s 35.193 MiB/s 35.333 MiB/s]
+Found 2 outliers among 50 measurements (4.00%)
+  1 (2.00%) high mild
+  1 (2.00%) high severe
+Benchmarking branch_read/branches_1/1000
+Benchmarking branch_read/branches_1/1000: Warming up for 1.0000 s
+Benchmarking branch_read/branches_1/1000: Collecting 50 samples in estimated 2.0136 s (6900 iterations)
+Benchmarking branch_read/branches_1/1000: Analyzing
+branch_read/branches_1/1000
+                        time:   [291.03 µs 292.85 µs 294.94 µs]
+                        thrpt:  [38.488 MiB/s 38.762 MiB/s 39.005 MiB/s]
+Found 7 outliers among 50 measurements (14.00%)
+  6 (12.00%) high mild
+  1 (2.00%) high severe
+Benchmarking branch_read/branches_16/1
+Benchmarking branch_read/branches_16/1: Warming up for 1.0000 s
+Benchmarking branch_read/branches_16/1: Collecting 50 samples in estimated 2.0000 s (3.1M iterations)
+Benchmarking branch_read/branches_16/1: Analyzing
+branch_read/branches_16/1
+                        time:   [648.19 ns 659.24 ns 676.41 ns]
+                        thrpt:  [32.428 MiB/s 33.272 MiB/s 33.840 MiB/s]
+Found 6 outliers among 50 measurements (12.00%)
+  6 (12.00%) high severe
+Benchmarking branch_read/branches_16/1000
+Benchmarking branch_read/branches_16/1000: Warming up for 1.0000 s
+Benchmarking branch_read/branches_16/1000: Collecting 50 samples in estimated 2.0078 s (6450 iterations)
+Benchmarking branch_read/branches_16/1000: Analyzing
+branch_read/branches_16/1000
+                        time:   [311.23 µs 313.40 µs 316.00 µs]
+                        thrpt:  [38.168 MiB/s 38.485 MiB/s 38.754 MiB/s]
+Found 7 outliers among 50 measurements (14.00%)
+  1 (2.00%) high mild
+  6 (12.00%) high severe
+Benchmarking branch_read/branches_64/1
+Benchmarking branch_read/branches_64/1: Warming up for 1.0000 s
+Benchmarking branch_read/branches_64/1: Collecting 50 samples in estimated 2.0000 s (3.1M iterations)
+Benchmarking branch_read/branches_64/1: Analyzing
+branch_read/branches_64/1
+                        time:   [646.13 ns 653.94 ns 664.00 ns]
+                        thrpt:  [33.034 MiB/s 33.542 MiB/s 33.948 MiB/s]
+Found 6 outliers among 50 measurements (12.00%)
+  1 (2.00%) high mild
+  5 (10.00%) high severe
+Benchmarking branch_read/branches_64/1000
+Benchmarking branch_read/branches_64/1000: Warming up for 1.0000 s
+Benchmarking branch_read/branches_64/1000: Collecting 50 samples in estimated 2.0071 s (5850 iterations)
+Benchmarking branch_read/branches_64/1000: Analyzing
+branch_read/branches_64/1000
+                        time:   [341.33 µs 343.21 µs 345.60 µs]
+                        thrpt:  [37.482 MiB/s 37.743 MiB/s 37.951 MiB/s]
+Found 7 outliers among 50 measurements (14.00%)
+  3 (6.00%) high mild
+  4 (8.00%) high severe
+Benchmarking branch_read/branches_256/1
+Benchmarking branch_read/branches_256/1: Warming up for 1.0000 s
+Benchmarking branch_read/branches_256/1: Collecting 50 samples in estimated 2.0000 s (3.1M iterations)
+Benchmarking branch_read/branches_256/1: Analyzing
+branch_read/branches_256/1
+                        time:   [652.24 ns 658.89 ns 666.82 ns]
+                        thrpt:  [32.894 MiB/s 33.290 MiB/s 33.630 MiB/s]
+Found 8 outliers among 50 measurements (16.00%)
+  2 (4.00%) high mild
+  6 (12.00%) high severe
+Benchmarking branch_read/branches_256/1000
+Benchmarking branch_read/branches_256/1000: Warming up for 1.0000 s
+Benchmarking branch_read/branches_256/1000: Collecting 50 samples in estimated 2.0087 s (4800 iterations)
+Benchmarking branch_read/branches_256/1000: Analyzing
+branch_read/branches_256/1000
+                        time:   [412.21 µs 414.89 µs 418.32 µs]
+                        thrpt:  [34.249 MiB/s 34.532 MiB/s 34.757 MiB/s]
+Found 4 outliers among 50 measurements (8.00%)
+  4 (8.00%) high severe
+
+Benchmarking branch_write/branches_1/1
+Benchmarking branch_write/branches_1/1: Warming up for 1.0000 s
+Benchmarking branch_write/branches_1/1: Collecting 50 samples in estimated 2.0000 s (17M iterations)
+Benchmarking branch_write/branches_1/1: Analyzing
+branch_write/branches_1/1
+                        time:   [112.44 ns 112.84 ns 113.34 ns]
+                        thrpt:  [193.52 MiB/s 194.39 MiB/s 195.09 MiB/s]
+Found 3 outliers among 50 measurements (6.00%)
+  2 (4.00%) high mild
+  1 (2.00%) high severe
+Benchmarking branch_write/branches_16/1
+Benchmarking branch_write/branches_16/1: Warming up for 1.0000 s
+Benchmarking branch_write/branches_16/1: Collecting 50 samples in estimated 2.0000 s (17M iterations)
+Benchmarking branch_write/branches_16/1: Analyzing
+branch_write/branches_16/1
+                        time:   [119.14 ns 119.70 ns 120.44 ns]
+                        thrpt:  [182.12 MiB/s 183.24 MiB/s 184.11 MiB/s]
+Found 3 outliers among 50 measurements (6.00%)
+  2 (4.00%) high mild
+  1 (2.00%) high severe
+Benchmarking branch_write/branches_64/1
+Benchmarking branch_write/branches_64/1: Warming up for 1.0000 s
+Benchmarking branch_write/branches_64/1: Collecting 50 samples in estimated 2.0000 s (14M iterations)
+Benchmarking branch_write/branches_64/1: Analyzing
+branch_write/branches_64/1
+                        time:   [142.01 ns 142.97 ns 144.27 ns]
+                        thrpt:  [152.03 MiB/s 153.43 MiB/s 154.46 MiB/s]
+Found 5 outliers among 50 measurements (10.00%)
+  3 (6.00%) high mild
+  2 (4.00%) high severe
+Benchmarking branch_write/branches_256/1
+Benchmarking branch_write/branches_256/1: Warming up for 1.0000 s
+Benchmarking branch_write/branches_256/1: Collecting 50 samples in estimated 2.0000 s (9.4M iterations)
+Benchmarking branch_write/branches_256/1: Analyzing
+branch_write/branches_256/1
+                        time:   [208.24 ns 209.13 ns 210.20 ns]
+                        thrpt:  [104.35 MiB/s 104.89 MiB/s 105.33 MiB/s]
+Found 4 outliers among 50 measurements (8.00%)
+  3 (6.00%) high mild
+  1 (2.00%) high severe
+

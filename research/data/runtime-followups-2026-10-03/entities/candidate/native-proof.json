@@ -1,0 +1,6 @@
+{
+  "result": "accepted",
+  "json": "{\"Code\":\"A&B\",\"Default\":\"caf\u00e9\",\"Fixed\":\"R&D\",\"Status\":\"R&D\",\"label\":\"<label>\",\"mode\":\"R&D\"}",
+  "module": "/home/bailey/github/polyxml-xsd-attributes/crates/polyxml-python/python/polyxml/_polyxml.abi3.so",
+  "sha256": "1c68a5177253ad4f9009c9ce586124241b5c4c3ff39b11d00a191227cbfe1a2d"
+}

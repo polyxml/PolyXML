@@ -1,0 +1,8 @@
+Parsing schema: /home/bailey/github/polyxml-default-literals/research/fixtures/default_literal_escaping.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+  File "/tmp/polyxml-default-literals-baseline-python/default_literal_escaping.py", line 13
+    value: str = field(default="\"quoted\"\path\u000a	
+                               ^
+SyntaxError: unterminated string literal (detected at line 13); perhaps you escaped the end quote?

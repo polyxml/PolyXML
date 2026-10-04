@@ -553,7 +553,14 @@ endif()
                         } else {
                             ""
                         };
-                        writeln!(out, "        {:?}, T::{}{}", v.value, var_name, comma).unwrap();
+                        writeln!(
+                            out,
+                            "        {}, T::{}{}",
+                            super::cpp_string_literal(&v.value),
+                            var_name,
+                            comma
+                        )
+                        .unwrap();
                     }
                     writeln!(out, "    );").unwrap();
                 }
@@ -790,8 +797,10 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             for (variant, var_name) in enum_def.variants.iter().zip(&variant_names) {
                 writeln!(
                     out,
-                    "        case {}::{}: return \"{}\";",
-                    enum_name, var_name, variant.value
+                    "        case {}::{}: return {};",
+                    enum_name,
+                    var_name,
+                    super::cpp_string_literal(&variant.value)
                 )
                 .unwrap();
             }
@@ -818,8 +827,10 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             for (variant, var_name) in enum_def.variants.iter().zip(&variant_names) {
                 writeln!(
                     out,
-                    "    if (s == \"{}\") return {}::{};",
-                    variant.value, enum_name, var_name
+                    "    if (s == {}) return {}::{};",
+                    super::cpp_string_literal(&variant.value),
+                    enum_name,
+                    var_name
                 )
                 .unwrap();
             }
@@ -998,7 +1009,9 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             // Value field
             let init = match &f.default_value {
                 Some(v) => match f.type_ref {
-                    TypeRef::Primitive(p) if p.is_unbounded_integer() => format!(" = {v:?}"),
+                    TypeRef::Primitive(p) if p.is_unbounded_integer() => {
+                        format!(" = {}", super::cpp_string_literal(v))
+                    }
                     TypeRef::Primitive(PrimitiveType::Boolean) => {
                         format!(" = {}", v.to_lowercase())
                     }
@@ -1008,7 +1021,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                     TypeRef::Primitive(PrimitiveType::String)
                     | TypeRef::Primitive(PrimitiveType::Token)
                     | TypeRef::Primitive(PrimitiveType::NormalizedString) => {
-                        format!(" = \"{}\"", v.replace('\\', "\\\\").replace('"', "\\\""))
+                        format!(" = {}", super::cpp_string_literal(v))
                     }
                     TypeRef::Primitive(_) => format!(" = {}", v),
                     TypeRef::Named(_) => format!(" = {}", v),

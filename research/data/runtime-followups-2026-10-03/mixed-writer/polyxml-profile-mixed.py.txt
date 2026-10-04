@@ -1,0 +1,41 @@
+from pathlib import Path
+import json,os,subprocess,shutil,sys
+root=Path('/home/bailey/github/PolyXML')
+repo=Path(sys.argv[1]).resolve();label=sys.argv[2];out=Path(sys.argv[3]);out.mkdir(parents=True,exist_ok=True)
+crate=root/'benchmarks/rust-runtime-investigation/target'/('mixed-profile-'+label);(crate/'src').mkdir(parents=True,exist_ok=True)
+source=Path('/home/bailey/github/polyxml-mixed-nil/benchmarks/rust-runtime-investigation/mixed.rs').read_text()
+fixture=source[source.index('fn fixture('):source.index('fn benchmarks(')]
+harness='use polyxml::schema::ModelSchema;\nuse polyxml::schema_parser::XsdParser;\nuse polyxml::{deserialize, serialize, PolyValue};\nuse std::{hint::black_box,sync::Arc};\n'+fixture+r'''
+#[inline(never)]
+#[no_mangle]
+fn measured_region(schema: &ModelSchema, value: &PolyValue, count: usize) {
+ for _ in 0..count { black_box(serialize("Root", black_box(value), black_box(schema), None).unwrap()); }
+}
+fn main() {
+ let kind=std::env::args().nth(1).unwrap();
+ let (schema,xml)=fixture(&kind,1000);
+ let value=deserialize(&xml,Arc::clone(&schema)).unwrap();
+ for _ in 0..3 { black_box(serialize("Root", &value, &schema,None).unwrap()); }
+ measured_region(&schema,&value,25);
+}
+'''
+(crate/'src/main.rs').write_text(harness)
+(crate/'Cargo.toml').write_text('[package]\nname="mixed-profile"\nversion="0.0.0"\nedition="2021"\n[workspace]\n[dependencies]\npolyxml={path='+json.dumps(str(repo/'crates/polyxml-core'))+'}\n[profile.release]\ndebug=1\n')
+shutil.copy2(root/'benchmarks/rust-runtime-investigation/target/selected/Cargo.lock',crate/'Cargo.lock')
+env=os.environ|{'CARGO_BUILD_JOBS':'1','POLYXML_MEMCAP_BACKEND':'systemd'}
+with (out/(label+'-build.txt')).open('w') as log:
+ subprocess.run([str(root/'scripts/memcap.sh'),'cargo','build','--release','--manifest-path',str(crate/'Cargo.toml')],env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
+for name,path in [('harness.rs',crate/'src/main.rs'),('Cargo.toml',crate/'Cargo.toml'),('Cargo.lock',crate/'Cargo.lock')]:shutil.copy2(path,out/(label+'-'+name))
+(out/(label+'-metadata.json')).write_text(json.dumps({'revision':subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),'kind':['scalar','pattern'],'items':1000,'operations':25,'warmup_operations':3,'rustc':subprocess.check_output(['rustc','-Vv'],text=True)},indent=2)+'\n')
+tools=root/'benchmarks/rust-runtime-investigation/target/tools/root/usr'
+env['VALGRIND_LIB']=str(tools/'libexec/valgrind')
+for kind in ['scalar','pattern']:
+ subprocess.run([str(root/'scripts/memcap.sh'),str(tools/'bin/valgrind'),'--tool=callgrind','--collect-atstart=no','--toggle-collect=measured_region','--callgrind-out-file='+str(out/(label+'-'+kind+'.callgrind')),'--log-file='+str(out/(label+'-'+kind+'-valgrind.txt')),'--error-exitcode=93',str(crate/'target/release/mixed-profile'),kind],env=env,check=True)
+ with (out/(label+'-'+kind+'-annotated.txt')).open('w') as log:
+  subprocess.run([str(tools/'bin/callgrind_annotate'),'--auto=no','--inclusive=no','--threshold=95',str(out/(label+'-'+kind+'.callgrind'))],env=env,stdout=log,check=True)
+
+for kind in ["scalar", "pattern"]:
+ text=(out/(label+"-"+kind+"-valgrind.txt")).read_text()
+ import re
+ match=re.search(r"Collected :\s*([\d,]+)",text)
+ assert match and int(match.group(1).replace(",","")) > 0, "measurement marker collected no instructions"

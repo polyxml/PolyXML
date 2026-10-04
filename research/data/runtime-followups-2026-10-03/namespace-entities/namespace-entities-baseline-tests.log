@@ -1,0 +1,37 @@
+memcap: <=7762 MiB (60% of 12937 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-namespace-entities/crates/polyxml-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.78s
+     Running tests/test_namespace_entities.rs (/home/bailey/github/PolyXML/target/followup-borrow-verification/debug/deps/test_namespace_entities-4bd83b729ca4f37e)
+
+running 3 tests
+test escaped_namespace_bindings_match_strict_root_and_round_trip ... FAILED
+test undefined_entities_cannot_form_namespace_bindings ... FAILED
+test entity_decoding_applies_to_inherited_and_local_xsi_type_bindings ... FAILED
+
+failures:
+
+---- escaped_namespace_bindings_match_strict_root_and_round_trip stdout ----
+
+thread 'escaped_namespace_bindings_match_strict_root_and_round_trip' (502620) panicked at crates/polyxml-core/tests/test_namespace_entities.rs:27:70:
+called `Result::unwrap()` on an `Err` value: SchemaError("Unexpected root element {urn:polyxml:A&amp;B}Root")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- undefined_entities_cannot_form_namespace_bindings stdout ----
+
+thread 'undefined_entities_cannot_form_namespace_bindings' (502621) panicked at crates/polyxml-core/tests/test_namespace_entities.rs:75:9:
+<Root xmlns='urn:polyxml:&undefined;'/>
+
+---- entity_decoding_applies_to_inherited_and_local_xsi_type_bindings stdout ----
+
+thread 'entity_decoding_applies_to_inherited_and_local_xsi_type_bindings' (502619) panicked at crates/polyxml-core/tests/test_namespace_entities.rs:51:59:
+called `Result::unwrap()` on an `Err` value: SchemaError("xsi:type=\"t:Derived\" does not match any known derivation of 'Root' (known: Derived)")
+
+
+failures:
+    entity_decoding_applies_to_inherited_and_local_xsi_type_bindings
+    escaped_namespace_bindings_match_strict_root_and_round_trip
+    undefined_entities_cannot_form_namespace_bindings
+
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p polyxml --test test_namespace_entities`

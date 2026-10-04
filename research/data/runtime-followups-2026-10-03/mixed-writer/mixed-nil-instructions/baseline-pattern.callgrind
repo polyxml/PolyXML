@@ -1,0 +1,2041 @@
+# callgrind format
+version: 1
+creator: callgrind-3.26.0
+pid: 502772
+cmd:  /home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile pattern
+part: 1
+
+
+desc: I1 cache: 
+desc: D1 cache: 
+desc: LL cache: 
+
+desc: Timerange: Basic block 0 - 17564422
+desc: Trigger: Program termination
+
+positions: line
+events: Ir
+summary: 61500849
+
+
+ob=(2) /usr/lib/x86_64-linux-gnu/libc.so.6
+fl=(2) ???
+fn=(4502) 0x00000000000b2300
+0 1800
+cfn=(4508) 0x00000000000b20e0
+calls=256 0 
+0 15550
+0 750
+
+fn=(4878) free
+0 300
+cfn=(4508)
+calls=15114 0 
+0 3625
+0 825625
+
+fn=(4128) (below main)
+cfn=(4162) 0x000000000002a580
+calls=1 0 
+0 61500849
+
+fn=(4508)
+0 16925
+cfn=(4952) 0x00000000000b0f70
+calls=7682 0 
+0 1325
+0 925
+
+fn=(4488) 0x0000000000197a00
+0 1708475
+
+fn=(4232) 0x00000000000b2400
+0 19625
+cfn=(4952)
+calls=286 0 
+0 1550
+0 1050
+
+fn=(5556) 0x00000000001972a0
+0 2507675
+
+fn=(4226) malloc
+0 400
+cfn=(4232)
+calls=15277 0 
+0 1925
+0 650725
+
+fn=(4460) 0x00000000000b4180
+0 6950
+cfn=(4232)
+calls=130 0 
+0 20300
+0 1650
+cfn=(4502)
+calls=126 0 
+0 11600
+0 1075
+cfn=(4952)
+calls=123 0 
+0 2200
+0 1100
+cob=(3) ???
+cfi=(3) ???
+cfn=(4486) 0x0000000004bd46a0
+calls=130 0 
+0 207825
+0 300
+cfn=(4502)
+calls=130 0 
+0 6500
+0 100
+
+fn=(4162)
+cob=(6) /home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/target/release/mixed-profile
+cfi=(6) ???
+cfn=(4176) main
+calls=1 0 
+0 61500849
+
+fn=(4458) realloc
+0 9300
+cfn=(4460)
+calls=277 0 
+0 259600
+0 1650
+
+fn=(4952)
+0 5075
+
+ob=(3)
+fl=(3)
+fn=(4486)
+0 100
+cob=(2)
+cfi=(2)
+cfn=(4488)
+calls=177 0 
+0 207725
+
+ob=(6)
+fl=(93) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/escape.rs
+fn=(10020) quick_xml::escape::_escape::<quick_xml::escape::escape<&str>::{closure#0}, &str>
+201 250000
++3 25000
+fi=(14) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/non_null.rs
+1663 25000
+fi=(79) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/iter/macros.rs
+180 25000
+0 125000
+180 125000
+0 75000
+fi=(14)
+1663 300000
+fi=(79)
+385 150000
+fi=(14)
+1663 150000
+fi=(79)
+180 150000
+379 300000
+fe=(93)
+109 150000
+0 225000
+218 125000
++7 100000
++2 225000
+
+fl=(215) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/writer.rs
+fn=(9966) <quick_xml::writer::Writer<&mut alloc::vec::Vec<u8>>>::write_event::<quick_xml::events::Event>
+262 600400
+fi=(120) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/convert/mod.rs
+792 225150
+fe=(215)
+264 225150
++1 100100
++53 25025
+0 25025
+318 25025
+-31 75000
++26 25000
+fi=(32) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/raw_vec/mod.rs
+616 25000
+fi=(33) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/vec/mod.rs
+1461 25000
+fi=(10) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/uint_macros.rs
+2689 25000
+fi=(32)
+764 25000
+-94 25000
+fi=(33)
+2981 49900
+0 25000
+fi=(20) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mut_ptr.rs
+970 25000
+fi=(18) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/mod.rs
+573 75000
+cob=(2)
+cfi=(2)
+cfn=(4488)
+calls=29000 0 
+* 375000
+fi=(33)
+2986 50000
+fe=(215)
+0 125000
+272 100100
+fi=(40) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/option.rs
+765 50050
+fi=(33)
+1461 25025
+fi=(32)
+764 25025
+-94 25025
+-59 25025
+fi=(18)
+-38 25025
+fi=(33)
+2986 50050
+fi=(32)
+616 25025
+fi=(10)
+2689 50050
+fi=(32)
+764 25025
+-94 25025
+fi=(33)
+2981 50050
+0 25025
+fi=(20)
+970 50050
+fi=(18)
+573 50050
+cob=(2)
+cfi=(2)
+cfn=(4488)
+calls=29029 0 
+* 375375
+fi=(32)
++43 25025
+fi=(33)
+2986 50050
+fi=(32)
+764 25025
+-94 25025
+-59 25025
+fi=(18)
+-38 25025
+fi=(33)
+2986 50050
+fi=(40)
+765 75075
+fi=(18)
++82 100100
+fe=(215)
+0 25025
+fi=(32)
+616 25025
+fi=(33)
+1461 25025
+fi=(10)
+2689 25025
+fi=(32)
+764 25025
+-94 25025
+-59 25025
+fi=(18)
+-38 25025
+fi=(33)
+2986 50050
+fi=(32)
+616 25025
+fi=(10)
+2689 50050
+fi=(32)
+764 25025
+-94 25025
+fi=(33)
+2981 50000
+0 25025
+fi=(20)
+970 50050
+fi=(18)
+573 50050
+cob=(2)
+cfi=(2)
+cfn=(4488)
+calls=29029 0 
+* 375375
+fi=(32)
++43 25025
+fi=(33)
+2986 50050
+fi=(32)
+764 25025
+-94 25025
+-59 25025
+fi=(18)
+-38 25025
+fi=(33)
+2986 50050
+fi=(18)
+847 100100
+fi=(40)
+-82 150100
+fe=(215)
+308 675450
+fi=(32)
+672 300
+cfn=(5320) <alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>
+calls=58 -14 
+* 19050
+fi=(33)
+3101 50
+2981 50
+fi=(32)
+672 150
+cfn=(5320)
+calls=29 -14 
+* 23975
+fi=(33)
+3101 50
+fi=(32)
+672 150
+cfn=(5320)
+calls=29 -14 
+* 222625
+fi=(33)
+3101 25
+2981 25
+0 25
+fi=(32)
+672 150
+cfn=(5320)
+calls=29 -14 
+* 10225
+fi=(33)
+3101 75
+0 25
+fi=(32)
+672 125
+cfn=(5320)
+calls=29 -14 
+* 9525
+fi=(33)
+3101 75
+fe=(215)
+
+fl=(79)
+fn=(9998) <core::slice::iter::Iter<polyxml::schema::MixedBranchSchema> as core::iter::traits::iterator::Iterator>::find::<<polyxml::serializer::XmlSerializer>::write_model<&mut alloc::vec::Vec<u8>>::{closure#7}>
+338 225000
+fi=(14)
+1663 25000
+fe=(79)
+180 25000
+0 200000
+fi=(14)
+1663 75000
+fe=(79)
+180 75000
+0 100000
+fi=(49) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/cmp.rs
+21 200000
+fi=(32)
+611 50000
+fi=(49)
+157 150000
+cob=(2)
+cfi=(2)
+cfn=(5556)
+calls=58000 0 
+* 1052075
+* 50000
+fe=(79)
+344 50000
+0 25000
+344 25000
+185 75000
+349 200000
+
+fl=(18)
+fn=(10012) core::ptr::drop_glue::<polyxml::value::PolyValue>
+847 325000
+fi=(32)
+425 50000
+631 25000
+425 25000
+fi=(23) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/alloc.rs
+175 50000
+fe=(18)
+847 200000
+cfi=(6)
+cfn=(5188) __rustc::__rust_dealloc
+calls=29000 0 
+* 875000
+
+fl=(82) /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/lib.rs
+fn=(9906) polyxml::serialize
+40 50
+fi=(214) /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/serializer.rs
+180 125
+cfn=(9908) <polyxml::serializer::XmlSerializer>::serialize_with_options
+calls=29 +3 
+* 61495300
+* 25
+fe=(82)
+47 75
+
+fl=(50) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ptr/const_ptr.rs
+fn=(7882) <core::str::iter::Chars as core::iter::traits::iterator::Iterator>::count
+733 25000
+fi=(142) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/count.rs
+28 50000
++5 25000
+cfi=(14)
+cfn=(7886) core::str::count::char_count_general_case
+calls=32000 1663 
+* 1325000
+fe=(50)
+
+fl=(29) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/backtrace.rs
+fn=(5138) std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+fi=(123) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ops/function.rs
+cfi=(30) /home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/mixed-profile-baseline/src/main.rs
+cfn=(5140) mixed_profile::main
+calls=1 98 
+250 61500849
+fe=(29)
+
+fl=(24) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/alloc.rs
+fn=(5486) __rustc::__rdl_realloc
+484 1200
+fi=(25) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/alloc/unix.rs
+70 900
++1 1200
+cob=(2)
+cfi=(2)
+cfn=(4458)
+calls=284 -71 
+* 270550
+fe=(24)
+
+fn=(5104) __rustc::__rdl_alloc
+467 25025
+fi=(25)
+30 150150
++1 50050
+cob=(2)
+cfi=(2)
+cfn=(4226)
+calls=46915 -31 
+* 653050
+fe=(24)
+
+fl=(37) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/converts.rs
+fn=(5176) core::str::converts::from_utf8
+89 375125
+fi=(38) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/str/validations.rs
++44 225075
++12 150050
+0 525175
+145 200
++19 75100
++1 150200
+fi=(10)
+2689 150200
+3875 75100
+fi=(38)
+222 75100
++23 200
+-21 150000
++17 150000
+0 75000
+241 800000
++1 400000
+-1 875000
+fe=(37)
+94 300100
+-94 75025
+98 300100
+
+fl=(135) /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/schema.rs
+fn=(9930) <polyxml::schema::ModelSchema>::variants
+143 350
+fi=(14)
+454 50
+fi=(136) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/sync.rs
+2454 50
+fi=(13) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/sync/atomic.rs
+3994 50
+fi=(138) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/sync/rwlock/futex.rs
+54 100
++45 50
+fi=(13)
+4149 50
+fi=(138)
+97 50
+fi=(13)
+3994 50
+fi=(33)
+1865 50
+fi=(10)
+3212 350
+fi=(67) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/intrinsics/mod.rs
+478 100
+fi=(32)
+-17 100
+fi=(131) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/adapters/take.rs
+0 50
+fi=(36) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/slice.rs
+440 200
+fi=(13)
+4049 50
+fi=(138)
+111 50
++7 200
+fe=(135)
++30 450
+
+fn=(9948) <polyxml::schema::ModelSchema>::matches_variant
+182 200
+fi=(14)
+454 25
+fi=(13)
+3994 25
+fi=(138)
+54 50
++45 25
+fi=(13)
+4149 25
+fi=(138)
+97 25
+fi=(13)
+3994 25
+fi=(33)
+1865 25
+fi=(14)
+1663 50
+fi=(79)
+180 25
+0 75
+fi=(13)
+4049 25
+fi=(138)
+111 25
++7 100
+fe=(135)
++73 225
+
+fl=(32)
+fn=(5310) <alloc::raw_vec::RawVecInner>::finish_grow
+544 1200
+fi=(10)
+3212 1200
+fi=(67)
+478 450
+0 150
+fe=(32)
+631 150
+fi=(10)
+1401 150
+fi=(23)
+228 750
+cfi=(6)
+cfn=(5484) __rustc::__rust_realloc
+calls=224 0 
+* 274000
+fi=(26) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/result.rs
+965 300
++1 450
+fe=(32)
+0 300
+564 900
+
+fn=(7876) <alloc::raw_vec::RawVecInner>::try_allocate_in
+447 225000
+fi=(10)
+3212 175000
+fi=(67)
+478 50000
+fe=(32)
+-17 50000
+0 50000
+cfi=(6)
+cfn=(5100) __rustc::__rust_no_alloc_shim_is_unstable_v2
+calls=32000 0 
+0 25000
+0 50000
+465 50000
++13 75000
+0 50000
+483 175000
+fi=(23)
+130 25000
+cfi=(6)
+cfn=(5102) __rustc::__rust_alloc
+calls=32000 0 
+* 900000
+fe=(32)
+470 50000
+
+fn=(5320)
+658 600
+512 300
+fi=(10)
+938 150
+fi=(67)
+478 150
+0 150
+fe=(32)
+523 300
+fi=(19) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/cmp.rs
+1051 300
+fe=(32)
+159 1050
+fi=(19)
+1051 450
+fe=(32)
+529 600
+cfn=(5310)
+calls=200 +15 
+* 280000
+fi=(26)
+2177 300
++1 150
+fe=(32)
+773 150
++1 150
+668 600
+
+fl=(30)
+fn=(10228) measured_region
+95 7
+fi=(19)
+2144 1
+fi=(34) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/range.rs
+1100 1
+0 7
+fi=(19)
+2144 25
+fi=(34)
+1100 25
+fi=(118) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hint.rs
+491 100
+fe=(30)
+96 175
+cfi=(82)
+cfn=(9906)
+calls=25 -56 
+* 61495575
+fi=(26)
+1230 50
++1 100
+fi=(32)
+425 25
+631 50
+425 25
+fi=(23)
+175 50
+cfi=(6)
+cfn=(5188)
+calls=25 0 
+* 4600
+* 25
+fe=(30)
+-78 8
+
+fn=(5140)
+cfn=(10228)
+calls=1 95 
+103 61500849
+
+fl=(25)
+fn=(5190) __rustc::__rdl_dealloc
+65 25025
+cob=(2)
+cfi=(2)
+cfn=(4878)
+calls=46863 -65 
+* 829550
+
+fl=(141) /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/converters.rs
+fn=(7866) <polyxml::converters::ValueConverter>::parse_scalar
+28 425000
++5 425000
+fi=(18)
+-33 25000
+fe=(141)
+35 200000
+cfn=(7867) <polyxml::converters::ValueConverter>::parse_scalar'2
+calls=32000 -7 
+* 5900000
+fi=(26)
+2177 25000
+0 200000
+2177 50000
+fe=(141)
+0 25000
+209 225000
+0 25000
+35 225000
++1 75000
+cfi=(37)
+cfn=(5176)
+calls=32000 +53 
+* 1725000
+* 25000
+fi=(26)
+-36 75000
+2177 50000
+fe=(141)
+37 50000
+fi=(48) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/mod.rs
+-37 25000
+fi=(20)
+970 25000
+fe=(141)
+39 25000
+cfi=(50)
+cfn=(7882)
+calls=32000 733 
+* 1425000
++2 25000
+fi=(40)
+709 125000
+fe=(141)
+0 25000
+fi=(40)
+709 50000
+fe=(141)
+0 25000
+fi=(33)
+1865 25000
+fi=(14)
+1663 25000
+fi=(79)
+180 25000
+0 100000
+fi=(32)
+611 25000
+fi=(33)
+1865 75000
+fe=(141)
+45 25000
+cfi=(143) /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/pattern.rs
+cfn=(7898) polyxml::pattern::matches
+calls=32000 +15 
+* 16150000
+* 25000
+fi=(14)
+1663 50000
+fi=(79)
+180 25000
+fe=(141)
+48 25000
++1 25000
++1 25000
++1 25000
+-4 275000
+-47 300000
+fi=(108) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/ops/index_range.rs
+131 200000
+fi=(45) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/index.rs
++88 300000
+fi=(18)
+1755 100000
+fe=(141)
+47 200000
+-47 100000
+53 200000
++23 50000
++7 150000
+-83 100000
+
+fn=(7867)
+28 425000
++5 425000
+fi=(48)
+-33 25000
+fe=(141)
+132 75000
+cfi=(37)
+cfn=(5176)
+calls=32000 -43 
+* 1725000
+fi=(26)
+0 50000
+2177 50000
+fi=(82)
+0 25000
+fi=(32)
+435 125000
+cfn=(7876)
+calls=32000 +12 
+* 1950000
+0 25000
+435 75000
++1 25000
+fi=(36)
++16 50000
+fi=(18)
+573 100000
+cob=(2)
+cfi=(2)
+cfn=(4488)
+calls=32000 0 
+* 375000
+fe=(141)
+133 100000
+0 50000
+209 225000
+
+fl=(6)
+fn=(5188)
+0 25025
+cfi=(25)
+cfn=(5190)
+calls=46863 65 
+0 854575
+
+fn=(5484)
+0 150
+cfi=(24)
+cfn=(5486)
+calls=284 484 
+0 273850
+
+fn=(5102)
+0 25025
+cfi=(24)
+cfn=(5104)
+calls=46916 467 
+0 878275
+
+fn=(4126) (below main)
+cob=(2)
+cfi=(2)
+cfn=(4128)
+calls=1 0 
+0 61500849
+
+fn=(4176)
+cfi=(8) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/rt.rs
+cfn=(4178) std::rt::lang_start_internal
+calls=1 152 
+0 61500849
+
+fn=(5100)
+0 25025
+
+fl=(73) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/sip.rs
+fn=(5362) <core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write
+256 150000
++2 150000
++4 450000
++1 100000
+fi=(19)
+1090 150000
+fe=(73)
+126 100000
+0 300000
+132 150000
++5 100000
++2 250000
+265 200000
++1 100000
++1 50000
+0 50000
+300 100000
+-22 100000
++1 300000
++3 200000
+0 125000
+fi=(18)
+573 25000
+fe=(73)
+288 25000
+fi=(10)
+2652 25000
+fi=(67)
+2215 25000
+fi=(10)
+2652 25000
+fe=(73)
+78 25000
+fi=(67)
+2215 25000
+fe=(73)
+79 25000
+fi=(67)
+2215 25000
+fi=(10)
+2652 50000
+fi=(67)
+2215 25000
+fe=(73)
+79 25000
+fi=(67)
+2215 50000
+fe=(73)
+78 25000
+290 25000
++2 25000
+-10 50000
+fi=(18)
+573 25000
+fe=(73)
+288 25000
+fi=(10)
+2652 25000
+fi=(67)
+2215 25000
+fi=(10)
+2652 25000
+fe=(73)
+78 25000
+fi=(67)
+2215 25000
+fe=(73)
+79 25000
+fi=(67)
+2215 25000
+fi=(10)
+2652 50000
+fi=(67)
+2215 25000
+fe=(73)
+79 25000
+fi=(67)
+2215 50000
+fe=(73)
+78 25000
+290 25000
++2 25000
+-10 50000
+0 100000
+126 200000
+fi=(18)
+573 100000
+fe=(73)
+132 200000
+0 100000
+132 150000
++5 200000
++2 300000
+298 50000
+0 50000
+300 100000
+-2 50000
+0 50000
+300 100000
+
+fl=(72) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/hash/mod.rs
+fn=(5544) <std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&str>
+694 150000
++5 75000
+fi=(73)
+203 150000
+fi=(46) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/hash/random.rs
+84 75000
+fi=(73)
+204 150000
+fi=(46)
+84 450000
+fi=(73)
+306 150000
+cfn=(5362)
+calls=91043 -50 
+* 3375000
+fe=(72)
++57 375000
+cfi=(73)
+cfn=(5362)
+calls=91043 256 
+* 2500000
+fi=(73)
+-49 225000
+-2 150000
++4 150000
+fi=(10)
+2652 150000
+fi=(67)
+2215 75000
+fi=(10)
+2652 75000
+fi=(73)
+78 75000
+fi=(67)
+2215 75000
+fi=(73)
+79 75000
+fi=(67)
+2215 75000
+fi=(10)
+2652 150000
+fi=(67)
+2215 75000
+fi=(73)
+79 75000
+fi=(67)
+2215 150000
+fi=(73)
+78 75000
+318 75000
++2 75000
+fi=(10)
+2652 150000
+fi=(67)
+2215 75000
+fi=(73)
+78 75000
+fi=(67)
+2215 150000
+fi=(73)
+79 75000
+fi=(10)
+2652 75000
+fi=(67)
+2215 75000
+fi=(10)
+2652 75000
+fi=(73)
+79 75000
+fi=(67)
+2215 75000
+fi=(73)
+78 75000
+fi=(67)
+2215 75000
+fi=(10)
+2652 150000
+fi=(67)
+2215 75000
+fi=(73)
+78 75000
+fi=(67)
+2215 150000
+fi=(73)
+79 75000
+fi=(10)
+2652 75000
+fi=(67)
+2215 75000
+fi=(10)
+2652 75000
+fi=(73)
+79 75000
+fi=(67)
+2215 75000
+fi=(73)
+78 75000
+fi=(67)
+2215 75000
+fi=(10)
+2652 150000
+fi=(67)
+2215 75000
+fi=(73)
+78 75000
+fi=(67)
+2215 75000
+fi=(73)
+79 75000
+fi=(10)
+2652 75000
+fi=(67)
+2215 300000
+fi=(73)
+323 225000
+fe=(72)
+702 225000
+
+fl=(214)
+fn=(9946) <polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>
+302 300
++9 125
+0 25
+324 100
+0 25
+fi=(14)
+454 25
+fi=(136)
+2454 75
+fe=(214)
+325 75
+cfi=(135)
+cfn=(9948)
+calls=29 182 
+* 950
+* 50
+fi=(79)
+0 75
+fi=(33)
+1865 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+0 575
+fi=(40)
+634 50
+fe=(214)
+353 50
+0 25
+251 350
++2 50
+-2 75
+353 50
+fi=(26)
+0 50
+fi=(14)
+1663 25
+fi=(79)
+180 25
+0 25
+fi=(40)
+634 50
+fe=(214)
+361 25
+fi=(23)
+0 75
+fe=(214)
+409 25
+cfi=(37)
+cfn=(5176)
+calls=29 89 
+* 1750
+fi=(26)
+0 50
+2177 50
+fi=(82)
+0 25
+fe=(214)
+410 50
++3 75
+fi=(95) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quick-xml-0.42.0/src/events/mod.rs
+124 100
+0 25
+fi=(33)
+1865 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+0 500
+fi=(14)
+1663 25
+fi=(79)
+180 25
+fe=(214)
+434 125
++33 50
++21 200
+cfi=(215)
+cfn=(9966)
+calls=29 262 
+* 2050
+* 25
+0 25
+fi=(26)
+965 50
+fi=(82)
+0 25
+fe=(214)
+492 50
++30 50
+fi=(33)
+1865 25
+fe=(214)
+524 25
+fi=(45)
+238 50
+fi=(32)
+611 25
+fi=(45)
+238 50
+fi=(32)
+611 25
+fi=(33)
+1865 50
+fe=(214)
+524 25
+cfn=(9980) <polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#0}
+calls=29 344 
+* 675
+* 25
+-1 75
+fi=(33)
+1865 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+0 100
+fe=(214)
+539 100
+cfn=(9984) <polyxml::serializer::XmlSerializer>::write_model::<&mut alloc::vec::Vec<u8>>::{closure#5}
+calls=29 -12 
+* 5975
+fi=(79)
+0 24975
+fe=(214)
+539 99900
+cfn=(9984)
+calls=28971 -12 
+* 5975225
+fi=(40)
+1541 50000
+fi=(213) /home/bailey/github/polyxml-perf-selected/crates/polyxml-core/src/value.rs
+63 25000
+fe=(214)
+539 25000
+fi=(213)
+63 50000
+fe=(214)
+539 50000
++5 100000
+cfn=(9984)
+calls=29000 -17 
+* 6149825
+* 50000
+0 25000
+fi=(49)
+21 50000
+fe=(214)
+-21 75000
+fi=(20)
+970 25000
+fi=(32)
+611 25000
+fi=(20)
+970 25000
+fi=(189) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/slice/iter.rs
+102 75000
+fe=(214)
+563 100000
+cfi=(79)
+cfn=(9998)
+calls=29000 338 
+* 2602075
+-3 50000
+0 25000
+fi=(32)
+611 25000
+fi=(33)
+1865 25000
+fe=(214)
+569 50000
+cfi=(37)
+cfn=(5176)
+calls=29000 89 
+* 1475000
+fi=(26)
+0 50000
+2177 50000
+0 100000
+fe=(214)
+410 25000
+570 25000
++6 75000
+-6 25000
++8 175000
+fi=(40)
+0 25000
+fe=(214)
+580 100000
++1 100000
+cfn=(10004) <polyxml::serializer::XmlSerializer>::format_scalar_to
+calls=29000 216 
+* 700000
+* 75000
+0 50000
+581 50000
++5 175000
+cfn=(10008) <polyxml::serializer::XmlSerializer>::validate_scalar
+calls=29000 285 
+* 32725000
+fi=(26)
+2177 50000
+fi=(85) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/borrow.rs
+350 50000
+fe=(214)
+588 200000
+cfi=(215)
+cfn=(9966)
+calls=29000 262 
+* 2070225
+fi=(26)
+965 50000
+fi=(93)
+108 100000
+cfn=(10020)
+calls=29000 +93 
+* 2525000
+fi=(95)
+564 125000
+fe=(214)
++27 100000
+cfi=(215)
+cfn=(9966)
+calls=29000 262 
+* 1594350
+fi=(26)
+965 50000
+fe=(214)
+594 175000
+cfi=(215)
+cfn=(9966)
+calls=29000 262 
+* 2271950
+fi=(26)
+965 50000
+0 25000
+fi=(18)
+847 50000
+fe=(214)
+612 25000
+fi=(18)
+847 50000
+fi=(23)
+0 50000
+fi=(14)
+1663 50000
+fi=(79)
+180 25025
+fi=(85)
+350 50
+fe=(214)
+756 175
+cfi=(215)
+cfn=(9966)
+calls=29 262 
+* 2025
+fi=(26)
+965 50
+fe=(214)
+760 200
+0 25
+759 25
++1 25
+fi=(18)
++87 50
+fi=(23)
+0 25
+fi=(18)
+847 75
+fe=(214)
+
+fn=(9980)
+344 175
++1 75
+fi=(45)
+184 50
+fe=(214)
+346 25
+fi=(45)
+186 75
+fi=(40)
+743 25
+0 50
+fe=(214)
+350 200
+
+fn=(9908)
+183 350
+cfi=(6)
+cfn=(5100)
+calls=29 0 
+* 25
+fi=(23)
+-53 75
+cfi=(6)
+cfn=(5102)
+calls=29 0 
+* 3300
+fi=(32)
+470 50
+fi=(33)
+969 75
+fe=(214)
+192 50
+fi=(40)
+0 25
+743 25
+0 25
+fi=(215)
+124 75
+fe=(214)
++73 50
+0 50
+199 75
+cfn=(9918) <polyxml::serializer::NamespaceContext>::build
+calls=29 22 
+* 7625
+fi=(40)
+743 75
+0 25
+743 75
+0 50
+fe=(214)
+202 225
+cfn=(9946)
+calls=29 302 
+* 61482400
+* 25
+fi=(26)
+2177 50
+fe=(214)
+212 150
+fi=(18)
+847 125
+fe=(214)
+0 25
+213 200
+
+fn=(9918)
+22 250
+fi=(33)
+462 100
+fe=(214)
+27 50
+cfn=(9920) <polyxml::serializer::NamespaceContext>::collect_namespaces
+calls=29 +60 
+* 6775
+fi=(33)
+3126 25
+fe=(214)
+29 25
+fi=(40)
+709 50
+fe=(214)
+0 25
+30 25
+fi=(32)
+425 50
+631 25
+fe=(214)
+85 225
+
+fn=(9984)
+527 450000
++1 250000
+fi=(71) /rust/deps/hashbrown-0.17.1/src/raw.rs
+1337 50000
+fi=(70) /rust/deps/hashbrown-0.17.1/src/map.rs
+-53 50000
+0 50000
+1287 100000
+241 100000
+cfi=(72)
+cfn=(5544)
+calls=58000 694 
+* 7700000
+fi=(88) /rust/deps/hashbrown-0.17.1/src/control/tag.rs
+47 150000
+fi=(71)
+2452 400000
+0 50000
+fi=(18)
+573 50000
+fi=(75) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/../../stdarch/crates/core_arch/src/x86/sse2.rs
+1569 150000
+fi=(84) /rust/deps/hashbrown-0.17.1/src/control/bitmask.rs
+40 100000
+-40 200000
+fi=(76) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/num/nonzero.rs
+628 50000
+fi=(71)
+2032 100000
+fi=(20)
+1054 150000
+fi=(49)
+21 100000
+fi=(76)
+628 25
+fi=(71)
+2032 50
+fi=(20)
+1054 75
+fi=(49)
+21 50
+fi=(71)
+1202 150000
+fi=(49)
+157 100000
+cob=(2)
+cfi=(2)
+cfn=(5556)
+calls=58000 0 
+* 980600
+* 50000
+fi=(67)
+455 50000
+fi=(76)
++31 25
+fi=(84)
+40 200
+fi=(71)
+1217 150000
+fe=(214)
+538 400000
+
+fn=(10008)
+285 100000
++10 25000
+-9 75000
++9 100000
+-9 75000
+0 25000
+297 25000
+cfi=(141)
+cfn=(7866)
+calls=29000 28 
+* 30125000
+fi=(26)
+2177 25000
+0 200000
+2177 50000
+fe=(214)
+297 250000
+cfi=(18)
+cfn=(10012)
+calls=29000 847 
+* 1550000
++2 25000
++1 75000
+
+fn=(9920)
+87 225
++1 100
+fi=(33)
+-88 25
+1865 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+0 150
+180 25
+fe=(214)
+0 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+fe=(214)
+-86 50
++5 225
+fi=(27) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/alloc/src/boxed.rs
+2415 25
+fe=(214)
+102 75
+0 25
+109 50
+0 25
+fi=(33)
+1865 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+0 275
+fi=(14)
+1663 125
+fi=(79)
+180 125
+fe=(214)
+-69 250
++5 375
+fi=(14)
+454 25
+fi=(136)
+2454 50
+fe=(214)
+117 25
+cfn=(9921) <polyxml::serializer::NamespaceContext>::collect_namespaces'2
+calls=29 -30 
+* 2625
+* 25
+0 50
+125 25
+cfi=(135)
+cfn=(9930)
+calls=29 +18 
+* 1200
+fi=(33)
+3101 25
++25 50
+fe=(214)
+126 25
+fi=(32)
+425 50
+631 25
+fe=(214)
+134 200
+
+fn=(9921)
+87 225
++1 100
+fi=(33)
+-88 25
+1865 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+0 150
+180 25
+fe=(214)
+0 25
+fi=(14)
+1663 25
+fi=(79)
+180 25
+fe=(214)
+-86 50
++5 175
+-99 25
+109 50
+0 50
+125 25
+cfi=(135)
+cfn=(9930)
+calls=29 +18 
+* 1200
+fi=(33)
+3101 25
++25 50
+fe=(214)
+126 25
+fi=(32)
+425 50
+631 25
+fe=(214)
+134 200
+
+fn=(10004)
+216 200000
++4 100000
+0 25000
+220 75000
+fi=(32)
+611 50000
+fe=(214)
+0 50000
+234 200000
+
+fl=(8)
+fn=(5136) std::rt::lang_start::<()>::{closure#0}
+cfi=(29)
+cfn=(5138)
+calls=1 162 
+206 61500849
+
+fn=(4178)
+fi=(123)
+cfn=(5136)
+calls=1 206 
+287 61500849
+fe=(8)
+
+fl=(14)
+fn=(7886)
+1663 25000
+fi=(79)
+25 25000
+279 50000
+fi=(142)
+0 200000
+fi=(79)
+274 100000
+fi=(219) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/adapters/filter.rs
+138 125000
+fi=(220) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/iter/traits/accum.rs
+-83 25000
+fi=(219)
++83 125000
+fi=(220)
+-83 25000
+fi=(79)
+-55 25000
+279 175000
+fi=(38)
+24 150000
+fi=(220)
++31 50000
+fi=(10)
+1013 50000
+fi=(79)
+279 150000
+fi=(142)
+137 25000
+fe=(14)
+
+fl=(209) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/hybrid/search.rs
+fn=(9524) regex_automata::hybrid::search::find_fwd
+13 200000
+fi=(206) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/util/search.rs
+662 50000
++80 25000
+fe=(209)
+18 25000
+fi=(206)
+704 25000
+1536 75000
+fi=(40)
+743 150000
+fe=(209)
+41 50000
+fi=(14)
+454 50000
+fi=(10)
+1092 50000
+fi=(206)
+704 25000
+fi=(178) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/hybrid/dfa.rs
+2685 75000
+fi=(211) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/util/start.rs
+397 50000
+fi=(178)
+2699 75000
+fi=(33)
+1865 25000
+fi=(45)
+238 50000
+fi=(32)
+611 25000
+fi=(178)
+2714 25000
+fi=(207) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/hybrid/id.rs
+281 25000
+fi=(178)
+1571 25000
+0 50000
+fi=(26)
+965 50000
+fi=(178)
+1957 50000
++3 75000
+fe=(209)
+85 50000
+-85 75000
+294 50000
+85 100000
+fi=(207)
+272 50000
+fe=(209)
+86 50000
+fi=(207)
+224 50000
++48 200000
+fe=(209)
+-40 100000
+0 100000
+232 50000
+-37 100000
+0 150000
+67 50000
+fi=(173) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/util/alphabet.rs
+295 50000
+fi=(207)
+-71 50000
+fi=(178)
+1423 50000
++1 150000
+fe=(209)
+197 50000
+67 25000
+fi=(173)
+295 25000
+fi=(207)
+-71 25000
+fi=(178)
+1423 25000
++1 75000
+fe=(209)
+197 75000
+67 25000
+fi=(173)
+295 25000
+fi=(178)
+1423 25000
++1 50000
+fe=(209)
+204 25000
+67 25000
+fi=(173)
+295 25000
+fi=(178)
+1423 25000
++1 75000
+fe=(209)
+67 25000
+fi=(173)
+295 25000
+fi=(178)
+1423 25000
++1 25000
+fi=(207)
+272 25000
+fe=(209)
+-55 25000
++3 25000
+-25 50000
+fi=(207)
+0 100000
+281 50000
+fe=(209)
+-56 50000
+fi=(45)
+-41 50000
+fi=(173)
+325 50000
+fi=(207)
+216 50000
+fi=(178)
+1512 25000
+fi=(33)
+1865 25000
+fi=(45)
+238 50000
+fi=(32)
+611 25000
+fi=(178)
+1513 25000
+fi=(207)
+281 25000
+fi=(178)
+1514 25000
++5 25000
+fi=(26)
+965 50000
+fe=(209)
+47 225000
+fi=(207)
+320 25000
+fe=(209)
+722 25000
+0 225000
+cfi=(178)
+cfn=(9692) <regex_automata::hybrid::dfa::DFA>::match_pattern
+calls=32000 1741 
+0 150000
+0 75000
+fi=(11) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/mem/mod.rs
+975 50000
++1 25000
+fi=(40)
+-9 50000
+fi=(178)
+2059 100000
+-70 25000
+fe=(209)
+298 75000
+fi=(168) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/lib.rs
+0 25000
+fe=(209)
+
+fl=(143)
+fn=(7898)
+60 275000
++2 50000
+fi=(13)
+3995 25000
+fi=(145) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/sync/once/futex.rs
+87 25000
+fi=(144) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sync/once_lock.rs
++98 25000
+0 25000
+fi=(13)
+3994 25000
+fi=(138)
+54 50000
++45 25000
+fi=(13)
+4149 25000
+fi=(138)
+97 25000
+fi=(13)
+3994 25000
+fi=(71)
+1337 50000
+fi=(70)
+-53 25000
+241 100000
+cfi=(72)
+cfn=(5544)
+calls=31999 694 
+* 4925000
+fi=(88)
+47 50000
+fi=(71)
+2452 225000
+0 25000
+fi=(18)
+573 25000
+fi=(75)
+1569 75000
+fi=(84)
+40 50000
+-40 125000
+fi=(76)
+628 25000
+fi=(71)
+2032 50000
+fi=(20)
+1054 75000
+fi=(49)
+21 50000
+fi=(89) /rust/deps/hashbrown-0.17.1/src/lib.rs
+157 125000
+cob=(2)
+cfi=(2)
+cfn=(5556)
+calls=31999 0 
+* 475000
+* 50000
+fi=(67)
+455 25000
+fe=(143)
+9 75000
+fi=(13)
+4029 50000
+fi=(136)
+2434 25000
++4 50000
+0 25000
+fi=(13)
+4049 25000
+fi=(138)
+111 25000
++7 125000
+fe=(143)
+-48 25000
++1 75000
+cfn=(9370) <polyxml::pattern::CompiledPattern>::matches
+calls=31999 -48 
+* 8200000
+fi=(18)
+847 50000
+fi=(13)
+4049 25000
+fi=(136)
+2868 25000
+fe=(143)
+87 200000
+
+fn=(9370)
+23 100000
++1 50000
+fi=(206)
+208 150000
+fi=(147) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-1.13.1/src/regex/string.rs
+1123 25000
+fi=(14)
+454 25000
+fi=(40)
+1040 50000
+fi=(147)
++83 25000
+fi=(150) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/meta/regex.rs
+0 25000
+2049 50000
++4 50000
+fi=(162) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-syntax-0.8.11/src/hir/mod.rs
+2720 25000
+fi=(150)
+2063 25000
+fi=(162)
+2720 25000
+fi=(150)
+2063 25000
++1 50000
++4 25000
+980 25000
+fi=(92) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/thread_local/native/mod.rs
+105 50000
+fi=(110) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/sys/thread_local/native/lazy.rs
+-46 50000
+fi=(124) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/std/src/thread/local.rs
+463 25000
+fi=(13)
+3995 25000
+fi=(203) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/util/pool.rs
+588 50000
+fi=(13)
+3979 25000
+fi=(203)
+693 100000
+fi=(14)
+454 50000
+fi=(136)
+2454 125000
+fi=(69) /rustc/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library/core/src/cell.rs
+-17 50000
+0 50000
+fi=(150)
+985 50000
+cfi=(164) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/meta/strategy.rs
+cfn=(9516) <regex_automata::meta::strategy::Core as regex_automata::meta::strategy::Strategy>::search_half
+calls=31999 740 
+* 6425000
++2 50000
+fi=(203)
+805 50000
++22 25000
++4 50000
+fi=(13)
+3979 50000
+fi=(40)
+634 25000
+fe=(143)
+28 125000
+
+fl=(164)
+fn=(9516)
+740 150000
+fi=(40)
++3 50000
+0 25000
+743 125000
++22 50000
+fi=(14)
+454 25000
+fi=(178)
+594 50000
+fi=(170) /home/bailey/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.18/src/nfa/thompson/nfa.rs
+0 125000
+fi=(178)
+595 25000
+cfi=(209)
+cfn=(9524)
+calls=32000 13 
+* 5325000
+fi=(26)
+2177 25000
+0 25000
+2177 50000
++1 25000
+fi=(178)
+595 75000
+fe=(164)
+760 75000
++9 200000
+
+fl=(178)
+fn=(9692)
+1741 50000
++11 50000
++6 50000
+
+ob=(1) /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+fl=(1) ???
+fn=(0) 0x0000000000023340
+cob=(6)
+cfi=(6)
+cfn=(4126)
+calls=1 0 
+0 61500849
+
+totals: 61500849

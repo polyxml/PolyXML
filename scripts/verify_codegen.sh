@@ -18,7 +18,7 @@ NC='\033[0m'
 
 echo -e "${BLUE}==> Building polyxml CLI binary...${NC}"
 cargo build -p polyxml-cli --quiet
-POLYXML_BIN="${REPO_ROOT}/target/debug/polyxml"
+POLYXML_BIN="${CARGO_TARGET_DIR:-${REPO_ROOT}/target}/debug/polyxml"
 
 TMP_DIR="$(mktemp -d -t polyxml-smoke-XXXXXX)"
 trap 'rm -rf "${TMP_DIR}"' EXIT

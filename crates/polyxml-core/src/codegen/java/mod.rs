@@ -597,8 +597,11 @@ impl JavaCodegen {
             let semi_or_comma = if i + 1 == e.variants.len() { ";" } else { "," };
             let _ = writeln!(
                 out,
-                "{}    {}({:?}){}",
-                indent, const_name, v.value, semi_or_comma
+                "{}    {}({}){}",
+                indent,
+                const_name,
+                super::string_literal(&v.value),
+                semi_or_comma
             );
         }
 

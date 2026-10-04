@@ -233,9 +233,11 @@ impl XsdParser {
                     let name = e.name().into_inner();
                     let local = strip_prefix(name);
                     if local == "schema" {
-                        for attr in e.attributes().flatten() {
+                        for attr in e.attributes() {
+                            let attr =
+                                attr.map_err(|error| SchemaError::Malformed(error.to_string()))?;
                             let key = attr.key.as_ref();
-                            let val = attr.value.as_ref();
+                            let val = attr.normalized_value(quick_xml::XmlVersion::Implicit1_0)?;
 
                             if key == "targetNamespace" {
                                 target_namespace = Some(val.to_string());
@@ -267,7 +269,7 @@ impl XsdParser {
 
                     match local {
                         "include" | "redefine" => {
-                            if let Some(schema_location) = get_attr_value(e, "schemaLocation") {
+                            if let Some(schema_location) = get_attr_value(e, "schemaLocation")? {
                                 if let Some(dir) = base_dir {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
@@ -299,7 +301,7 @@ impl XsdParser {
                             }
                         }
                         "import" => {
-                            if let Some(schema_location) = get_attr_value(e, "schemaLocation") {
+                            if let Some(schema_location) = get_attr_value(e, "schemaLocation")? {
                                 if let Some(dir) = base_dir {
                                     let imp_path = dir.join(&schema_location);
                                     if imp_path.exists() {
@@ -341,7 +343,7 @@ impl XsdParser {
                                 &prefixes,
                                 &mut ir,
                             )? {
-                                if get_attr_value(e, "abstract")
+                                if get_attr_value(e, "abstract")?
                                     .is_some_and(|value| value == "true" || value == "1")
                                 {
                                     ir.abstract_elements.insert(elem_def.qname.clone());
@@ -360,7 +362,7 @@ impl XsdParser {
                         }
                         "group" => {
                             // Named model group definition.
-                            if let Some(gname) = get_attr_value(e, "name") {
+                            if let Some(gname) = get_attr_value(e, "name")? {
                                 let gq = QName::new(target_namespace.as_deref(), gname);
                                 let def = self.parse_group_body(
                                     &mut reader,
@@ -381,7 +383,7 @@ impl XsdParser {
 
                     match local {
                         "include" | "redefine" => {
-                            if let Some(schema_location) = get_attr_value(e, "schemaLocation") {
+                            if let Some(schema_location) = get_attr_value(e, "schemaLocation")? {
                                 if let Some(dir) = base_dir {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
@@ -413,7 +415,7 @@ impl XsdParser {
                             }
                         }
                         "import" => {
-                            if let Some(schema_location) = get_attr_value(e, "schemaLocation") {
+                            if let Some(schema_location) = get_attr_value(e, "schemaLocation")? {
                                 if let Some(dir) = base_dir {
                                     let imp_path = dir.join(&schema_location);
                                     if imp_path.exists() {
@@ -428,8 +430,8 @@ impl XsdParser {
                                 e,
                                 target_namespace.as_deref(),
                                 &prefixes,
-                            ) {
-                                if get_attr_value(e, "abstract")
+                            )? {
+                                if get_attr_value(e, "abstract")?
                                     .is_some_and(|value| value == "true" || value == "1")
                                 {
                                     ir.abstract_elements.insert(elem_def.qname.clone());
@@ -438,8 +440,8 @@ impl XsdParser {
                             }
                         }
                         "attribute" => {
-                            if let Some(name) = get_attr_value(e, "name") {
-                                let type_ref = get_attr_value(e, "type")
+                            if let Some(name) = get_attr_value(e, "name")? {
+                                let type_ref = get_attr_value(e, "type")?
                                     .map(|ty| {
                                         resolve_type_ref(
                                             &ty,
@@ -455,14 +457,14 @@ impl XsdParser {
                         }
                         "group" => {
                             // Empty named model group (no particles).
-                            if let Some(gname) = get_attr_value(e, "name") {
+                            if let Some(gname) = get_attr_value(e, "name")? {
                                 let gq = QName::new(target_namespace.as_deref(), gname);
                                 self.groups.insert(gq, GroupDef::default());
                             }
                         }
                         "complexType" => {
-                            if let Some(name) = get_attr_value(e, "name") {
-                                let is_abstract = get_attr_value(e, "abstract")
+                            if let Some(name) = get_attr_value(e, "name")? {
+                                let is_abstract = get_attr_value(e, "abstract")?
                                     .map(|v| v == "true" || v == "1")
                                     .unwrap_or(false);
                                 let qname = QName::new(target_namespace.as_deref(), name);
@@ -470,7 +472,7 @@ impl XsdParser {
                                     qname,
                                     base_type: None,
                                     is_abstract,
-                                    is_mixed: get_attr_value(e, "mixed")
+                                    is_mixed: get_attr_value(e, "mixed")?
                                         .is_some_and(|value| value == "true" || value == "1"),
                                     fields: Vec::new(),
                                     documentation: None,
@@ -478,7 +480,7 @@ impl XsdParser {
                             }
                         }
                         "simpleType" => {
-                            if let Some(name) = get_attr_value(e, "name") {
+                            if let Some(name) = get_attr_value(e, "name")? {
                                 let qname = QName::new(target_namespace.as_deref(), name);
                                 ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
                                     qname,
@@ -512,16 +514,16 @@ impl XsdParser {
         name_override: Option<String>,
         ir: &mut SchemaIR,
     ) -> Result<Option<TypeDef>, SchemaError> {
-        let name = match get_attr_value(start, "name").or(name_override) {
+        let name = match get_attr_value(start, "name")?.or(name_override) {
             Some(n) => n,
             None => return Ok(None), // Anonymous type handled in place
         };
 
-        let is_abstract = get_attr_value(start, "abstract")
+        let is_abstract = get_attr_value(start, "abstract")?
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
         let is_mixed =
-            get_attr_value(start, "mixed").is_some_and(|value| value == "true" || value == "1");
+            get_attr_value(start, "mixed")?.is_some_and(|value| value == "true" || value == "1");
 
         let qname = QName::new(target_ns, name.clone());
         if !is_mixed {
@@ -564,7 +566,7 @@ impl XsdParser {
                             in_simple_content = true;
                         }
                         "restriction" if in_simple_content => {
-                            if let Some(base) = get_attr_value(e, "base") {
+                            if let Some(base) = get_attr_value(e, "base")? {
                                 let resolved = resolve_qname(&base, target_ns, prefixes);
                                 if resolved != qname {
                                     base_type = Some(resolved);
@@ -576,7 +578,7 @@ impl XsdParser {
                             }
                         }
                         "extension" => {
-                            if let Some(base) = get_attr_value(e, "base") {
+                            if let Some(base) = get_attr_value(e, "base")? {
                                 let resolved = resolve_qname(&base, target_ns, prefixes);
                                 if resolved != qname {
                                     base_type = Some(resolved);
@@ -591,7 +593,7 @@ impl XsdParser {
                         }
                         "group" => {
                             // Named model group particle; expanded post-parse.
-                            if let Some(r) = get_attr_value(e, "ref") {
+                            if let Some(r) = get_attr_value(e, "ref")? {
                                 group_refs
                                     .push((fields.len(), resolve_qname(&r, target_ns, prefixes)));
                             }
@@ -599,13 +601,13 @@ impl XsdParser {
                             depth -= 1;
                         }
                         "sequence" | "all" => {
-                            let is_unbounded = get_attr_value(e, "maxOccurs")
+                            let is_unbounded = get_attr_value(e, "maxOccurs")?
                                 .map(|v| {
                                     v == "unbounded"
                                         || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
                                 })
                                 .unwrap_or(false);
-                            let min_occurs = get_attr_value(e, "minOccurs")
+                            let min_occurs = get_attr_value(e, "minOccurs")?
                                 .and_then(|v| v.parse::<usize>().ok())
                                 .unwrap_or(1);
                             compositor_stack.push(CompositorFrame {
@@ -622,13 +624,13 @@ impl XsdParser {
                             });
                         }
                         "choice" => {
-                            let is_unbounded = get_attr_value(e, "maxOccurs")
+                            let is_unbounded = get_attr_value(e, "maxOccurs")?
                                 .map(|v| {
                                     v == "unbounded"
                                         || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
                                 })
                                 .unwrap_or(false);
-                            let min_occurs = get_attr_value(e, "minOccurs")
+                            let min_occurs = get_attr_value(e, "minOccurs")?
                                 .and_then(|v| v.parse::<usize>().ok())
                                 .unwrap_or(1);
                             compositor_stack.push(CompositorFrame {
@@ -655,7 +657,7 @@ impl XsdParser {
                                 prefixes,
                                 in_any_choice,
                                 in_unbounded,
-                            ) {
+                            )? {
                                 // Consume inline type definitions so nested
                                 // fields cannot leak into the parent struct;
                                 // extracted types are registered in `ir`.
@@ -680,7 +682,7 @@ impl XsdParser {
                             }
                         }
                         "attribute" => {
-                            if let Some(field) = parse_attribute_field(e, target_ns, prefixes) {
+                            if let Some(field) = parse_attribute_field(e, target_ns, prefixes)? {
                                 fields.push(field);
                             }
                         }
@@ -690,7 +692,7 @@ impl XsdParser {
                                 .last()
                                 .map(|c| c.kind == CompositorKind::Choice)
                                 .unwrap_or(false);
-                            let field = parse_any_field(e, in_choice, in_unbounded);
+                            let field = parse_any_field(e, in_choice, in_unbounded)?;
                             if in_choice {
                                 if let Some(frame) = compositor_stack.last_mut() {
                                     if frame.kind == CompositorKind::Choice {
@@ -721,7 +723,7 @@ impl XsdParser {
                         "extension" | "restriction"
                             if local == "extension" || in_simple_content =>
                         {
-                            if let Some(base) = get_attr_value(e, "base") {
+                            if let Some(base) = get_attr_value(e, "base")? {
                                 let resolved = resolve_qname(&base, target_ns, prefixes);
                                 if resolved != qname {
                                     base_type = Some(resolved);
@@ -735,7 +737,7 @@ impl XsdParser {
                         }
                         "group" => {
                             // Self-closing group reference; expanded post-parse.
-                            if let Some(r) = get_attr_value(e, "ref") {
+                            if let Some(r) = get_attr_value(e, "ref")? {
                                 group_refs
                                     .push((fields.len(), resolve_qname(&r, target_ns, prefixes)));
                             }
@@ -755,7 +757,7 @@ impl XsdParser {
                                 prefixes,
                                 in_any_choice,
                                 in_unbounded,
-                            ) {
+                            )? {
                                 if in_choice {
                                     if let Some(frame) = compositor_stack.last_mut() {
                                         if frame.kind == CompositorKind::Choice {
@@ -773,7 +775,7 @@ impl XsdParser {
                             }
                         }
                         "attribute" => {
-                            if let Some(field) = parse_attribute_field(e, target_ns, prefixes) {
+                            if let Some(field) = parse_attribute_field(e, target_ns, prefixes)? {
                                 fields.push(field);
                             }
                         }
@@ -783,7 +785,7 @@ impl XsdParser {
                                 .last()
                                 .map(|c| c.kind == CompositorKind::Choice)
                                 .unwrap_or(false);
-                            let field = parse_any_field(e, in_choice, in_unbounded);
+                            let field = parse_any_field(e, in_choice, in_unbounded)?;
                             if in_choice {
                                 if let Some(frame) = compositor_stack.last_mut() {
                                     if frame.kind == CompositorKind::Choice {
@@ -1023,16 +1025,16 @@ impl XsdParser {
         field: &mut FieldDef,
         ir: &mut SchemaIR,
     ) -> Result<(), SchemaError> {
-        if get_attr_value(element_start, "type").is_some()
-            || get_attr_value(element_start, "ref").is_some()
+        if get_attr_value(element_start, "type")?.is_some()
+            || get_attr_value(element_start, "ref")?.is_some()
         {
             // Type already specified — discard (illegal) inline content.
             skip_subtree(reader)?;
             return Ok(());
         }
 
-        let elem_local = get_attr_value(element_start, "name")
-            .or_else(|| get_attr_value(element_start, "ref").map(|r| strip_prefix(&r).to_string()))
+        let elem_local = get_attr_value(element_start, "name")?
+            .or(get_attr_value(element_start, "ref")?.map(|r| strip_prefix(&r).to_string()))
             .unwrap_or_else(|| field.name.clone());
 
         let mut extracted = false;
@@ -1122,7 +1124,7 @@ impl XsdParser {
                             if local == "choice" {
                                 in_choice = true;
                             }
-                            let is_unbounded = get_attr_value(e, "maxOccurs")
+                            let is_unbounded = get_attr_value(e, "maxOccurs")?
                                 .map(|v| {
                                     v == "unbounded"
                                         || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
@@ -1132,9 +1134,13 @@ impl XsdParser {
                         }
                         "element" => {
                             let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            if let Some(mut field) =
-                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
-                            {
+                            if let Some(mut field) = parse_element_field(
+                                e,
+                                target_ns,
+                                prefixes,
+                                in_choice,
+                                in_unbounded,
+                            )? {
                                 self.consume_inline_element_type(
                                     reader, e, target_ns, prefixes, "", &mut field, ir,
                                 )?;
@@ -1143,7 +1149,7 @@ impl XsdParser {
                             }
                         }
                         "group" => {
-                            if let Some(r) = get_attr_value(e, "ref") {
+                            if let Some(r) = get_attr_value(e, "ref")? {
                                 def.group_refs.push((
                                     def.fields.len(),
                                     resolve_qname(&r, target_ns, prefixes),
@@ -1154,7 +1160,8 @@ impl XsdParser {
                         }
                         "any" => {
                             let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            def.fields.push(parse_any_field(e, in_choice, in_unbounded));
+                            def.fields
+                                .push(parse_any_field(e, in_choice, in_unbounded)?);
                         }
                         _ => {}
                     }
@@ -1164,14 +1171,18 @@ impl XsdParser {
                     match local {
                         "element" => {
                             let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            if let Some(field) =
-                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
-                            {
+                            if let Some(field) = parse_element_field(
+                                e,
+                                target_ns,
+                                prefixes,
+                                in_choice,
+                                in_unbounded,
+                            )? {
                                 def.fields.push(field);
                             }
                         }
                         "group" => {
-                            if let Some(r) = get_attr_value(e, "ref") {
+                            if let Some(r) = get_attr_value(e, "ref")? {
                                 def.group_refs.push((
                                     def.fields.len(),
                                     resolve_qname(&r, target_ns, prefixes),
@@ -1180,7 +1191,8 @@ impl XsdParser {
                         }
                         "any" => {
                             let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            def.fields.push(parse_any_field(e, in_choice, in_unbounded));
+                            def.fields
+                                .push(parse_any_field(e, in_choice, in_unbounded)?);
                         }
                         _ => {}
                     }
@@ -1209,7 +1221,7 @@ impl XsdParser {
         name_override: Option<String>,
         ir: &mut SchemaIR,
     ) -> Result<Option<TypeDef>, SchemaError> {
-        let name = match get_attr_value(start, "name").or(name_override) {
+        let name = match get_attr_value(start, "name")?.or(name_override) {
             Some(n) => n,
             None => return Ok(None),
         };
@@ -1237,12 +1249,12 @@ impl XsdParser {
                             depth -= 1;
                         }
                         "restriction" => {
-                            if let Some(base) = get_attr_value(e, "base") {
+                            if let Some(base) = get_attr_value(e, "base")? {
                                 base_type = resolve_type_ref(&base, target_ns, prefixes);
                             }
                         }
                         "list" => {
-                            if let Some(item) = get_attr_value(e, "itemType") {
+                            if let Some(item) = get_attr_value(e, "itemType")? {
                                 base_type = TypeRef::List(Box::new(resolve_type_ref(
                                     &item, target_ns, prefixes,
                                 )));
@@ -1251,7 +1263,7 @@ impl XsdParser {
                             }
                         }
                         "union" => {
-                            union_branches = Some(parse_union_members(e, target_ns, prefixes));
+                            union_branches = Some(parse_union_members(e, target_ns, prefixes)?);
                         }
                         "simpleType" if list_requires_inline => {
                             let item_name =
@@ -1299,12 +1311,12 @@ impl XsdParser {
                             depth -= 1;
                         }
                         "pattern" => {
-                            if let Some(val) = get_attr_value(e, "value") {
+                            if let Some(val) = get_attr_value(e, "value")? {
                                 facets.patterns.push(val);
                             }
                         }
                         "enumeration" => {
-                            if let Some(val) = get_attr_value(e, "value") {
+                            if let Some(val) = get_attr_value(e, "value")? {
                                 enum_values.push(EnumValue {
                                     name: sanitize_variant_name(&val),
                                     value: val.clone(),
@@ -1321,12 +1333,12 @@ impl XsdParser {
 
                     match local {
                         "restriction" => {
-                            if let Some(base) = get_attr_value(e, "base") {
+                            if let Some(base) = get_attr_value(e, "base")? {
                                 base_type = resolve_type_ref(&base, target_ns, prefixes);
                             }
                         }
                         "list" => {
-                            if let Some(item) = get_attr_value(e, "itemType") {
+                            if let Some(item) = get_attr_value(e, "itemType")? {
                                 base_type = TypeRef::List(Box::new(resolve_type_ref(
                                     &item, target_ns, prefixes,
                                 )));
@@ -1337,10 +1349,10 @@ impl XsdParser {
                             }
                         }
                         "union" => {
-                            union_branches = Some(parse_union_members(e, target_ns, prefixes));
+                            union_branches = Some(parse_union_members(e, target_ns, prefixes)?);
                         }
                         "enumeration" => {
-                            if let Some(val) = get_attr_value(e, "value") {
+                            if let Some(val) = get_attr_value(e, "value")? {
                                 enum_values.push(EnumValue {
                                     name: sanitize_variant_name(&val),
                                     value: val.clone(),
@@ -1350,43 +1362,44 @@ impl XsdParser {
                             }
                         }
                         "pattern" => {
-                            if let Some(val) = get_attr_value(e, "value") {
+                            if let Some(val) = get_attr_value(e, "value")? {
                                 facets.patterns.push(val);
                             }
                         }
                         "minInclusive" => {
-                            facets.min_inclusive = get_attr_value(e, "value");
+                            facets.min_inclusive = get_attr_value(e, "value")?;
                         }
                         "maxInclusive" => {
-                            facets.max_inclusive = get_attr_value(e, "value");
+                            facets.max_inclusive = get_attr_value(e, "value")?;
                         }
                         "minExclusive" => {
-                            facets.min_exclusive = get_attr_value(e, "value");
+                            facets.min_exclusive = get_attr_value(e, "value")?;
                         }
                         "maxExclusive" => {
-                            facets.max_exclusive = get_attr_value(e, "value");
+                            facets.max_exclusive = get_attr_value(e, "value")?;
                         }
                         "minLength" => {
                             facets.min_length =
-                                get_attr_value(e, "value").and_then(|v| v.parse().ok());
+                                get_attr_value(e, "value")?.and_then(|v| v.parse().ok());
                         }
                         "maxLength" => {
                             facets.max_length =
-                                get_attr_value(e, "value").and_then(|v| v.parse().ok());
+                                get_attr_value(e, "value")?.and_then(|v| v.parse().ok());
                         }
                         "length" => {
-                            facets.length = get_attr_value(e, "value").and_then(|v| v.parse().ok());
+                            facets.length =
+                                get_attr_value(e, "value")?.and_then(|v| v.parse().ok());
                         }
                         "totalDigits" => {
                             facets.total_digits =
-                                get_attr_value(e, "value").and_then(|v| v.parse().ok());
+                                get_attr_value(e, "value")?.and_then(|v| v.parse().ok());
                         }
                         "fractionDigits" => {
                             facets.fraction_digits =
-                                get_attr_value(e, "value").and_then(|v| v.parse().ok());
+                                get_attr_value(e, "value")?.and_then(|v| v.parse().ok());
                         }
                         "whiteSpace" => {
-                            facets.white_space = get_attr_value(e, "value");
+                            facets.white_space = get_attr_value(e, "value")?;
                         }
                         _ => {}
                     }
@@ -1489,10 +1502,10 @@ impl XsdParser {
         prefixes: &HashMap<String, String>,
         ir: &mut SchemaIR,
     ) -> Result<(), SchemaError> {
-        let Some(name) = get_attr_value(start, "name") else {
+        let Some(name) = get_attr_value(start, "name")? else {
             return skip_subtree(reader);
         };
-        let mut type_ref = get_attr_value(start, "type")
+        let mut type_ref = get_attr_value(start, "type")?
             .map(|ty| resolve_type_ref(&ty, target_ns, prefixes))
             .unwrap_or_else(TypeRef::string);
         loop {
@@ -1529,19 +1542,19 @@ impl XsdParser {
         prefixes: &HashMap<String, String>,
         ir: &mut SchemaIR,
     ) -> Result<Option<ElementDef>, SchemaError> {
-        let name = match get_attr_value(start, "name") {
+        let name = match get_attr_value(start, "name")? {
             Some(n) => n,
             None => return Ok(None),
         };
 
         let qname = QName::new(target_ns, name.clone());
-        let substitution_group = get_attr_value(start, "substitutionGroup")
+        let substitution_group = get_attr_value(start, "substitutionGroup")?
             .map(|s| resolve_qname(&s, target_ns, prefixes));
-        let nillable = get_attr_value(start, "nillable")
+        let nillable = get_attr_value(start, "nillable")?
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
 
-        let mut type_ref = get_attr_value(start, "type")
+        let mut type_ref = get_attr_value(start, "type")?
             .map(|t| resolve_type_ref(&t, target_ns, prefixes))
             .unwrap_or(TypeRef::Primitive(PrimitiveType::AnyType));
 
@@ -1879,9 +1892,9 @@ fn parse_union_members(
     union: &BytesStart,
     target_ns: Option<&str>,
     prefixes: &HashMap<String, String>,
-) -> Vec<UnionBranch> {
+) -> Result<Vec<UnionBranch>, SchemaError> {
     let mut names = HashMap::<String, usize>::new();
-    get_attr_value(union, "memberTypes")
+    Ok(get_attr_value(union, "memberTypes")?
         .unwrap_or_default()
         .split_whitespace()
         .map(|member| {
@@ -1905,7 +1918,7 @@ fn parse_union_members(
                 documentation: None,
             }
         })
-        .collect()
+        .collect())
 }
 
 /// Replace element-reference placeholders with their global element's declared type.
@@ -2053,14 +2066,18 @@ fn strip_prefix(s: &str) -> &str {
     s.split_once(':').map(|(_, local)| local).unwrap_or(s)
 }
 
-fn get_attr_value(e: &BytesStart, name: &str) -> Option<String> {
-    for attr in e.attributes().flatten() {
+fn get_attr_value(e: &BytesStart, name: &str) -> Result<Option<String>, SchemaError> {
+    for attr in e.attributes() {
+        let attr = attr.map_err(|error| SchemaError::Malformed(error.to_string()))?;
         let key = attr.key.as_ref();
         if key == name || strip_prefix(key) == name {
-            return Some(attr.value.as_ref().to_string());
+            return Ok(Some(
+                attr.normalized_value(quick_xml::XmlVersion::Implicit1_0)?
+                    .into_owned(),
+            ));
         }
     }
-    None
+    Ok(None)
 }
 
 fn resolve_qname(name: &str, target_ns: Option<&str>, prefixes: &HashMap<String, String>) -> QName {
@@ -2098,9 +2115,9 @@ fn parse_element_field(
     prefixes: &HashMap<String, String>,
     in_choice: bool,
     in_unbounded_compositor: bool,
-) -> Option<FieldDef> {
-    let ref_attr = get_attr_value(e, "ref");
-    let name_attr = get_attr_value(e, "name");
+) -> Result<Option<FieldDef>, SchemaError> {
+    let ref_attr = get_attr_value(e, "ref")?;
+    let name_attr = get_attr_value(e, "name")?;
 
     let (name, xml_name, namespace) = if let Some(ref r) = ref_attr {
         let qname = resolve_qname(r, target_ns, prefixes);
@@ -2109,13 +2126,15 @@ fn parse_element_field(
         let namespace = qname.namespace;
         (field_name, xml_name, namespace)
     } else {
-        let n = name_attr?;
+        let Some(n) = name_attr else {
+            return Ok(None);
+        };
         let xml_name = n.clone();
         let namespace = target_ns.map(Into::into);
         (n, xml_name, namespace)
     };
 
-    let type_ref = get_attr_value(e, "type")
+    let type_ref = get_attr_value(e, "type")?
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
         .or_else(|| {
             ref_attr
@@ -2127,7 +2146,7 @@ fn parse_element_field(
     let min_occurs = if in_choice {
         0
     } else {
-        get_attr_value(e, "minOccurs")
+        get_attr_value(e, "minOccurs")?
             .and_then(|v| v.parse().ok())
             .unwrap_or(1)
     };
@@ -2135,21 +2154,21 @@ fn parse_element_field(
     let max_occurs = if in_unbounded_compositor {
         OccursLimit::Unbounded
     } else {
-        match get_attr_value(e, "maxOccurs").as_deref() {
+        match get_attr_value(e, "maxOccurs")?.as_deref() {
             Some("unbounded") => OccursLimit::Unbounded,
             Some(v) => OccursLimit::Count(v.parse().unwrap_or(1)),
             None => OccursLimit::Count(1),
         }
     };
 
-    let nillable = get_attr_value(e, "nillable")
+    let nillable = get_attr_value(e, "nillable")?
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
 
-    let default_value = get_attr_value(e, "default");
-    let fixed_value = get_attr_value(e, "fixed");
+    let default_value = get_attr_value(e, "default")?;
+    let fixed_value = get_attr_value(e, "fixed")?;
 
-    Some(FieldDef {
+    Ok(Some(FieldDef {
         name: sanitize_field_name(&name),
         xml_name,
         namespace,
@@ -2165,16 +2184,16 @@ fn parse_element_field(
         documentation: None,
         facets: None,
         is_cycle_cut: false,
-    })
+    }))
 }
 
 fn parse_attribute_field(
     e: &BytesStart,
     target_ns: Option<&str>,
     prefixes: &HashMap<String, String>,
-) -> Option<FieldDef> {
-    let ref_attr = get_attr_value(e, "ref");
-    let name_attr = get_attr_value(e, "name");
+) -> Result<Option<FieldDef>, SchemaError> {
+    let ref_attr = get_attr_value(e, "ref")?;
+    let name_attr = get_attr_value(e, "name")?;
 
     let (name, xml_name, namespace) = if let Some(ref r) = ref_attr {
         let qname = resolve_qname(r, target_ns, prefixes);
@@ -2183,12 +2202,14 @@ fn parse_attribute_field(
         let namespace = qname.namespace;
         (field_name, xml_name, namespace)
     } else {
-        let n = name_attr?;
+        let Some(n) = name_attr else {
+            return Ok(None);
+        };
         let xml_name = n.clone();
         (n, xml_name, None)
     };
 
-    let type_ref = get_attr_value(e, "type")
+    let type_ref = get_attr_value(e, "type")?
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
         .or_else(|| {
             ref_attr
@@ -2197,7 +2218,7 @@ fn parse_attribute_field(
         })
         .unwrap_or(TypeRef::Primitive(PrimitiveType::String));
 
-    let is_required = get_attr_value(e, "use")
+    let is_required = get_attr_value(e, "use")?
         .map(|u| u == "required")
         .unwrap_or(false);
 
@@ -2207,10 +2228,10 @@ fn parse_attribute_field(
         Cardinality::optional_one()
     };
 
-    let default_value = get_attr_value(e, "default");
-    let fixed_value = get_attr_value(e, "fixed");
+    let default_value = get_attr_value(e, "default")?;
+    let fixed_value = get_attr_value(e, "fixed")?;
 
-    Some(FieldDef {
+    Ok(Some(FieldDef {
         name: sanitize_field_name(&name),
         xml_name,
         namespace,
@@ -2223,28 +2244,32 @@ fn parse_attribute_field(
         documentation: None,
         facets: None,
         is_cycle_cut: false,
-    })
+    }))
 }
 
-fn parse_any_field(e: &BytesStart, in_choice: bool, in_unbounded_compositor: bool) -> FieldDef {
+fn parse_any_field(
+    e: &BytesStart,
+    in_choice: bool,
+    in_unbounded_compositor: bool,
+) -> Result<FieldDef, SchemaError> {
     let min_occurs = if in_choice {
         0
     } else {
-        get_attr_value(e, "minOccurs")
+        get_attr_value(e, "minOccurs")?
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(1)
     };
     let max_occurs = if in_unbounded_compositor {
         OccursLimit::Unbounded
     } else {
-        match get_attr_value(e, "maxOccurs").as_deref() {
+        match get_attr_value(e, "maxOccurs")?.as_deref() {
             Some("unbounded") => OccursLimit::Unbounded,
             Some(v) => OccursLimit::Count(v.parse::<usize>().unwrap_or(1)),
             None => OccursLimit::Count(1),
         }
     };
-    let namespace = get_attr_value(e, "namespace");
-    FieldDef {
+    let namespace = get_attr_value(e, "namespace")?;
+    Ok(FieldDef {
         name: "any".to_string(),
         xml_name: "*".to_string(),
         namespace,
@@ -2260,7 +2285,7 @@ fn parse_any_field(e: &BytesStart, in_choice: bool, in_unbounded_compositor: boo
         documentation: None,
         facets: None,
         is_cycle_cut: false,
-    }
+    })
 }
 
 fn parse_any_attribute_field(_e: &BytesStart) -> FieldDef {
@@ -2284,26 +2309,28 @@ fn parse_empty_global_element(
     e: &BytesStart,
     target_ns: Option<&str>,
     prefixes: &HashMap<String, String>,
-) -> Option<ElementDef> {
-    let name = get_attr_value(e, "name")?;
+) -> Result<Option<ElementDef>, SchemaError> {
+    let Some(name) = get_attr_value(e, "name")? else {
+        return Ok(None);
+    };
     let qname = QName::new(target_ns, name);
     let substitution_group =
-        get_attr_value(e, "substitutionGroup").map(|s| resolve_qname(&s, target_ns, prefixes));
-    let nillable = get_attr_value(e, "nillable")
+        get_attr_value(e, "substitutionGroup")?.map(|s| resolve_qname(&s, target_ns, prefixes));
+    let nillable = get_attr_value(e, "nillable")?
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
 
-    let type_ref = get_attr_value(e, "type")
+    let type_ref = get_attr_value(e, "type")?
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
         .unwrap_or(TypeRef::Primitive(PrimitiveType::AnyType));
 
-    Some(ElementDef {
+    Ok(Some(ElementDef {
         qname,
         type_ref,
         substitution_group,
         nillable,
         documentation: None,
-    })
+    }))
 }
 
 fn sanitize_field_name(name: &str) -> String {
@@ -2668,34 +2695,34 @@ fn capture_content_model(
                         } else {
                             Particle::Sequence(items)
                         };
-                        result.push(repeat(model, &e));
+                        result.push(repeat(model, &e)?);
                     } else if local == "element" {
                         if let Some(field) =
-                            parse_element_field(&e, target_ns, prefixes, false, false)
+                            parse_element_field(&e, target_ns, prefixes, false, false)?
                         {
                             result.push(repeat(
-                                if get_attr_value(&e, "ref").is_some() {
+                                if get_attr_value(&e, "ref")?.is_some() {
                                     Particle::Reference(QName::new(field.namespace, field.xml_name))
                                 } else {
                                     Particle::Element(QName::new(field.namespace, field.xml_name))
                                 },
                                 &e,
-                            ));
+                            )?);
                         }
                         reader.read_to_end(e.name())?;
                     }
                 }
                 Event::Empty(e) if strip_prefix(e.name().into_inner()) == "element" => {
-                    if let Some(field) = parse_element_field(&e, target_ns, prefixes, false, false)
+                    if let Some(field) = parse_element_field(&e, target_ns, prefixes, false, false)?
                     {
                         result.push(repeat(
-                            if get_attr_value(&e, "ref").is_some() {
+                            if get_attr_value(&e, "ref")?.is_some() {
                                 Particle::Reference(QName::new(field.namespace, field.xml_name))
                             } else {
                                 Particle::Element(QName::new(field.namespace, field.xml_name))
                             },
                             &e,
-                        ));
+                        )?);
                     }
                 }
                 Event::End(e) if strip_prefix(e.name().into_inner()) == end => {
@@ -2706,16 +2733,16 @@ fn capture_content_model(
             }
         }
     }
-    fn repeat(model: Particle, e: &BytesStart) -> Particle {
-        let min = get_attr_value(e, "minOccurs")
+    fn repeat(model: Particle, e: &BytesStart) -> Result<Particle, SchemaError> {
+        let min = get_attr_value(e, "minOccurs")?
             .and_then(|s| s.parse().ok())
             .unwrap_or(1);
-        let max = match get_attr_value(e, "maxOccurs").as_deref() {
+        let max = match get_attr_value(e, "maxOccurs")?.as_deref() {
             Some("unbounded") => None,
             Some(value) => value.parse().ok(),
             None => Some(1),
         };
-        if min == 1 && max == Some(1) {
+        Ok(if min == 1 && max == Some(1) {
             model
         } else {
             Particle::Repeat {
@@ -2723,7 +2750,7 @@ fn capture_content_model(
                 min,
                 max,
             }
-        }
+        })
     }
     let mut preview = Reader::from_reader(*reader.get_ref());
     preview.config_mut().allow_unmatched_ends = true;
@@ -2803,16 +2830,18 @@ fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
         let mut prefixes = stack.last().map(|(_, p)| p.clone()).unwrap_or_else(|| {
             HashMap::from([("xml".into(), "http://www.w3.org/XML/1998/namespace".into())])
         });
-        for attr in element.attributes().flatten() {
+        for attr in element.attributes() {
+            let attr = attr.map_err(|error| SchemaError::Malformed(error.to_string()))?;
+            let value = attr.normalized_value(quick_xml::XmlVersion::Implicit1_0)?;
             if let Some(prefix) = attr.key.as_ref().strip_prefix("xmlns:") {
-                prefixes.insert(prefix.into(), attr.value.to_string());
+                prefixes.insert(prefix.into(), value.to_string());
             } else if attr.key.as_ref() == "xmlns" {
-                prefixes.insert(String::new(), attr.value.to_string());
+                prefixes.insert(String::new(), value.to_string());
             }
         }
         let local = strip_prefix(element.name().into_inner());
         if stack.is_empty() && local == "schema" {
-            schema_namespace = get_attr_value(&element, "targetNamespace");
+            schema_namespace = get_attr_value(&element, "targetNamespace")?;
         }
         let position = reader.buffer_position() as usize;
         line += xml[line_position..position]
@@ -2849,14 +2878,16 @@ fn validate_schema_grammar(xml: &str) -> Result<(), SchemaError> {
                 "Illegal child {local} under simpleType at line {line}"
             )));
         }
-        for attr in element.attributes().flatten() {
+        for attr in element.attributes() {
+            let attr = attr.map_err(|error| SchemaError::Malformed(error.to_string()))?;
+            let value = attr.normalized_value(quick_xml::XmlVersion::Implicit1_0)?;
             if !annotation
                 && matches!(
                     attr.key.as_ref(),
                     "type" | "base" | "itemType" | "memberTypes" | "ref"
                 )
             {
-                for value in attr.value.split_whitespace() {
+                for value in value.split_whitespace() {
                     if let Some((prefix, local)) = value.split_once(':') {
                         let Some(namespace) = prefixes.get(prefix) else {
                             return Err(SchemaError::Resolution(format!(

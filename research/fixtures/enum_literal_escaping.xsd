@@ -1,0 +1,13 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="R&amp;D"/>
+      <xs:enumeration value="&quot;quoted&quot; &apos;value&apos; &lt;tag&gt;"/>
+      <xs:enumeration value="caf&#xE9; &#128512;"/>
+      <xs:enumeration value="literal &amp;amp;"/>
+      <xs:enumeration value="slash\path\u000a"/>
+      <xs:enumeration value="tab&#9;line&#10;carriage&#13;tail"/>
+      <xs:enumeration value="&#x85;next&#x2028;line"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

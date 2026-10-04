@@ -1,0 +1,10 @@
+{
+  "revision": "71aff6ca6cbe7106dcc2389a2428571a16d69430",
+  "native_file": "/home/bailey/github/polyxml-runtime-integration/crates/polyxml-python/python/polyxml/_polyxml.abi3.so",
+  "native_sha256": "42dbd3a98d575ebdce8a45e277e7e3f9728f6139e0b0eed4b0d59c4d541d8cf1",
+  "cli_sha256": "b1ea4bc3e1ca1df4c40f8e9cf82a2d184e1f18eb120fec83bd4279f1c9529371",
+  "generated_defaults": "passed",
+  "schema_entities": "passed",
+  "namespace_entities": "passed",
+  "mixed_nil_transcode": "passed"
+}

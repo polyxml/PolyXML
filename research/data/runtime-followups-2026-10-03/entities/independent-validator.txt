@@ -1,0 +1,3 @@
+WARN `--no-project` was provided, but no project was found
+lxml (6, 1, 3, 0) libxml2 (2, 14, 6)
+Fixture and all four valid instances pass independent XSD validation

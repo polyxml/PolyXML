@@ -521,9 +521,9 @@ impl PythonCodegen {
 
             let _ = writeln!(
                 out,
-                "    {} = \"{}\"",
+                "    {} = {}",
                 var_id,
-                variant.value.replace('"', "\\\"")
+                super::string_literal(&variant.value)
             );
         }
     }
@@ -1012,10 +1012,10 @@ impl PythonCodegen {
         }
 
         if let Some(ref fixed) = field.fixed_value {
-            parts.push(format!("\"fixed\": {fixed:?}"));
+            parts.push(format!("\"fixed\": {}", super::string_literal(fixed)));
         }
         if let Some(ref default) = field.default_value {
-            parts.push(format!("\"default\": {default:?}"));
+            parts.push(format!("\"default\": {}", super::string_literal(default)));
         }
         if matches!(super::primitive_base(&field.type_ref, ir), TypeRef::List(_)) {
             parts.push("\"tokens\": True".into());
@@ -1045,7 +1045,7 @@ impl PythonCodegen {
     fn format_default_value(&self, val: &str, type_ref: &TypeRef, ir: &SchemaIR) -> String {
         if matches!(super::primitive_base(type_ref, ir), TypeRef::Primitive(p) if p.is_unbounded_integer())
         {
-            return format!("int({val:?})");
+            return format!("int({})", super::string_literal(val));
         }
 
         let base = super::primitive_base(type_ref, ir);
@@ -1073,20 +1073,20 @@ impl PythonCodegen {
                 if val.trim().parse::<i64>().is_ok() {
                     val.trim().to_string()
                 } else {
-                    format!("\"{}\"", val.replace('"', "\\\""))
+                    super::string_literal(val)
                 }
             }
             TypeRef::Primitive(PrimitiveType::Float | PrimitiveType::Double) => {
                 if val.trim().parse::<f64>().is_ok() {
                     val.trim().to_string()
                 } else {
-                    format!("\"{}\"", val.replace('"', "\\\""))
+                    super::string_literal(val)
                 }
             }
             TypeRef::Primitive(PrimitiveType::Decimal) => {
-                format!("Decimal(\"{}\")", val.replace('"', "\\\""))
+                format!("Decimal({})", super::string_literal(val))
             }
-            _ => format!("\"{}\"", val.replace('"', "\\\"")),
+            _ => super::string_literal(val),
         }
     }
 

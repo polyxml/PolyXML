@@ -1,0 +1,19 @@
+{
+  "revisions": {
+    "baseline": "1819c91b0808b9242c642d82350d2b657b60108c",
+    "current": "121ac4b888fd434060d13fc886835a2fd46d684c"
+  },
+  "core_status": {
+    "baseline": "",
+    "current": ""
+  },
+  "sample_size": 100,
+  "warmup_seconds": 3.0,
+  "measurement_seconds": 5.0,
+  "rounds": 3,
+  "filter": "^mixed_write/scalar/",
+  "order": "alternate baseline/current per round",
+  "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1\n"
+}

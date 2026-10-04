@@ -1,0 +1,13 @@
+memcap: <=7851 MiB (60% of 13085 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-xsd-attributes/crates/polyxml-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.86s
+     Running tests/test_schema_attribute_entities.rs (/home/bailey/github/PolyXML/target/debug/deps/test_schema_attribute_entities-9c9a3aa83120aff2)
+
+running 4 tests
+test malformed_attributes_and_undefined_entities_are_errors_even_in_skipped_content ... ok
+test literal_attribute_whitespace_is_normalized_but_character_references_survive ... ok
+test namespace_and_qname_attributes_are_normalized_consistently ... ok
+test attribute_entities_reach_enum_facets_and_defaults_in_value_space ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

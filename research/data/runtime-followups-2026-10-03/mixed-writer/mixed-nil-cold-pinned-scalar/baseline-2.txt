@@ -1,0 +1,11 @@
+memcap: <=7754 MiB (60% of 12924 MiB available) [systemd MemoryMax, swap off]
+Benchmarking mixed_write/scalar/1000
+Benchmarking mixed_write/scalar/1000: Warming up for 3.0000 s
+Benchmarking mixed_write/scalar/1000: Collecting 100 samples in estimated 5.0029 s (42k iterations)
+Benchmarking mixed_write/scalar/1000: Analyzing
+mixed_write/scalar/1000 time:   [117.61 µs 118.46 µs 119.48 µs]
+                        thrpt:  [334.46 MiB/s 337.35 MiB/s 339.78 MiB/s]
+Found 19 outliers among 100 measurements (19.00%)
+  16 (16.00%) high mild
+  3 (3.00%) high severe
+

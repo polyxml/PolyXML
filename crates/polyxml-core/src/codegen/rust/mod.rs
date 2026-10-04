@@ -724,7 +724,7 @@ impl RustCodegen {
                 write_documentation_lines(out, "    /// ", doc);
             }
             if self.options.derive_serde {
-                let _ = writeln!(out, "    #[serde(rename = \"{}\")]", variant.value);
+                let _ = writeln!(out, "    #[serde(rename = {:?})]", variant.value);
             }
             if self.options.derive_default && idx == 0 {
                 let _ = writeln!(out, "    #[default]");
@@ -740,7 +740,7 @@ impl RustCodegen {
         out.push_str("    pub fn as_str(&self) -> &'static str {\n");
         out.push_str("        match self {\n");
         for (var_id, val) in &variant_map {
-            let _ = writeln!(out, "            Self::{} => \"{}\",", var_id, val);
+            let _ = writeln!(out, "            Self::{} => {:?},", var_id, val);
         }
         if variant_map.is_empty() {
             out.push_str("            _ => \"\",\n");
@@ -755,7 +755,7 @@ impl RustCodegen {
         out.push_str("    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {\n");
         out.push_str("        match s {\n");
         for (var_id, val) in &variant_map {
-            let _ = writeln!(out, "            \"{}\" => Ok(Self::{}),", val, var_id);
+            let _ = writeln!(out, "            {:?} => Ok(Self::{}),", val, var_id);
         }
         let _ = writeln!(
             out,
@@ -844,7 +844,7 @@ impl RustCodegen {
                 write_documentation_lines(out, "    /// ", doc);
             }
             if self.options.derive_serde && !u.is_lexical() {
-                let _ = writeln!(out, "    #[serde(rename = \"{}\")]", branch.xml_name);
+                let _ = writeln!(out, "    #[serde(rename = {:?})]", branch.xml_name);
             }
             if self.options.emit_polyxml_attrs && !u.is_lexical() {
                 let _ = writeln!(out, "    #[polyxml(element = \"{}\")]", branch.xml_name);
