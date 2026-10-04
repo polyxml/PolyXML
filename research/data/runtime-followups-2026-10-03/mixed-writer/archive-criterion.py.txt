@@ -1,0 +1,26 @@
+from pathlib import Path
+import gzip,hashlib,re,shutil,sys,tarfile
+root=Path(sys.argv[1])
+original=dict(line.split('  ',1)[::-1] for line in (root/'SHA256SUMS').read_text().splitlines())
+for dataset in sorted(root.iterdir()):
+ if not dataset.is_dir(): continue
+ directories=sorted(p for p in dataset.iterdir() if p.is_dir() and re.fullmatch(r'(baseline|current)-[0-9]+',p.name))
+ if not directories: continue
+ archive=dataset/'criterion-results.tar.gz'
+ assert not archive.exists(),archive
+ files=sorted(p for directory in directories for p in directory.rglob('*') if p.is_file())
+ expected={str(p.relative_to(dataset)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+ for path in files:
+  assert original[str(path.relative_to(root))]==expected[str(path.relative_to(dataset))],path
+ with archive.open('wb') as output,gzip.GzipFile(filename='',mode='wb',fileobj=output,mtime=0) as compressed,tarfile.open(fileobj=compressed,mode='w') as tar:
+  for path in files:
+   info=tar.gettarinfo(str(path),arcname=str(path.relative_to(dataset)))
+   info.mtime=0;info.uid=0;info.gid=0;info.uname='';info.gname=''
+   with path.open('rb') as source:tar.addfile(info,source)
+ with tarfile.open(archive,'r:gz') as tar:
+  observed={member.name:hashlib.sha256(tar.extractfile(member).read()).hexdigest() for member in tar.getmembers() if member.isfile()}
+ assert observed==expected,archive
+ (dataset/'criterion-SHA256SUMS').write_text(''.join(digest+'  '+name+'\n' for name,digest in expected.items()))
+ for directory in directories:shutil.rmtree(directory)
+ print(dataset.name,len(files))
+(root/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(root))+'\n' for p in sorted(root.rglob('*')) if p.is_file() and p!=root/'SHA256SUMS'))
