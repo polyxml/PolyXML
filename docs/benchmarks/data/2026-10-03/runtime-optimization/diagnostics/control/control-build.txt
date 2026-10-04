@@ -1,0 +1,3 @@
+memcap: <=7852 MiB (60% of 13088 MiB available) [systemd MemoryMax, swap off]
+   Compiling xml-diagnostics v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-runtime-investigation/target/control)
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.63s

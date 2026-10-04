@@ -1,0 +1,8 @@
+memcap: <=7869 MiB (60% of 13115 MiB available) [systemd MemoryMax, swap off]
+╭──────────────────────────────────────────────────────────╮
+│ PolyXML W3C XML Schema Conformance Suite                 │
+│ Compiler Binary: polyxml                                 │
+│ W3C Submodule: /home/bailey/github/polyxml-w3c-tests/w3c │
+│ Selected Suite: CType                                    │
+╰──────────────────────────────────────────────────────────╯
+Error: PolyXML binary not found at polyxml!

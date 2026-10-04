@@ -1,0 +1,103 @@
+memcap: <=7887 MiB (60% of 13146 MiB available) [systemd MemoryMax, swap off]
+Benchmarking constraint_read/enum/1000
+Benchmarking constraint_read/enum/1000: Warming up for 3.0000 s
+Benchmarking constraint_read/enum/1000: Collecting 100 samples in estimated 5.0221 s (14k iterations)
+Benchmarking constraint_read/enum/1000: Analyzing
+constraint_read/enum/1000
+                        time:   [352.07 µs 356.97 µs 363.43 µs]
+                        thrpt:  [56.116 MiB/s 57.132 MiB/s 57.928 MiB/s]
+Found 18 outliers among 100 measurements (18.00%)
+  7 (7.00%) high mild
+  11 (11.00%) high severe
+Benchmarking constraint_read/pattern/1000
+Benchmarking constraint_read/pattern/1000: Warming up for 3.0000 s
+Benchmarking constraint_read/pattern/1000: Collecting 100 samples in estimated 5.1308 s (500 iterations)
+Benchmarking constraint_read/pattern/1000: Analyzing
+constraint_read/pattern/1000
+                        time:   [10.230 ms 10.272 ms 10.323 ms]
+                        thrpt:  [1.9412 MiB/s 1.9509 MiB/s 1.9588 MiB/s]
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) high mild
+  6 (6.00%) high severe
+Benchmarking constraint_read/restricted/1000
+Benchmarking constraint_read/restricted/1000: Warming up for 3.0000 s
+Benchmarking constraint_read/restricted/1000: Collecting 100 samples in estimated 5.1707 s (500 iterations)
+Benchmarking constraint_read/restricted/1000: Analyzing
+constraint_read/restricted/1000
+                        time:   [10.251 ms 10.279 ms 10.314 ms]
+                        thrpt:  [1.9430 MiB/s 1.9495 MiB/s 1.9549 MiB/s]
+Found 15 outliers among 100 measurements (15.00%)
+  9 (9.00%) high mild
+  6 (6.00%) high severe
+Benchmarking constraint_read/list/1000
+Benchmarking constraint_read/list/1000: Warming up for 3.0000 s
+Benchmarking constraint_read/list/1000: Collecting 100 samples in estimated 5.0052 s (18k iterations)
+Benchmarking constraint_read/list/1000: Analyzing
+constraint_read/list/1000
+                        time:   [291.09 µs 298.09 µs 306.69 µs]
+                        thrpt:  [77.105 MiB/s 79.328 MiB/s 81.237 MiB/s]
+Found 13 outliers among 100 measurements (13.00%)
+  7 (7.00%) high mild
+  6 (6.00%) high severe
+Benchmarking constraint_read/content/1000
+Benchmarking constraint_read/content/1000: Warming up for 3.0000 s
+Benchmarking constraint_read/content/1000: Collecting 100 samples in estimated 5.0014 s (26k iterations)
+Benchmarking constraint_read/content/1000: Analyzing
+constraint_read/content/1000
+                        time:   [191.66 µs 192.49 µs 193.50 µs]
+                        thrpt:  [122.73 MiB/s 123.38 MiB/s 123.91 MiB/s]
+Found 10 outliers among 100 measurements (10.00%)
+  6 (6.00%) high mild
+  4 (4.00%) high severe
+
+Benchmarking constraint_write/enum/1000
+Benchmarking constraint_write/enum/1000: Warming up for 3.0000 s
+Benchmarking constraint_write/enum/1000: Collecting 100 samples in estimated 5.0057 s (72k iterations)
+Benchmarking constraint_write/enum/1000: Analyzing
+constraint_write/enum/1000
+                        time:   [68.822 µs 69.126 µs 69.603 µs]
+                        thrpt:  [293.01 MiB/s 295.03 MiB/s 296.33 MiB/s]
+Found 7 outliers among 100 measurements (7.00%)
+  3 (3.00%) high mild
+  4 (4.00%) high severe
+Benchmarking constraint_write/pattern/1000
+Benchmarking constraint_write/pattern/1000: Warming up for 3.0000 s
+Benchmarking constraint_write/pattern/1000: Collecting 100 samples in estimated 5.8066 s (600 iterations)
+Benchmarking constraint_write/pattern/1000: Analyzing
+constraint_write/pattern/1000
+                        time:   [9.7182 ms 9.7973 ms 9.9045 ms]
+                        thrpt:  [2.0233 MiB/s 2.0454 MiB/s 2.0621 MiB/s]
+Found 12 outliers among 100 measurements (12.00%)
+  7 (7.00%) high mild
+  5 (5.00%) high severe
+Benchmarking constraint_write/restricted/1000
+Benchmarking constraint_write/restricted/1000: Warming up for 3.0000 s
+Benchmarking constraint_write/restricted/1000: Collecting 100 samples in estimated 5.8097 s (600 iterations)
+Benchmarking constraint_write/restricted/1000: Analyzing
+constraint_write/restricted/1000
+                        time:   [9.5971 ms 9.6221 ms 9.6496 ms]
+                        thrpt:  [2.0767 MiB/s 2.0827 MiB/s 2.0881 MiB/s]
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) high mild
+  5 (5.00%) high severe
+Benchmarking constraint_write/list/1000
+Benchmarking constraint_write/list/1000: Warming up for 3.0000 s
+Benchmarking constraint_write/list/1000: Collecting 100 samples in estimated 5.0154 s (21k iterations)
+Benchmarking constraint_write/list/1000: Analyzing
+constraint_write/list/1000
+                        time:   [231.61 µs 232.46 µs 233.43 µs]
+                        thrpt:  [101.30 MiB/s 101.73 MiB/s 102.10 MiB/s]
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) high mild
+  3 (3.00%) high severe
+Benchmarking constraint_write/content/1000
+Benchmarking constraint_write/content/1000: Warming up for 3.0000 s
+Benchmarking constraint_write/content/1000: Collecting 100 samples in estimated 5.0009 s (102k iterations)
+Benchmarking constraint_write/content/1000: Analyzing
+constraint_write/content/1000
+                        time:   [48.406 µs 48.653 µs 48.955 µs]
+                        thrpt:  [485.12 MiB/s 488.14 MiB/s 490.62 MiB/s]
+Found 12 outliers among 100 measurements (12.00%)
+  4 (4.00%) high mild
+  8 (8.00%) high severe
+

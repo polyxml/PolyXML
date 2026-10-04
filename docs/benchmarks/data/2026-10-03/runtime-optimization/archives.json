@@ -1,0 +1,32 @@
+{
+  "prototype-confirmation.tar.gz": {
+    "sha256": "4bb5860fe8fdb7cf8f73d39462cd6c912986995aa62eac75fd124902ef4df6ef",
+    "files": 1447,
+    "bytes": 367345
+  },
+  "screening.tar.gz": {
+    "sha256": "3a096fd3b001ca36fd137c12b5a702fe74d3785bc4b07329a3ee7c5f75839743",
+    "files": 1931,
+    "bytes": 382056
+  },
+  "selected-cache-boundaries/samples.tar.gz": {
+    "sha256": "ec9209b8895f3eb29a91fd9f52c1e009b7a50b27c9cd5a7d09f6925753e14f6c",
+    "files": 384,
+    "bytes": 56431
+  },
+  "selected-constraints/samples.tar.gz": {
+    "sha256": "84e4439facba3f926d20aab1843704c20496822962f4ebd9ad84100387579f9f",
+    "files": 480,
+    "bytes": 72214
+  },
+  "selected-core/samples.tar.gz": {
+    "sha256": "c6b469263f1e7e98ebb45b86558ceba9fea3f19b855a033b52a2d8ac455e140b",
+    "files": 288,
+    "bytes": 55440
+  },
+  "selected-old-core/samples.tar.gz": {
+    "sha256": "b031a7e6c35aba2a6809723d82e19ec1373afb4d769c9eb3b60b3c33818b2a02",
+    "files": 288,
+    "bytes": 55389
+  }
+}

@@ -1,0 +1,16 @@
+memcap: <=7882 MiB (60% of 13137 MiB available) [systemd MemoryMax, swap off]
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+Parsing schema: /home/bailey/github/PolyXML/benchmarks/workloads/sensor-batch/batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+memcap: <=7879 MiB (60% of 13133 MiB available) [systemd MemoryMax, swap off]
+   Compiling xml-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/baseline-borrowed)
+    Finished `release` profile [optimized] target(s) in 0.86s
+Parsing schema: /home/bailey/github/PolyXML/benchmarks/workloads/sensor-batch/batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+memcap: <=7863 MiB (60% of 13105 MiB available) [systemd MemoryMax, swap off]
+   Compiling xml-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/baseline-owned)
+    Finished `release` profile [optimized] target(s) in 0.82s

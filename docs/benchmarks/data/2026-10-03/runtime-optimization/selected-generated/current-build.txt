@@ -1,0 +1,20 @@
+memcap: <=7839 MiB (60% of 13066 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/PolyXML/crates/polyxml-core)
+   Compiling polyxml-cli v0.34.6 (/home/bailey/github/PolyXML/crates/polyxml-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.95s
+Parsing schema: /home/bailey/github/PolyXML/benchmarks/workloads/sensor-batch/batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+memcap: <=7840 MiB (60% of 13066 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/PolyXML/crates/polyxml-core)
+   Compiling xml-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/current-borrowed)
+    Finished `release` profile [optimized] target(s) in 24.92s
+Parsing schema: /home/bailey/github/PolyXML/benchmarks/workloads/sensor-batch/batch.xsd
+  Types: 2 total (2 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+memcap: <=7818 MiB (60% of 13030 MiB available) [systemd MemoryMax, swap off]
+   Compiling polyxml v0.34.6 (/home/bailey/github/PolyXML/crates/polyxml-core)
+   Compiling xml-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/current-owned)
+    Finished `release` profile [optimized] target(s) in 24.83s

@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::io::Cursor;
 
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
@@ -189,7 +188,7 @@ impl XmlSerializer {
         enable_namespaces: Option<bool>,
         ns_map: Option<&HashMap<String, String>>,
     ) -> Result<Vec<u8>> {
-        let mut buffer = Cursor::new(Vec::with_capacity(512));
+        let mut buffer = Vec::with_capacity(512);
         let mut writer = match indent {
             Some(spaces) => Writer::new_with_indent(&mut buffer, b' ', spaces),
             None => Writer::new(&mut buffer),
@@ -210,9 +209,10 @@ impl XmlSerializer {
             schema.namespace.as_deref(),
         )?;
 
-        Ok(buffer.into_inner())
+        Ok(buffer)
     }
 
+    #[inline]
     fn format_scalar_to<'a>(
         val: &'a PolyValue,
         buf: &'a mut [u8; lexical_core::BUFFER_SIZE],
@@ -227,16 +227,31 @@ impl XmlSerializer {
                 let bytes = lexical_core::write(*f, buf);
                 std::str::from_utf8(bytes).ok().map(Cow::Borrowed)
             }
-            PolyValue::List(items) => {
-                let mut parts = Vec::with_capacity(items.len());
-                for item in items {
-                    let mut buffer = [0u8; lexical_core::BUFFER_SIZE];
-                    parts.push(Self::format_scalar_to(item, &mut buffer)?.into_owned());
-                }
-                Some(Cow::Owned(parts.join(" ")))
-            }
+            PolyValue::List(items) => Self::format_lexical_list(items).map(Cow::Owned),
             PolyValue::Bool(b) => Some(Cow::Borrowed(if *b { "true" } else { "false" })),
             _ => None,
+        }
+    }
+
+    fn format_lexical_list(items: &[PolyValue]) -> Option<String> {
+        let mut text = String::new();
+        for (index, item) in items.iter().enumerate() {
+            let mut buffer = [0u8; lexical_core::BUFFER_SIZE];
+            let part = Self::format_scalar_to(item, &mut buffer)?;
+            if index > 0 {
+                text.push(' ');
+            }
+            text.push_str(&part);
+        }
+        Some(text)
+    }
+
+    #[inline]
+    fn has_lexical_list(ty: &ValueType) -> bool {
+        match ty {
+            ValueType::Scalar(ScalarType::List(_)) => true,
+            ValueType::List(inner) => Self::has_lexical_list(inner),
+            _ => false,
         }
     }
 
@@ -258,8 +273,10 @@ impl XmlSerializer {
                 ));
             }
         } else if let (ValueType::List(inner), PolyValue::List(items)) = (ty, value) {
-            for item in items {
-                Self::validate_lexical_list_items(inner, item)?;
+            if Self::has_lexical_list(inner) {
+                for item in items {
+                    Self::validate_lexical_list_items(inner, item)?;
+                }
             }
         }
         Ok(())
@@ -333,9 +350,11 @@ impl XmlSerializer {
         };
 
         for (index, field) in schema.fields.iter().enumerate() {
-            if let Some(value) = get_field(index, &field.name) {
-                crate::schema::validate_fixed(field, value)?;
-                Self::validate_lexical_list_items(&field.val_type, value)?;
+            if field.fixed_value.is_some() || Self::has_lexical_list(&field.val_type) {
+                if let Some(value) = get_field(index, &field.name) {
+                    crate::schema::validate_fixed(field, value)?;
+                    Self::validate_lexical_list_items(&field.val_type, value)?;
+                }
             }
         }
 

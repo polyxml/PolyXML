@@ -1,0 +1,4 @@
+memcap: <=7884 MiB (60% of 13141 MiB available) [systemd MemoryMax, swap off]
+memcap: <=7858 MiB (60% of 13097 MiB available) [systemd MemoryMax, swap off]
+escaped XSD enumeration limitation: ScalarParseError { field: "value", expected: "enumeration", value: "R&D" }
+nil mixed scalar serialization limitation: SerializationError("Invalid mixed content value for text")

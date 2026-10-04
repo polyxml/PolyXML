@@ -12,6 +12,11 @@ use crate::value::PolyValue;
 
 type NamespaceScope = Arc<HashMap<String, String>>;
 
+enum ActiveScalar {
+    Field { index: usize, repeated: bool },
+    Mixed { branch: usize },
+}
+
 pub(crate) struct StackFrame {
     schema: Arc<ModelSchema>,
     values: SmallVec<[Option<PolyValue>; 8]>,
@@ -39,7 +44,7 @@ impl StackFrame {
         }
     }
 
-    fn push_mixed_item(&mut self, kind: &str, value: PolyValue) {
+    fn push_mixed_item(&mut self, kind: impl Into<String>, value: PolyValue) {
         if let Some(mixed) = &self.schema.mixed_content {
             let mut item = HashMap::new();
             item.insert("kind".into(), PolyValue::String(kind.into()));
@@ -417,8 +422,7 @@ impl XmlDeserializer {
         Self::parse_attributes(root_start, &mut root_frame)?;
         stack.push(root_frame);
 
-        let mut active_scalar_field: Option<(usize, ScalarType, bool)> = None;
-        let mut active_mixed_scalar: Option<(String, ScalarType)> = None;
+        let mut active_scalar: Option<ActiveScalar> = None;
         let mut unknown_depth: usize = 0;
         let mut any_stack: Vec<AnyElementFrame> = Vec::new();
         let mut text_buf: Vec<u8> = Vec::new();
@@ -432,14 +436,11 @@ impl XmlDeserializer {
                         unknown_depth += 1;
                         continue;
                     }
-                    if active_scalar_field.is_none()
-                        && active_mixed_scalar.is_none()
-                        && any_stack.is_empty()
-                    {
+                    if active_scalar.is_none() && any_stack.is_empty() {
                         let scope = namespace_stack.last().unwrap();
                         record_content_token(stack.last_mut().unwrap(), e, scope);
                     }
-                    if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
+                    if active_scalar.is_some() {
                         unknown_depth = 1;
                         continue;
                     }
@@ -476,24 +477,30 @@ impl XmlDeserializer {
                     {
                         let field = &current_schema.fields[field_idx];
                         match &field.val_type {
-                            ValueType::Scalar(st) => {
+                            ValueType::Scalar(_) => {
                                 if is_nil {
                                     stack.last_mut().unwrap().values[field_idx] =
                                         Some(PolyValue::Null);
                                 } else {
-                                    active_scalar_field = Some((field_idx, st.clone(), false));
+                                    active_scalar = Some(ActiveScalar::Field {
+                                        index: field_idx,
+                                        repeated: false,
+                                    });
                                     text_buf.clear();
                                 }
                             }
                             ValueType::List(inner) => match inner.as_ref() {
-                                ValueType::Scalar(st) => {
+                                ValueType::Scalar(_) => {
                                     if is_nil {
                                         stack
                                             .last_mut()
                                             .unwrap()
                                             .push_list_item(field_idx, PolyValue::Null);
                                     } else {
-                                        active_scalar_field = Some((field_idx, st.clone(), true));
+                                        active_scalar = Some(ActiveScalar::Field {
+                                            index: field_idx,
+                                            repeated: true,
+                                        });
                                         text_buf.clear();
                                     }
                                 }
@@ -535,7 +542,12 @@ impl XmlDeserializer {
                             }
                         }
                     } else if let Some(mixed) = &current_schema.mixed_content {
-                        if let Some(branch) = mixed.branch(local_name.as_ref().as_bytes()) {
+                        if let Some(branch_index) = mixed
+                            .branches
+                            .iter()
+                            .position(|branch| branch.xml_name == local_name.as_ref().as_bytes())
+                        {
+                            let branch = &mixed.branches[branch_index];
                             if is_nil {
                                 stack
                                     .last_mut()
@@ -544,9 +556,10 @@ impl XmlDeserializer {
                                 unknown_depth = 1;
                             } else {
                                 match &branch.val_type {
-                                    ValueType::Scalar(scalar) => {
-                                        active_mixed_scalar =
-                                            Some((branch.variant_name.clone(), scalar.clone()));
+                                    ValueType::Scalar(_) => {
+                                        active_scalar = Some(ActiveScalar::Mixed {
+                                            branch: branch_index,
+                                        });
                                         text_buf.clear();
                                     }
                                     ValueType::Nested(sub_schema) => {
@@ -609,10 +622,7 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::Empty(ref e)) => {
-                    if unknown_depth > 0
-                        || active_scalar_field.is_some()
-                        || active_mixed_scalar.is_some()
-                    {
+                    if unknown_depth > 0 || active_scalar.is_some() {
                         continue;
                     }
                     if any_stack.is_empty() {
@@ -789,7 +799,7 @@ impl XmlDeserializer {
                     let raw = e.as_ref();
                     let raw_bytes = raw.as_bytes();
                     if memchr::memchr(b'&', raw_bytes).is_none() {
-                        if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
+                        if active_scalar.is_some() {
                             text_buf.extend_from_slice(raw_bytes);
                         } else if let Some(frame) = stack.last_mut() {
                             if let Some(ref mut tb) = frame.frame_text_buf {
@@ -800,7 +810,7 @@ impl XmlDeserializer {
                         }
                     } else {
                         let unescaped = quick_xml::escape::unescape(raw)?;
-                        if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
+                        if active_scalar.is_some() {
                             text_buf.extend_from_slice(unescaped.as_bytes());
                         } else if let Some(frame) = stack.last_mut() {
                             if let Some(ref mut tb) = frame.frame_text_buf {
@@ -821,7 +831,7 @@ impl XmlDeserializer {
                         }
                         continue;
                     }
-                    if active_scalar_field.is_some() || active_mixed_scalar.is_some() {
+                    if active_scalar.is_some() {
                         text_buf.extend_from_slice(e.as_ref().as_bytes());
                     } else if let Some(frame) = stack.last_mut() {
                         if let Some(ref mut tb) = frame.frame_text_buf {
@@ -853,16 +863,8 @@ impl XmlDeserializer {
                         continue;
                     }
                     let frame_tb = stack.last_mut().and_then(|f| f.frame_text_buf.as_mut());
-                    if active_scalar_field.is_some()
-                        || active_mixed_scalar.is_some()
-                        || frame_tb.is_some()
-                    {
-                        append_general_ref(
-                            e,
-                            active_scalar_field.is_some() || active_mixed_scalar.is_some(),
-                            &mut text_buf,
-                            frame_tb,
-                        )?;
+                    if active_scalar.is_some() || frame_tb.is_some() {
+                        append_general_ref(e, active_scalar.is_some(), &mut text_buf, frame_tb)?;
                     } else {
                         let mut resolved = Vec::new();
                         append_general_ref(e, true, &mut resolved, None)?;
@@ -904,29 +906,57 @@ impl XmlDeserializer {
                         }
                         continue;
                     }
-                    if let Some((kind, scalar_type)) = active_mixed_scalar.take() {
-                        let parsed = ValueConverter::parse_scalar(&scalar_type, &text_buf, &kind)?;
-                        stack.last_mut().unwrap().push_mixed_item(&kind, parsed);
-                    } else if let Some((field_idx, ref scalar_type, is_list)) =
-                        active_scalar_field.take()
-                    {
-                        let field = &stack.last().unwrap().schema.fields[field_idx];
-                        let parsed_val = parse_field_scalar(scalar_type, &text_buf, field)?;
+                    if let Some(active) = active_scalar.take() {
                         let frame = stack.last_mut().unwrap();
-                        if is_list {
-                            frame.push_list_item(field_idx, parsed_val);
-                        } else {
-                            frame.values[field_idx] = Some(parsed_val);
+                        match active {
+                            ActiveScalar::Field { index, repeated } => {
+                                let field = &frame.schema.fields[index];
+                                // Schema metadata remains owned by the active frame.
+                                let scalar_type = match &field.val_type {
+                                    ValueType::Scalar(scalar) => scalar,
+                                    ValueType::List(inner) => match inner.as_ref() {
+                                        ValueType::Scalar(scalar) => scalar,
+                                        _ => unreachable!(
+                                            "active scalar list has a scalar item type"
+                                        ),
+                                    },
+                                    _ => unreachable!("active scalar field has a scalar type"),
+                                };
+                                let parsed = parse_field_scalar(scalar_type, &text_buf, field)?;
+                                if repeated {
+                                    frame.push_list_item(index, parsed);
+                                } else {
+                                    frame.values[index] = Some(parsed);
+                                }
+                            }
+                            ActiveScalar::Mixed { branch } => {
+                                let branch = &frame
+                                    .schema
+                                    .mixed_content
+                                    .as_ref()
+                                    .expect("active mixed scalar has a content model")
+                                    .branches[branch];
+                                let ValueType::Scalar(scalar) = &branch.val_type else {
+                                    unreachable!("active mixed scalar has a scalar type");
+                                };
+                                let parsed = ValueConverter::parse_scalar(
+                                    scalar,
+                                    &text_buf,
+                                    &branch.variant_name,
+                                )?;
+                                let kind = branch.variant_name.clone();
+                                frame.push_mixed_item(kind, parsed);
+                            }
                         }
                     } else if stack.len() > 1 {
-                        let finished_frame = stack.pop().unwrap();
+                        let mut finished_frame = stack.pop().unwrap();
                         let local_name = e.local_name();
-                        let mixed_kind = finished_frame.mixed_parent_kind.clone();
+                        let mixed_kind = finished_frame.mixed_parent_kind.take();
                         let instance = finished_frame.finish()?;
                         let parent = stack.last_mut().unwrap();
 
                         if let Some(kind) = mixed_kind {
-                            parent.push_mixed_item(&kind, instance);
+                            parent.push_mixed_item(kind, instance);
                             continue;
                         }
 

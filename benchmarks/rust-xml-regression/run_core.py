@@ -19,16 +19,27 @@ def main():
     parser.add_argument("--baseline", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--rounds", type=int, default=2)
+    parser.add_argument("--samples", type=int, default=100)
+    parser.add_argument("--warmup", type=float, default=3)
+    parser.add_argument("--measurement", type=float, default=5)
+    parser.add_argument("--filter", default="")
+    parser.add_argument("--harness", type=Path)
     args = parser.parse_args()
     if args.rounds < 1:
         parser.error("--rounds must be positive")
+    if args.samples < 10 or args.warmup <= 0 or args.measurement <= 0:
+        parser.error("use at least 10 samples and positive warmup/measurement times")
     root = Path(__file__).resolve().parents[2]
     output = args.output.resolve()
+    if (output / "metadata.json").exists():
+        parser.error("choose a new output directory to preserve earlier evidence")
     output.mkdir(parents=True, exist_ok=True)
     build = root / "benchmarks/rust-xml-regression/target"
     env = os.environ | {"CARGO_BUILD_JOBS": "1", "POLYXML_MEMCAP_BACKEND": "systemd"}
     # Use one harness for both revisions, with round-trip checks outside timing.
-    source = (root / "crates/polyxml-core/benches/core_benchmarks.rs").read_text()
+    source = (
+        args.harness or root / "crates/polyxml-core/benches/core_benchmarks.rs"
+    ).read_text()
     source = source.replace(
         "    (schema, xml)\n",
         '    let value = deserialize(&xml, Arc::clone(&schema)).unwrap();\n    let output = serialize("Sensor", &value, &schema, None).unwrap();\n    assert_eq!(value, deserialize(&output, Arc::clone(&schema)).unwrap());\n    (schema, xml)\n',
@@ -40,10 +51,27 @@ def main():
     (output / "harness.rs").write_text(source)
     executables = {}
     revisions = {}
+    core_status = {}
     for label, repo in [("baseline", args.baseline.resolve()), ("current", root)]:
         revisions[label] = run(
             ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True
         ).stdout.strip()
+        core_status[label] = run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "status",
+                "--porcelain",
+                "--",
+                "crates/polyxml-core",
+            ],
+            capture_output=True,
+        ).stdout
+        if core_status[label]:
+            parser.error(
+                f"commit core changes before measuring {label}: {core_status[label]}"
+            )
         crate = build / f"core-{label}"
         (crate / "benches").mkdir(parents=True, exist_ok=True)
         (crate / "benches/xml.rs").write_text(source)
@@ -83,10 +111,12 @@ def main():
         json.dumps(
             {
                 "revisions": revisions,
-                "sample_size": 100,
-                "warmup_seconds": 3,
-                "measurement_seconds": 5,
+                "core_status": core_status,
+                "sample_size": args.samples,
+                "warmup_seconds": args.warmup,
+                "measurement_seconds": args.measurement,
                 "rounds": args.rounds,
+                "filter": args.filter,
                 "order": "alternate baseline/current per round",
                 "os": platform.platform(),
                 "cpu": Path("/proc/cpuinfo")
@@ -104,6 +134,8 @@ def main():
             ["baseline", "current"] if round_index % 2 == 0 else ["current", "baseline"]
         ):
             crate, executable = executables[label]
+            # A filter must not retain results from earlier unfiltered runs.
+            shutil.rmtree(crate / "target/criterion", ignore_errors=True)
             with (output / f"{label}-{round_index}.txt").open("w") as log:
                 run(
                     [
@@ -112,11 +144,12 @@ def main():
                         "--bench",
                         "--noplot",
                         "--sample-size",
-                        "100",
+                        str(args.samples),
                         "--warm-up-time",
-                        "3",
+                        str(args.warmup),
                         "--measurement-time",
-                        "5",
+                        str(args.measurement),
+                        *([args.filter] if args.filter else []),
                     ],
                     cwd=crate,
                     env=env,

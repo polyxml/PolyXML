@@ -1,0 +1,12 @@
+memcap: <=7880 MiB (60% of 13134 MiB available) [systemd MemoryMax, swap off]
+    Checking serde_core v1.0.229
+    Checking serde v1.0.229
+    Checking fastrand v2.5.0
+    Checking phf_generator v0.14.0
+    Checking minijinja v2.24.0
+    Checking serde_json v1.0.151
+    Checking thiserror v2.0.21
+    Checking phf_codegen v0.14.0
+    Checking quick-xml v0.42.0
+    Checking polyxml v0.34.6 (/home/bailey/github/polyxml-perf-cache/crates/polyxml-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.05s

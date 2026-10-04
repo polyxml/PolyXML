@@ -1,0 +1,434 @@
+{
+  "borrowed/json_read/1": {
+    "baseline_ns": 82.0875,
+    "candidate_ns": 80.2955,
+    "delta_percent": -2.1830363940916753,
+    "speedup": 1.0223175644961424,
+    "process_values_ns": {
+      "baseline": [
+        82.388,
+        81.75,
+        81.787,
+        83.282
+      ],
+      "current": [
+        80.158,
+        80.433,
+        81.54,
+        80.054
+      ]
+    },
+    "process_deltas_percent": [
+      -2.706704859931064,
+      -1.611009174311917,
+      -0.3020039859635393,
+      -3.875987608366749
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "borrowed/json_read/1000": {
+    "baseline_ns": 60323.093,
+    "candidate_ns": 58903.306,
+    "delta_percent": -2.3536376027668227,
+    "speedup": 1.0241036895280546,
+    "process_values_ns": {
+      "baseline": [
+        60521.405,
+        60243.156,
+        60379.292,
+        60266.894
+      ],
+      "current": [
+        59175.735,
+        58710.255,
+        59093.242,
+        58713.37
+      ]
+    },
+    "process_deltas_percent": [
+      -2.2234612696119593,
+      -2.5445230658234563,
+      -2.129952103446331,
+      -2.577740276444307
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "borrowed/json_write/1": {
+    "baseline_ns": 38.256,
+    "candidate_ns": 40.339,
+    "delta_percent": 5.444897532413218,
+    "speedup": 0.9483626267383921,
+    "process_values_ns": {
+      "baseline": [
+        38.695,
+        38.357,
+        38.117,
+        38.155
+      ],
+      "current": [
+        39.522,
+        38.916,
+        41.471,
+        41.156
+      ]
+    },
+    "process_deltas_percent": [
+      2.1372270319162556,
+      1.4573611074901516,
+      8.79922344360784,
+      7.865286332066557
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "borrowed/json_write/1000": {
+    "baseline_ns": 25663.8825,
+    "candidate_ns": 25978.036,
+    "delta_percent": 1.2241074591889944,
+    "speedup": 0.9879069572464986,
+    "process_values_ns": {
+      "baseline": [
+        25663.313,
+        25940.777,
+        25664.452,
+        25449.99
+      ],
+      "current": [
+        26074.351,
+        25881.721,
+        25814.005,
+        26876.503
+      ]
+    },
+    "process_deltas_percent": [
+      1.6016560293676818,
+      -0.22765702045084435,
+      0.5827243067570764,
+      5.60516133798088
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "borrowed/xml_read/1": {
+    "baseline_ns": 300.03499999999997,
+    "candidate_ns": 287.2505,
+    "delta_percent": -4.261002882996978,
+    "speedup": 1.0445064499452568,
+    "process_values_ns": {
+      "baseline": [
+        300.385,
+        302.046,
+        299.685,
+        299.655
+      ],
+      "current": [
+        288.124,
+        286.22,
+        287.372,
+        287.129
+      ]
+    },
+    "process_deltas_percent": [
+      -4.081761739101475,
+      -5.239599266336903,
+      -4.108647413117106,
+      -4.180140494902451
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "borrowed/xml_read/1000": {
+    "baseline_ns": 194653.6715,
+    "candidate_ns": 185728.8035,
+    "delta_percent": -4.584998541884677,
+    "speedup": 1.0480532250884822,
+    "process_values_ns": {
+      "baseline": [
+        194318.975,
+        194988.368,
+        193877.262,
+        195159.815
+      ],
+      "current": [
+        186515.871,
+        185165.041,
+        185902.056,
+        185555.551
+      ]
+    },
+    "process_deltas_percent": [
+      -4.015616076608053,
+      -5.037904107182434,
+      -4.113533437458994,
+      -4.921230326027926
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "borrowed/xml_write/1": {
+    "baseline_ns": 170.83249999999998,
+    "candidate_ns": 171.236,
+    "delta_percent": 0.23619627412816424,
+    "speedup": 0.9976436029806816,
+    "process_values_ns": {
+      "baseline": [
+        170.59,
+        170.252,
+        171.463,
+        171.075
+      ],
+      "current": [
+        171.3,
+        171.172,
+        170.801,
+        172.017
+      ]
+    },
+    "process_deltas_percent": [
+      0.416202591007675,
+      0.5403754434602837,
+      -0.3860891271003086,
+      0.5506356861025852
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "borrowed/xml_write/1000": {
+    "baseline_ns": 54281.294,
+    "candidate_ns": 51676.5135,
+    "delta_percent": -4.79867060648923,
+    "speedup": 1.0504054999763093,
+    "process_values_ns": {
+      "baseline": [
+        54130.73,
+        54431.858,
+        53872.526,
+        55303.228
+      ],
+      "current": [
+        51877.138,
+        52925.848,
+        51475.889,
+        51420.229
+      ]
+    },
+    "process_deltas_percent": [
+      -4.163239623777482,
+      -2.766780439499239,
+      -4.4487184432376425,
+      -7.0212881606115385
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/json_read/1": {
+    "baseline_ns": 80.77850000000001,
+    "candidate_ns": 80.884,
+    "delta_percent": 0.13060405924842922,
+    "speedup": 0.9986956629246824,
+    "process_values_ns": {
+      "baseline": [
+        80.916,
+        80.641,
+        82.365,
+        80.553
+      ],
+      "current": [
+        81.066,
+        80.984,
+        80.116,
+        80.784
+      ]
+    },
+    "process_deltas_percent": [
+      0.18537742844431104,
+      0.4253419476444753,
+      -2.730528744005334,
+      0.28676771814830637
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/json_read/1000": {
+    "baseline_ns": 59245.266,
+    "candidate_ns": 59622.6645,
+    "delta_percent": 0.6370103899947077,
+    "speedup": 0.9936702174724178,
+    "process_values_ns": {
+      "baseline": [
+        59379.771,
+        59110.761,
+        58822.587,
+        60303.164
+      ],
+      "current": [
+        59710.053,
+        60442.482,
+        59433.747,
+        59535.276
+      ]
+    },
+    "process_deltas_percent": [
+      0.5562197267483526,
+      2.2529248100866095,
+      1.0389886456370956,
+      -1.2733792873620975
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/json_write/1": {
+    "baseline_ns": 36.562,
+    "candidate_ns": 36.709500000000006,
+    "delta_percent": 0.40342432033260156,
+    "speedup": 0.9959819665209276,
+    "process_values_ns": {
+      "baseline": [
+        37.024,
+        37.253,
+        36.093,
+        36.1
+      ],
+      "current": [
+        36.929,
+        36.37,
+        36.548,
+        36.871
+      ]
+    },
+    "process_deltas_percent": [
+      -0.2565903197925601,
+      -2.370278903712464,
+      1.2606322555620109,
+      2.1357340720221663
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/json_write/1000": {
+    "baseline_ns": 24243.841500000002,
+    "candidate_ns": 24100.321,
+    "delta_percent": -0.5919874538034886,
+    "speedup": 1.005955128149538,
+    "process_values_ns": {
+      "baseline": [
+        24357.375,
+        24288.611,
+        23934.693,
+        24199.072
+      ],
+      "current": [
+        24115.481,
+        24326.595,
+        24085.161,
+        23909.484
+      ]
+    },
+    "process_deltas_percent": [
+      -0.9931037314160451,
+      0.15638605270593686,
+      0.6286606642500026,
+      -1.1966905177190235
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/xml_read/1": {
+    "baseline_ns": 313.3,
+    "candidate_ns": 314.505,
+    "delta_percent": 0.38461538461538325,
+    "speedup": 0.996168582375479,
+    "process_values_ns": {
+      "baseline": [
+        312.604,
+        313.057,
+        314.716,
+        313.543
+      ],
+      "current": [
+        312.52,
+        314.868,
+        320.649,
+        314.142
+      ]
+    },
+    "process_deltas_percent": [
+      -0.0268710573121278,
+      0.5784889013821681,
+      1.8851917284154585,
+      0.1910423769626357
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/xml_read/1000": {
+    "baseline_ns": 234470.7775,
+    "candidate_ns": 233462.641,
+    "delta_percent": -0.4299625355232095,
+    "speedup": 1.0043181919628845,
+    "process_values_ns": {
+      "baseline": [
+        234370.285,
+        234375.853,
+        234565.702,
+        238183.975
+      ],
+      "current": [
+        233177.855,
+        232705.448,
+        233747.427,
+        235349.094
+      ]
+    },
+    "process_deltas_percent": [
+      -0.5087803686375958,
+      -0.7127035394725589,
+      -0.34884682330923455,
+      -1.190206436012331
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/xml_write/1": {
+    "baseline_ns": 174.954,
+    "candidate_ns": 178.707,
+    "delta_percent": 2.1451352927055023,
+    "speedup": 0.9789991438499892,
+    "process_values_ns": {
+      "baseline": [
+        175.216,
+        174.784,
+        173.729,
+        175.124
+      ],
+      "current": [
+        179.891,
+        177.304,
+        178.069,
+        179.345
+      ]
+    },
+    "process_deltas_percent": [
+      2.6681353301068356,
+      1.4417795679238399,
+      2.49814366052874,
+      2.4102921358580165
+    ],
+    "statistic": "median across process sample medians"
+  },
+  "owned/xml_write/1000": {
+    "baseline_ns": 80084.0135,
+    "candidate_ns": 80644.9295,
+    "delta_percent": 0.7004094518814341,
+    "speedup": 0.9930446216088514,
+    "process_values_ns": {
+      "baseline": [
+        81013.157,
+        80084.668,
+        80083.359,
+        80079.414
+      ],
+      "current": [
+        80564.444,
+        80725.415,
+        80871.235,
+        80231.527
+      ]
+    },
+    "process_deltas_percent": [
+      -0.5538766993119393,
+      0.8000869779468678,
+      0.9838198719911428,
+      0.18995268871473403
+    ],
+    "statistic": "median across process sample medians"
+  }
+}

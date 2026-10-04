@@ -1,0 +1,83 @@
+memcap: <=7885 MiB (60% of 13141 MiB available) [systemd MemoryMax, swap off]
+Benchmarking cache_read/active_patterns/1
+Benchmarking cache_read/active_patterns/1: Warming up for 3.0000 s
+Benchmarking cache_read/active_patterns/1: Collecting 100 samples in estimated 5.0001 s (2.2M iterations)
+Benchmarking cache_read/active_patterns/1: Analyzing
+cache_read/active_patterns/1
+                        time:   [2.3418 µs 2.3702 µs 2.4058 µs]
+                        thrpt:  [78.092 MiB/s 79.264 MiB/s 80.226 MiB/s]
+Found 13 outliers among 100 measurements (13.00%)
+  4 (4.00%) high mild
+  9 (9.00%) high severe
+Benchmarking cache_read/active_patterns/16
+Benchmarking cache_read/active_patterns/16: Warming up for 3.0000 s
+Benchmarking cache_read/active_patterns/16: Collecting 100 samples in estimated 5.0030 s (145k iterations)
+Benchmarking cache_read/active_patterns/16: Analyzing
+cache_read/active_patterns/16
+                        time:   [34.369 µs 34.525 µs 34.749 µs]
+                        thrpt:  [85.106 MiB/s 85.657 MiB/s 86.048 MiB/s]
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+Benchmarking cache_read/active_patterns/17
+Benchmarking cache_read/active_patterns/17: Warming up for 3.0000 s
+Benchmarking cache_read/active_patterns/17: Collecting 100 samples in estimated 5.0029 s (24k iterations)
+Benchmarking cache_read/active_patterns/17: Analyzing
+cache_read/active_patterns/17
+                        time:   [205.36 µs 206.63 µs 208.05 µs]
+                        thrpt:  [15.168 MiB/s 15.272 MiB/s 15.366 MiB/s]
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
+Benchmarking cache_read/active_patterns/64
+Benchmarking cache_read/active_patterns/64: Warming up for 3.0000 s
+Benchmarking cache_read/active_patterns/64: Collecting 100 samples in estimated 5.2273 s (1000 iterations)
+Benchmarking cache_read/active_patterns/64: Analyzing
+cache_read/active_patterns/64
+                        time:   [5.2373 ms 5.2702 ms 5.3076 ms]
+                        thrpt:  [2.3511 MiB/s 2.3678 MiB/s 2.3827 MiB/s]
+Found 10 outliers among 100 measurements (10.00%)
+  6 (6.00%) high mild
+  4 (4.00%) high severe
+
+Benchmarking cache_write/active_patterns/1
+Benchmarking cache_write/active_patterns/1: Warming up for 3.0000 s
+Benchmarking cache_write/active_patterns/1: Collecting 100 samples in estimated 5.0000 s (6.1M iterations)
+Benchmarking cache_write/active_patterns/1: Analyzing
+cache_write/active_patterns/1
+                        time:   [808.79 ns 812.81 ns 817.20 ns]
+                        thrpt:  [229.90 MiB/s 231.14 MiB/s 232.29 MiB/s]
+Found 5 outliers among 100 measurements (5.00%)
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+Benchmarking cache_write/active_patterns/16
+Benchmarking cache_write/active_patterns/16: Warming up for 3.0000 s
+Benchmarking cache_write/active_patterns/16: Collecting 100 samples in estimated 5.0010 s (392k iterations)
+Benchmarking cache_write/active_patterns/16: Analyzing
+cache_write/active_patterns/16
+                        time:   [12.726 µs 12.870 µs 13.069 µs]
+                        thrpt:  [226.28 MiB/s 229.79 MiB/s 232.38 MiB/s]
+Found 12 outliers among 100 measurements (12.00%)
+  4 (4.00%) high mild
+  8 (8.00%) high severe
+Benchmarking cache_write/active_patterns/17
+Benchmarking cache_write/active_patterns/17: Warming up for 3.0000 s
+Benchmarking cache_write/active_patterns/17: Collecting 100 samples in estimated 5.0014 s (144k iterations)
+Benchmarking cache_write/active_patterns/17: Analyzing
+cache_write/active_patterns/17
+                        time:   [34.903 µs 35.454 µs 36.130 µs]
+                        thrpt:  [87.343 MiB/s 89.007 MiB/s 90.412 MiB/s]
+Found 10 outliers among 100 measurements (10.00%)
+  1 (1.00%) high mild
+  9 (9.00%) high severe
+Benchmarking cache_write/active_patterns/64
+Benchmarking cache_write/active_patterns/64: Warming up for 3.0000 s
+Benchmarking cache_write/active_patterns/64: Collecting 100 samples in estimated 5.0297 s (7300 iterations)
+Benchmarking cache_write/active_patterns/64: Analyzing
+cache_write/active_patterns/64
+                        time:   [684.12 µs 689.33 µs 695.60 µs]
+                        thrpt:  [17.940 MiB/s 18.103 MiB/s 18.241 MiB/s]
+Found 15 outliers among 100 measurements (15.00%)
+  5 (5.00%) high mild
+  10 (10.00%) high severe
+

@@ -1,0 +1,12 @@
+==341931== Callgrind, a call-graph generating cache profiler
+==341931== Copyright (C) 2002-2017, and GNU GPL'd, by Josef Weidendorfer et al.
+==341931== Using Valgrind-3.26.0 and LibVEX; rerun with -h for copyright info
+==341931== Command: benchmarks/rust-runtime-investigation/target/old/target/release/xml-diagnostics write 1000 25 instructions
+==341931== Parent PID: 341905
+==341931== 
+==341931== For interactive control, run 'callgrind_control -h'.
+==341931== 
+==341931== Events    : Ir
+==341931== Collected : 80501030
+==341931== 
+==341931== I   refs:      80,501,030

@@ -1,0 +1,12 @@
+memcap: <=7726 MiB (60% of 12877 MiB available) [systemd MemoryMax, swap off]
+operation=read,count=0,iterations=1,allocations=12,reallocations=5,requested_bytes=10325,input_bytes=94,output_bytes=94,field_schema_bytes=96,scalar_type_bytes=1,value_type_bytes=16,poly_value_bytes=56
+memcap: <=7738 MiB (60% of 12897 MiB available) [systemd MemoryMax, swap off]
+operation=write,count=0,iterations=1,allocations=2,reallocations=2,requested_bytes=554,input_bytes=94,output_bytes=94,field_schema_bytes=96,scalar_type_bytes=1,value_type_bytes=16,poly_value_bytes=56
+memcap: <=7738 MiB (60% of 12897 MiB available) [systemd MemoryMax, swap off]
+operation=read,count=1000,iterations=1,allocations=5010,reallocations=1014,requested_bytes=716634,input_bytes=63911,output_bytes=63411,field_schema_bytes=96,scalar_type_bytes=1,value_type_bytes=16,poly_value_bytes=56
+memcap: <=7738 MiB (60% of 12897 MiB available) [systemd MemoryMax, swap off]
+operation=write,count=1000,iterations=1,allocations=1001,reallocations=2007,requested_bytes=158560,input_bytes=63911,output_bytes=63411,field_schema_bytes=96,scalar_type_bytes=1,value_type_bytes=16,poly_value_bytes=56
+memcap: <=7738 MiB (60% of 12897 MiB available) [systemd MemoryMax, swap off]
+operation=read,count=10000,iterations=1,allocations=50010,reallocations=10019,requested_bytes=7773970,input_bytes=668911,output_bytes=663911,field_schema_bytes=96,scalar_type_bytes=1,value_type_bytes=16,poly_value_bytes=56
+memcap: <=7735 MiB (60% of 12892 MiB available) [systemd MemoryMax, swap off]
+operation=write,count=10000,iterations=1,allocations=10001,reallocations=20011,requested_bytes=2376640,input_bytes=668911,output_bytes=663911,field_schema_bytes=96,scalar_type_bytes=1,value_type_bytes=16,poly_value_bytes=56

@@ -38,6 +38,9 @@ lists every entry point.
 
 ## Published studies
 
+- [October 2026 dynamic Rust XML optimization](rust-runtime-optimization-2026-10.md):
+  branch experiments, allocation diagnostics and same-host confirmation.
+
 - [October 2026 Rust XML/Serde regression check](rust-xml-serde-regression-2026-10.md):
   same-host generated-model and dynamic-core comparisons with retained samples.
 

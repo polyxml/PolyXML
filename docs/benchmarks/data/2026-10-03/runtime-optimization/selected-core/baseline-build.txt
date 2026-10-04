@@ -1,0 +1,3 @@
+memcap: <=7606 MiB (60% of 12678 MiB available) [systemd MemoryMax, swap off]
+   Compiling core-regression v0.0.0 (/home/bailey/github/PolyXML/benchmarks/rust-xml-regression/target/core-baseline)
+    Finished `bench` profile [optimized] target(s) in 2.58s
