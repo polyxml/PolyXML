@@ -54,7 +54,7 @@ optional and enabled with `--feature validation`.
 ## Spring Boot 4 and Jackson 3
 
 Use `--backend jackson3` for Spring Boot 4. The `jackson`, `spring`, and
-`spring-boot` backends retain Jackson 2 behavior for existing applications;
+`spring-boot` backends retain Jackson 2 behavior for Spring Boot 3 applications;
 `jackson-3`, `jackson_3`, and `spring-boot-4` select Jackson 3.
 
 ```bash
@@ -128,6 +128,8 @@ items, absent optional values, invalid requests, and XSD validation of returned 
 # Set JAVA_HOME and PATH to a Java 25 JDK first.
 ./scripts/verify_spring_boot.sh
 ```
+
+A dedicated CI job runs this integration fixture on Java 25 with Spring Boot 4.1.1.
 
 See `tests/java-spring/` for the fixture. The test requires Maven and dependency
 downloads on its first run, so it is separate from the fast Rust test suites
