@@ -72,3 +72,17 @@ description: Use when running, adding, or publishing PolyXML language and runtim
     Its allocation and Callgrind consumers are diagnostic only. Confirm wins
     with the uninstrumented Criterion runner, and anchor write-only filters as
     `^serialization/` because `serialization` also matches deserialization.
+
+12. For matched serializer comparisons, use `benchmarks/serializer-comparison/`.
+    Measure uninstrumented builds; the Rust allocation feature is a separate
+    diagnostic binary, and Python timings must not run under `tracemalloc`.
+    Typed stdlib/DOM adapters must include model construction and integer
+    conversion. Check every decoded field, escaped text, declared XML root,
+    and outputs with an independent XML implementation before publishing.
+    Generated Rust JSON and handwritten Serde JSON use the same `serde_json`
+    engine; Go/C# generated and handwritten models use the same native XML
+    serializer. Label these model comparisons, not separate engine wins.
+    Keep dynamic value graphs and Pydantic validation distinct from dataclass
+    binding. Report medians of process medians and their range; raw samples
+    within one process are correlated. Current and historical host/revision
+    results belong in separate tables.
