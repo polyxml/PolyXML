@@ -29,24 +29,33 @@ public static class Program
         using (var check = new StringReader(xml))
         {
             var decoded = serializer.Deserialize(check) as T ?? throw new Exception("Round trip failed");
-            int mid = count / 2;
-            if (decoded is Batch<Sensor> generated && (
-                generated.Sensors.Length != count ||
-                generated.Sensors[0].Id != "sensor-0" || generated.Sensors[0].Value != 0 ||
-                generated.Sensors[mid].Id != $"sensor-{mid}" || generated.Sensors[mid].Value != mid ||
-                generated.Sensors[^1].Id != $"sensor-{count-1}" || generated.Sensors[^1].Value != count-1))
-                throw new Exception("Generated batch mismatch");
-            if (decoded is Batch<BaselineSensor> baseline && (
-                baseline.Sensors.Length != count ||
-                baseline.Sensors[0].Id != "sensor-0" || baseline.Sensors[0].Value != 0 ||
-                baseline.Sensors[mid].Id != $"sensor-{mid}" || baseline.Sensors[mid].Value != mid ||
-                baseline.Sensors[^1].Id != $"sensor-{count-1}" || baseline.Sensors[^1].Value != count-1))
-                throw new Exception("Baseline batch mismatch");
+            var fields = decoded switch {
+                Batch<Sensor> generated => generated.Sensors.Select(s => (s.Id, s.Value)),
+                Batch<BaselineSensor> baseline => baseline.Sensors.Select(s => (s.Id, s.Value)),
+                _ => throw new Exception("Unknown model")
+            };
+            int index = 0;
+            foreach (var (id, number) in fields) {
+                if (id != $"sensor-{index}" || number != index) throw new Exception($"Field mismatch at {index}");
+                index++;
+            }
+            if (index != count) throw new Exception("Sensor count mismatch");
             using var verify = new StringWriter();
             serializer.Serialize(verify, decoded);
             if (verify.ToString() != initial.ToString()) throw new Exception("Round trip mismatch");
         }
-        for (var i = 0; i < 100; i++) { using var reader = new StringReader(xml); _ = serializer.Deserialize(reader); using var writer = new StringWriter(); serializer.Serialize(writer, value); }
+        var warmup = Stopwatch.StartNew();
+        int warmed = 0;
+        int warmupMs = int.TryParse(Environment.GetEnvironmentVariable("BENCH_WARMUP_MS"), out var ms) ? ms : 2000;
+        while (warmed < 500 || warmup.ElapsedMilliseconds < warmupMs) {
+            using var reader = new StringReader(xml);
+            GC.KeepAlive(serializer.Deserialize(reader));
+            using var writer = new StringWriter();
+            serializer.Serialize(writer, value);
+            GC.KeepAlive(writer.ToString());
+            warmed++;
+        }
+        warmup.Stop();
         foreach (var operation in new[] { "read", "write" })
         {
             GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
@@ -54,11 +63,11 @@ public static class Program
             var timer = Stopwatch.StartNew();
             for (var i = 0; i < Iterations; i++)
             {
-                if (operation == "read") { using var reader = new StringReader(xml); _ = serializer.Deserialize(reader); }
-                else { using var writer = new StringWriter(); serializer.Serialize(writer, value); }
+                if (operation == "read") { using var reader = new StringReader(xml); GC.KeepAlive(serializer.Deserialize(reader)); }
+                else { using var writer = new StringWriter(); serializer.Serialize(writer, value); GC.KeepAlive(writer.ToString()); }
             }
             timer.Stop();
-            Console.WriteLine($"{name},size={count},{operation},ns/op={timer.Elapsed.TotalNanoseconds / Iterations:F0},B/op={(GC.GetAllocatedBytesForCurrentThread()-bytes)/Iterations},xml_bytes={System.Text.Encoding.UTF8.GetByteCount(xml)}");
+            Console.WriteLine($"{name},size={count},{operation},ns/op={timer.Elapsed.TotalNanoseconds / Iterations:F0},B/op={(GC.GetAllocatedBytesForCurrentThread()-bytes)/Iterations},xml_bytes={System.Text.Encoding.UTF8.GetByteCount(xml)},output_chars={initial.ToString().Length},warmup_iterations={warmed},warmup_ms={warmup.ElapsedMilliseconds}");
         }
     }
 
@@ -67,8 +76,10 @@ public static class Program
         Console.WriteLine($"dotnet={Environment.Version},os={System.Runtime.InteropServices.RuntimeInformation.OSDescription},cpu={Environment.ProcessorCount},iterations={Iterations}");
         foreach (var count in new[] { 1, 1000 })
         {
-            Measure("generated", count, n => new Batch<Sensor> { Sensors = Enumerable.Range(0, n).Select(i => new Sensor { Id = $"sensor-{i}", Value = i }).ToArray() });
-            Measure("baseline", count, n => new Batch<BaselineSensor> { Sensors = Enumerable.Range(0, n).Select(i => new BaselineSensor { Id = $"sensor-{i}", Value = i }).ToArray() });
+            Action generated = () => Measure("generated", count, n => new Batch<Sensor> { Sensors = Enumerable.Range(0, n).Select(i => new Sensor { Id = $"sensor-{i}", Value = i }).ToArray() });
+            Action baseline = () => Measure("baseline", count, n => new Batch<BaselineSensor> { Sensors = Enumerable.Range(0, n).Select(i => new BaselineSensor { Id = $"sensor-{i}", Value = i }).ToArray() });
+            if (Environment.GetEnvironmentVariable("BENCH_BASELINE_FIRST") == "1") { baseline(); generated(); }
+            else { generated(); baseline(); }
         }
     }
 }

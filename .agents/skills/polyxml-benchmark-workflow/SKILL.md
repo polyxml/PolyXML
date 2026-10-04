@@ -86,3 +86,10 @@ description: Use when running, adding, or publishing PolyXML language and runtim
     binding. Report medians of process medians and their range; raw samples
     within one process are correlated. Current and historical host/revision
     results belong in separate tables.
+
+13. C# `XmlSerializer` timings require enough warmup for tiered compilation:
+    at least 500 read/write pairs and two seconds per model, plus alternating
+    model order in fresh processes. Include `StringWriter.ToString()` in
+    timed writes when the promised result is a string. Record the actual
+    runtime (a net8.0 target rolled forward to .NET 10 measures .NET 10).
+    Go full-field assertions belong in preflight, outside measured reads.

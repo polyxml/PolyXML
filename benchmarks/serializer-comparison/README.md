@@ -68,3 +68,19 @@ large-schema benchmark, streaming-memory test or universal XML ranking. Java,
 Go and C# have dedicated harnesses; the comparison page labels older results
 separately until refreshed. C++ and JS need matched-return-value comparisons
 before they can join a typed serializer ranking.
+
+## Native models and Java
+
+After the Rust/Python suite finishes, refresh the other matched comparisons:
+
+```bash
+python3 benchmarks/serializer-comparison/run_models.py \
+  --maven /path/to/apache-maven/bin/mvn \
+  --output benchmarks/serializer-comparison/target/model-results
+```
+
+Requires Go, the .NET SDK/runtime, Maven and JDK 22+. Go/C# use five fresh
+processes with model order alternating. Java uses two JMH forks per case,
+three 2-second warmups and five 2-second measurements with GC profiling.
+It returns complete equivalent POJO/JAXB graphs; Panama is excluded. Its
+80-field synthetic projections differ from the sensor batch.
