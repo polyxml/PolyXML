@@ -67,3 +67,7 @@ size cutoff, repeated first-branch hits were 11–20% slower with a hash table.
 A bounded, evenly spaced sample can select linear lookup when the observed
 branch-search work is low. Treat sampling as a performance heuristic only;
 normal writer validation must still examine every item and preserve errors.
+
+Offset samples within their bins and include a power-of-two item count: a
+strictly evenly spaced sample can repeatedly hit the first tag when the choice
+cycle divides its stride, overlooking a distributed payload's lookup work.

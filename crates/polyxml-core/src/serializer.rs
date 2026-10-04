@@ -716,7 +716,10 @@ impl XmlSerializer {
         let mut tagged = 0;
         let mut comparisons = 0;
         for sample in 0..16 {
-            let Some(kind) = items[sample * stride]
+            // Offset within each bin to avoid sampling the same tag when a
+            // repeated choice cycle divides the stride exactly.
+            let offset = (sample * 17 + 7) % stride;
+            let Some(kind) = items[sample * stride + offset]
                 .get("kind")
                 .and_then(PolyValue::as_str)
             else {
