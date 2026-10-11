@@ -1,0 +1,127 @@
+memcap: <=7735 MiB (60% of 12892 MiB available) [systemd MemoryMax, swap off]
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling syn v3.0.5
+   Compiling serde_core v1.0.229
+   Compiling syn v2.0.119
+   Compiling serde v1.0.229
+   Compiling memchr v2.8.3
+   Compiling siphasher v1.0.3
+   Compiling serde_derive v1.0.229
+   Compiling zerocopy v0.8.57
+   Compiling libc v0.2.189
+   Compiling zmij v1.0.23
+   Compiling cfg-if v1.0.4
+   Compiling lexical-util v1.0.7
+   Compiling zerocopy-derive v0.8.57
+   Compiling find-msvc-tools v0.1.12
+   Compiling shlex v2.0.1
+   Compiling serde_json v1.0.151
+   Compiling cc v1.4.5
+   Compiling phf_shared v0.14.0
+   Compiling aho-corasick v1.1.5
+   Compiling autocfg v1.5.1
+   Compiling itoa v1.0.18
+   Compiling fastrand v2.5.0
+   Compiling regex-syntax v0.8.11
+   Compiling regex-automata v0.4.18
+   Compiling num-traits v0.2.19
+   Compiling half v2.7.1
+   Compiling alloca v0.4.0
+   Compiling lexical-write-integer v1.0.6
+   Compiling lexical-parse-integer v1.0.6
+   Compiling getrandom v0.4.3
+   Compiling ciborium-io v0.2.2
+   Compiling clap_lex v1.1.0
+   Compiling anstyle v1.0.14
+   Compiling thiserror v2.0.21
+   Compiling rustix v1.1.5
+   Compiling either v1.18.0
+   Compiling itertools v0.13.0
+   Compiling phf_generator v0.14.0
+   Compiling clap_builder v4.6.7
+   Compiling ciborium-ll v0.2.2
+   Compiling lexical-parse-float v1.0.6
+   Compiling lexical-write-float v1.0.6
+   Compiling regex v1.13.1
+   Compiling thiserror-impl v2.0.21
+   Compiling same-file v1.0.6
+   Compiling cast v0.3.0
+   Compiling memo-map v0.3.4
+   Compiling bitflags v2.13.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling minijinja v2.24.0
+   Compiling criterion-plot v0.8.2
+   Compiling walkdir v2.5.0
+   Compiling phf_codegen v0.14.0
+   Compiling lexical-core v1.0.6
+   Compiling ciborium v0.2.2
+   Compiling clap v4.6.7
+   Compiling phf_macros v0.14.0
+   Compiling tinytemplate v1.2.1
+   Compiling page_size v0.6.0
+   Compiling quick-xml v0.42.0
+   Compiling diff v0.1.13
+   Compiling anes v0.1.6
+   Compiling smallvec v1.16.2
+   Compiling yansi v1.0.1
+   Compiling once_cell v1.21.4
+   Compiling oorandom v11.1.5
+   Compiling heck v0.5.0
+   Compiling polyxml v0.34.6 (/home/bailey/github/polyxml-compact-frames/crates/polyxml-core)
+   Compiling criterion v0.8.2
+   Compiling tempfile v3.27.0
+   Compiling pretty_assertions v1.4.1
+   Compiling phf v0.14.0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 39.97s
+     Running tests/test_runtime_fast_paths.rs (/home/bailey/github/PolyXML/target/followup-compact-verification/debug/deps/test_runtime_fast_paths-cb1357dd8af777c0)
+
+running 7 tests
+test repeated_lexical_lists_keep_whitespace_validation ... ok
+test repeated_nested_records_validate_their_own_lexical_lists ... ok
+test lexical_list_formatting_preserves_escaping_empty_lists_and_long_numbers ... ok
+test indexed_scalar_state_preserves_enum_pattern_and_split_text ... ok
+test cached_patterns_keep_raw_restriction_and_trimmed_pattern_semantics ... ok
+test nested_mixed_frames_resolve_kind_from_their_parent_schema ... ok
+test unified_scalar_state_keeps_mixed_branch_order_nil_and_nested_frames ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_security.rs (/home/bailey/github/PolyXML/target/followup-compact-verification/debug/deps/test_security-e324fcc17a7a8524)
+
+running 6 tests
+test test_cdata_section_handling ... ok
+test test_numeric_character_references ... ok
+test test_xml_entity_roundtrip_escaping ... ok
+test test_malformed_unclosed_cdata_rejection ... ok
+test unsupported_general_entities_are_rejected ... ok
+test test_max_depth_recursion_limit ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_value_constraints.rs (/home/bailey/github/PolyXML/target/followup-compact-verification/debug/deps/test_value_constraints-22fd91427282898a)
+
+running 2 tests
+test fixed_constraints_cover_input_and_output_in_value_space ... ok
+test repeated_particle_cardinality_belongs_to_the_group ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test_xsi_type.rs (/home/bailey/github/PolyXML/target/followup-compact-verification/debug/deps/test_xsi_type-c45053350e445953)
+
+running 11 tests
+test abstract_type_without_derivations_errors ... ok
+test plain_type_attribute_is_not_mistaken_for_dispatch ... ok
+test nil_abstract_complex_type_skips_concrete_dispatch ... ok
+test abstract_type_requires_concrete_selector ... ok
+test iterparse_dispatches_each_streamed_item ... ok
+test root_xsi_type_dispatch_including_empty_element ... ok
+test variant_serialization_requires_namespaces ... ok
+test nested_xsi_type_dispatch_and_round_trip ... ok
+test unknown_xsi_type_on_abstract_type_errors ... ok
+test from_ir_flattens_base_fields_and_registers_variants ... ok
+test xsi_type_resolves_namespace_inherited_from_parent ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

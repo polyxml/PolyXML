@@ -145,3 +145,11 @@ This avoids the observed repeated-first-tag regression and skips a table for
 text-only content. It is a heuristic, so retain concentrated/distributed cases
 and the actual sampled payload along with timing evidence. All items still pass
 through the normal writer validation.
+
+## Variants and xsi:type
+
+`variants.rs` compares 1,000 ordinary nested items with 1,000 items selected by
+namespaced `xsi:type`. It verifies every scalar payload and the concrete schema,
+then checks the XML round trip before measuring. Use the alternate `--harness`
+argument to check both empty-registry and populated-dispatch paths when changing
+registry synchronization.

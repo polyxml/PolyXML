@@ -1,0 +1,90 @@
+{
+  "attribute-fast-final-core.tar.gz": {
+    "sha256": "52cc05df84a6233d23cfbda8d8fc1c353b7ac7c0670685e9d8507b776ec6656d",
+    "bytes": 75015
+  },
+  "attribute-fast-focused-tests.txt": {
+    "sha256": "1d4083383238aad7c17e4b18878d25eeb3355dcb0b9225cd8dc0bb86df5495e1",
+    "bytes": 3498
+  },
+  "attribute-fast-screen.tar.gz": {
+    "sha256": "d8ed59800765f5889de5fe94a4606802c3084b946bd43f4ed9cc5620663ed00b",
+    "bytes": 28194
+  },
+  "attribute-fast.patch": {
+    "sha256": "6efc4d7824c9d5632393592e979035083781b129f29b684c20b674446aadc2c6",
+    "bytes": 1436
+  },
+  "borrow-schema-screen.tar.gz": {
+    "sha256": "9e99be1bea3b5602be4920c53c9b517d8c6bb161afae51a8176bc3eb04affda6",
+    "bytes": 28085
+  },
+  "borrow-schema-tests.txt": {
+    "sha256": "68e90c9af143b078ee4ea5613a369ed72980f7d3e1004dcbf968738267e073d9",
+    "bytes": 3522
+  },
+  "borrow-schema.patch": {
+    "sha256": "f1ed9c87133c6da1a55a1d069d8213047c23c8ac3af0f90ba8510eec4a9bf6eb",
+    "bytes": 3411
+  },
+  "compact-frames-screen.tar.gz": {
+    "sha256": "c8fc1e0d2f409d969bd0052f4a143d972369c08ade66a2ced81b474a623859ac",
+    "bytes": 28131
+  },
+  "compact-frames-tests.txt": {
+    "sha256": "7d10e91036fe40e63bd43c83b0450611bd9ee8216bf14cda6f488c9aafa404a7",
+    "bytes": 5141
+  },
+  "compact-frames.patch": {
+    "sha256": "a1517c48c784c62cc4c9326bb4e2869b4ad461c9264e5c0c375870d860fffa4d",
+    "bytes": 4820
+  },
+  "isolated-mixed-writer-tests.txt": {
+    "sha256": "09f54b5a5d6dc3c5187dbe8aca8372cbd8917ab9f24dd1839e990be0602f8382",
+    "bytes": 4069
+  },
+  "quality-gate-missing-tsc.txt": {
+    "sha256": "94ec8f6088a9f4b9321dee4d8a3498eec4e52be0bdbaab8b7d080c83d02a931f",
+    "bytes": 10510
+  },
+  "quality-gate.txt": {
+    "sha256": "d4aa026ec0307f81a049e2c82ade47cc6014e2f0ed54de2016185a6eab7bc618",
+    "bytes": 35973
+  },
+  "read-fixed-guard.patch": {
+    "sha256": "aef25aeb15c598d76da91aefa4405c1ae36c6390e7ec1bca4000818d9ba00c9d",
+    "bytes": 701
+  },
+  "read-fixed-guard.tar.gz": {
+    "sha256": "aef1b2005dd39b1b39b6134ea4ce866f6f45437f93ffc488b39443f3b5951e42",
+    "bytes": 28231
+  },
+  "rejected-shared-workspace-test-preflight.txt": {
+    "sha256": "a76e000ad3d29edcef0acbf6f4a3f626859df52c9a9ba36f10f45416d758c0ae",
+    "bytes": 1632
+  },
+  "variant-registry-all-empty-screen.tar.gz": {
+    "sha256": "bdc64991185aede07e5c420fe627d4d57e3a8ede2ee0d9603929ce3de13e64dc",
+    "bytes": 44452
+  },
+  "variant-registry-diagnostics.tar.gz": {
+    "sha256": "57d43a66f55eef5fb613c36254c3cdc2bb6ee13dc2b51ff6b7334c345e86978b",
+    "bytes": 27716
+  },
+  "variant-registry-final-core.tar.gz": {
+    "sha256": "50c8aaf98b60dd2894ec41f77a8e6f53fabfd35e24b21a56eb74a346da827713",
+    "bytes": 74906
+  },
+  "variant-registry-final-dispatch.tar.gz": {
+    "sha256": "b726f55cabb2400d42c45bdc7d1f740f637c5ff286f5a6f63ea17c1135807d3d",
+    "bytes": 46905
+  },
+  "variant-registry-screen.tar.gz": {
+    "sha256": "6cc4d4cf265fc32fa8d60e263e5993360546daee19e3c965499b2c0174d1faf7",
+    "bytes": 44454
+  },
+  "variant-registry.patch": {
+    "sha256": "46653b2008d1cb10d5791d151e60688ed2ee90fe05d2ff2bfd8a41cfb8e55d45",
+    "bytes": 7076
+  }
+}
