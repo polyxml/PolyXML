@@ -15,3 +15,11 @@ native PolyXML codec.
 Use `BENCH_ITERATIONS=2 ./benchmarks/csharp/run.sh` for a smoke run. Repeat full
 runs on an idle host, retain raw output, and record Git revision, CPU, and
 `dotnet --version` before publishing numbers. Generated code stays in `target/`.
+
+For steady-state comparisons, warmup runs for at least two seconds and 500
+read/write pairs per model. Writes materialize a UTF-16 `string`; reads start
+from the shared XML decoded to a string outside timing. Set
+`BENCH_BASELINE_FIRST=1` in alternate fresh processes to rotate model order.
+`BENCH_ITERATIONS` defaults to 1,000 and `BENCH_WARMUP_MS` to 2,000. Every
+sensor field is checked before timing. Record the actual .NET runtime when
+rolling a `net8.0` build forward; it is not a .NET 8 timing in that case.

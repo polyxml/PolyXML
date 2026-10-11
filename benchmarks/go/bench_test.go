@@ -25,47 +25,59 @@ func BenchmarkXML(b *testing.B) {
 				generated[i] = models.Sensor{ID: fmt.Sprintf("sensor-%d", i), Value: int32(i)}
 				plain[i] = baseline{ID: generated[i].ID, Value: generated[i].Value}
 			}
-			for _, tc := range []struct {
+			cases := []struct {
 				name   string
 				values any
-				read   func([]byte) error
+				read   func([]byte, bool) error
 			}{
-				{"generated", generated, func(data []byte) error {
+				{"generated", generated, func(data []byte, verify bool) error {
 					var v struct {
 						Items []models.Sensor `xml:"Sensor"`
 					}
 					if err := xml.Unmarshal(data, &v); err != nil {
 						return err
 					}
-					if len(v.Items) != count ||
-						v.Items[0].ID != generated[0].ID || v.Items[0].Value != generated[0].Value ||
-						v.Items[count/2].ID != generated[count/2].ID || v.Items[count/2].Value != generated[count/2].Value ||
-						v.Items[count-1].ID != generated[count-1].ID || v.Items[count-1].Value != generated[count-1].Value {
-						return fmt.Errorf("generated round trip mismatch")
+					if verify {
+						if len(v.Items) != count {
+							return fmt.Errorf("generated count mismatch")
+						}
+						for i, sensor := range v.Items {
+							if sensor.ID != generated[i].ID || sensor.Value != generated[i].Value {
+								return fmt.Errorf("generated field mismatch at %d", i)
+							}
+						}
 					}
 					return nil
 				}},
-				{"baseline", plain, func(data []byte) error {
+				{"baseline", plain, func(data []byte, verify bool) error {
 					var v struct {
 						Items []baseline `xml:"Sensor"`
 					}
 					if err := xml.Unmarshal(data, &v); err != nil {
 						return err
 					}
-					if len(v.Items) != count ||
-						v.Items[0].ID != plain[0].ID || v.Items[0].Value != plain[0].Value ||
-						v.Items[count/2].ID != plain[count/2].ID || v.Items[count/2].Value != plain[count/2].Value ||
-						v.Items[count-1].ID != plain[count-1].ID || v.Items[count-1].Value != plain[count-1].Value {
-						return fmt.Errorf("baseline round trip mismatch")
+					if verify {
+						if len(v.Items) != count {
+							return fmt.Errorf("baseline count mismatch")
+						}
+						for i, sensor := range v.Items {
+							if sensor.ID != plain[i].ID || sensor.Value != plain[i].Value {
+								return fmt.Errorf("baseline field mismatch at %d", i)
+							}
+						}
 					}
 					return nil
 				}},
-			} {
+			}
+			if os.Getenv("BENCH_BASELINE_FIRST") == "1" {
+				cases[0], cases[1] = cases[1], cases[0]
+			}
+			for _, tc := range cases {
 				input, err := os.ReadFile(fmt.Sprintf("../workloads/sensor-batch/sensor-%d.xml", count))
 				if err != nil {
 					b.Fatal(err)
 				}
-				if err := tc.read(input); err != nil {
+				if err := tc.read(input, true); err != nil {
 					b.Fatal(err)
 				}
 				output, err := xml.Marshal(struct {
@@ -83,7 +95,7 @@ func BenchmarkXML(b *testing.B) {
 					b.ReportAllocs()
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						if err := tc.read(input); err != nil {
+						if err := tc.read(input, false); err != nil {
 							b.Fatal(err)
 						}
 					}

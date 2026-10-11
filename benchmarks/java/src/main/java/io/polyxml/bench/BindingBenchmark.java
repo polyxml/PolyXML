@@ -58,6 +58,15 @@ public class BindingBenchmark {
         verify();
     }
     public void verify() throws Exception {
+        // Check every input and field across the matched typed readers before timing.
+        for (byte[] xml : documents) {
+            var expected = MessageCodec.readXml(new ByteArrayInputStream(xml));
+            if (!expected.equals(mapper.readValue(xml, Message.class))) throw new AssertionError("Jackson input mismatch");
+            var decoded = unmarshaller.unmarshal(new javax.xml.transform.stream.StreamSource(new ByteArrayInputStream(xml)), io.polyxml.bench.jaxb.Message.class).getValue();
+            var encoded = new ByteArrayOutputStream();
+            marshaller.marshal(new JAXBElement<>(root, io.polyxml.bench.jaxb.Message.class, decoded), encoded);
+            if (!expected.equals(MessageCodec.readXml(new ByteArrayInputStream(encoded.toByteArray())))) throw new AssertionError("JAXB input mismatch");
+        }
         var direct = new ByteArrayOutputStream(); MessageCodec.writeXml(pojo, direct);
         if (!pojo.equals(MessageCodec.readXml(new ByteArrayInputStream(direct.toByteArray())))) throw new AssertionError("direct round trip");
         if (!pojo.equals(mapper.readValue(mapper.writeValueAsBytes(pojo), Message.class))) throw new AssertionError("Jackson round trip");
@@ -65,6 +74,9 @@ public class BindingBenchmark {
         if (!pojo.equals(json.readValue(json.writeValueAsBytes(pojo), Message.class))) throw new AssertionError("JSON round trip");
         var jaxb = new ByteArrayOutputStream(); marshaller.marshal(new JAXBElement<>(root, io.polyxml.bench.jaxb.Message.class, legacy), jaxb);
         if (!pojo.equals(MessageCodec.readXml(new ByteArrayInputStream(jaxb.toByteArray())))) throw new AssertionError("JAXB round trip");
+        long inputBytes = 0; for (byte[] xml : documents) inputBytes += xml.length;
+        System.out.printf("fixture: workload=%s,batch=%d,input_bytes=%d,direct_output_bytes=%d,jackson_output_bytes=%d,jaxb_output_bytes=%d%n",
+            workload, batchSize, inputBytes, direct.size(), mapper.writeValueAsBytes(pojo).length, jaxb.size());
         var records = new ByteArrayOutputStream(); io.polyxml.bench.records.MessageCodec.writeXml(record,records);
         if (!pojo.equals(MessageCodec.readXml(new ByteArrayInputStream(records.toByteArray())))) throw new AssertionError("record round trip");
     }

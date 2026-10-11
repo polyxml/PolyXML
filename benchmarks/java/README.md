@@ -91,3 +91,8 @@ harness; these JMH results do not measure them. Generated direct codecs have sta
 model calls, but StAX provider selection and application dependencies still determine
 native-image configuration. Do not infer universal zero-configuration AOT support
 from the absence of model reflection.
+
+The matched serializer refresh checks every input against all three typed
+readers before measurement. JMH logs include aggregate input bytes and
+per-message writer output lengths. Reads use varying IDs; writes repeatedly
+serialize the same preconstructed ID-0 model to fresh output bytes.

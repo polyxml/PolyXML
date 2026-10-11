@@ -1,0 +1,20 @@
+memcap: <=7581 MiB (60% of 12636 MiB available) [systemd MemoryMax, swap off]
+Parsing schema: sensor.xsd
+  Types: 1 total (1 structs, 0 enums, 0 unions, 0 simple restrictions)
+  Root elements: 1
+Code generation complete.
+goos: linux
+goarch: amd64
+pkg: polyxml-bench-go
+cpu: 11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz
+BenchmarkXML/size=1/generated/read-12         	  791352	      2868 ns/op	  22.66 MB/s	    1976 B/op	      44 allocs/op
+BenchmarkXML/size=1/generated/write-12        	 1294020	      1853 ns/op	  35.09 MB/s	    5072 B/op	      15 allocs/op
+BenchmarkXML/size=1/baseline/read-12          	  821305	      2725 ns/op	  23.86 MB/s	    1912 B/op	      43 allocs/op
+BenchmarkXML/size=1/baseline/write-12         	 1347320	      1769 ns/op	  36.74 MB/s	    4832 B/op	      12 allocs/op
+BenchmarkXML/size=1000/generated/read-12      	    1192	   2031079 ns/op	  26.49 MB/s	 1035712 B/op	   27027 allocs/op
+BenchmarkXML/size=1000/generated/write-12     	    4834	    484785 ns/op	 110.97 MB/s	  266641 B/op	    2922 allocs/op
+BenchmarkXML/size=1000/baseline/read-12       	    1224	   1985216 ns/op	  27.10 MB/s	 1035648 B/op	   27026 allocs/op
+BenchmarkXML/size=1000/baseline/write-12      	    5614	    420260 ns/op	 128.00 MB/s	  134608 B/op	     916 allocs/op
+PASS
+ok  	polyxml-bench-go	23.099s
+?   	polyxml-bench-go/target/generated	[no test files]

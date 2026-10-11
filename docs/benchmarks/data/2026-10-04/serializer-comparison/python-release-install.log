@@ -1,0 +1,27 @@
+memcap: <=7523 MiB (60% of 12539 MiB available) [systemd MemoryMax, swap off]
+Using Python 3.12.15 environment at: benchmarks/serializer-comparison/target/venv
+Resolved 18 packages in 460ms
+   Building polyxml @ file:///home/bailey/github/PolyXML/crates/polyxml-python
+Downloading lxml (5.0MiB)
+ Downloaded lxml
+      Built polyxml @ file:///home/bailey/github/PolyXML/crates/polyxml-python
+Prepared 4 packages in 31.35s
+Installed 18 packages in 12ms
+ + annotated-types==0.8.0
+ + coverage==7.16.2
+ + iniconfig==2.3.0
+ + lxml==6.1.3
+ + msgspec==0.22.0
+ + packaging==26.3
+ + pluggy==1.6.0
+ + polyxml==0.34.8 (from file:///home/bailey/github/PolyXML/crates/polyxml-python)
+ + pydantic==2.13.5
+ + pydantic-core==2.46.5
+ + pydantic-xml==2.21.1
+ + pygments==2.21.0
+ + pytest==9.1.1
+ + pytest-cov==7.1.0
+ + ruff==0.16.10
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.4
+ + xsdata==26.2

@@ -1,0 +1,10 @@
+{
+  "revision": "171c028e2b0c738a72446ea5facb22391432d6c3",
+  "tiered_compilation": false,
+  "processes": 6,
+  "iterations": 1000,
+  "minimum_warmup_pairs": 500,
+  "minimum_warmup_ms": 2000,
+  "dll_sha256": "ecce7317836104c0f2a3c3d206cf3c72e2fb3f266f9482ffdf1f5bc7e37ea625",
+  "note": "Default-tiering runs retained separately as diagnostics; first-model effect persisted after warmup."
+}

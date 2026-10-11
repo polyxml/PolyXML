@@ -1,0 +1,2 @@
+memcap: <=7533 MiB (60% of 12555 MiB available) [systemd MemoryMax, swap off]
+    Finished `release` profile [optimized] target(s) in 0.01s

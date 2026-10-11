@@ -1,0 +1,1546 @@
+memcap: <=7488 MiB (60% of 12480 MiB available) [systemd MemoryMax, swap off]
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.directRead
+# Parameters: (batchSize = 1000, workload = settlement)
+
+# Run progress: 0.00% complete, ETA 00:06:24
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+355.416 ops/s
+# Warmup Iteration   2: 379.985 ops/s
+# Warmup Iteration   3: 382.457 ops/s
+Iteration   1: 374.296 ops/s
+                 gc.alloc.rate:      1613.238 MB/sec
+                 gc.alloc.rate.norm: 4520009.378 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   2: 380.935 ops/s
+                 gc.alloc.rate:      1641.816 MB/sec
+                 gc.alloc.rate.norm: 4520009.260 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   3: 381.471 ops/s
+                 gc.alloc.rate:      1644.130 MB/sec
+                 gc.alloc.rate.norm: 4520009.236 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   4: 379.777 ops/s
+                 gc.alloc.rate:      1636.879 MB/sec
+                 gc.alloc.rate.norm: 4520009.242 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   5: 374.233 ops/s
+                 gc.alloc.rate:      1612.904 MB/sec
+                 gc.alloc.rate.norm: 4520009.378 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            23.000 ms
+
+
+# Run progress: 4.17% complete, ETA 00:06:27
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+346.238 ops/s
+# Warmup Iteration   2: 381.660 ops/s
+# Warmup Iteration   3: 378.106 ops/s
+Iteration   1: 382.603 ops/s
+                 gc.alloc.rate:      1649.029 MB/sec
+                 gc.alloc.rate.norm: 4520009.170 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            24.000 ms
+
+Iteration   2: 381.577 ops/s
+                 gc.alloc.rate:      1644.562 MB/sec
+                 gc.alloc.rate.norm: 4520009.236 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            23.000 ms
+
+Iteration   3: 382.267 ops/s
+                 gc.alloc.rate:      1647.535 MB/sec
+                 gc.alloc.rate.norm: 4520009.224 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            23.000 ms
+
+Iteration   4: 381.583 ops/s
+                 gc.alloc.rate:      1644.615 MB/sec
+                 gc.alloc.rate.norm: 4520009.194 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            23.000 ms
+
+Iteration   5: 382.617 ops/s
+                 gc.alloc.rate:      1649.121 MB/sec
+                 gc.alloc.rate.norm: 4520009.170 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            22.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.directRead":
+  380.136 ±(99.9%) 4.846 ops/s [Average]
+  (min, avg, max) = (374.233, 380.136, 382.617), stdev = 3.205
+  CI (99.9%): [375.290, 384.982] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.alloc.rate":
+  1638.383 ±(99.9%) 20.888 MB/sec [Average]
+  (min, avg, max) = (1612.904, 1638.383, 1649.121), stdev = 13.816
+  CI (99.9%): [1617.495, 1659.271] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.alloc.rate.norm":
+  4520009.249 ±(99.9%) 0.113 B/op [Average]
+  (min, avg, max) = (4520009.170, 4520009.249, 4520009.378), stdev = 0.075
+  CI (99.9%): [4520009.136, 4520009.361] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.count":
+  216.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (21.000, 21.600, 22.000), stdev = 0.516
+  CI (99.9%): [216.000, 216.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.time":
+  226.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (22.000, 22.600, 24.000), stdev = 0.699
+  CI (99.9%): [226.000, 226.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.directRead
+# Parameters: (batchSize = 1000, workload = telemetry)
+
+# Run progress: 8.33% complete, ETA 00:06:10
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+571.831 ops/s
+# Warmup Iteration   2: 582.105 ops/s
+# Warmup Iteration   3: 606.346 ops/s
+Iteration   1: 605.355 ops/s
+                 gc.alloc.rate:      1570.091 MB/sec
+                 gc.alloc.rate.norm: 2720005.800 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   2: 605.525 ops/s
+                 gc.alloc.rate:      1570.453 MB/sec
+                 gc.alloc.rate.norm: 2720005.822 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            21.000 ms
+
+Iteration   3: 605.561 ops/s
+                 gc.alloc.rate:      1570.588 MB/sec
+                 gc.alloc.rate.norm: 2720005.822 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   4: 605.508 ops/s
+                 gc.alloc.rate:      1570.510 MB/sec
+                 gc.alloc.rate.norm: 2720005.795 B/op
+                 gc.count:           20.000 counts
+                 gc.time:            20.000 ms
+
+Iteration   5: 608.622 ops/s
+                 gc.alloc.rate:      1578.519 MB/sec
+                 gc.alloc.rate.norm: 2720005.767 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            23.000 ms
+
+
+# Run progress: 12.50% complete, ETA 00:05:53
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+553.790 ops/s
+# Warmup Iteration   2: 600.765 ops/s
+# Warmup Iteration   3: 606.444 ops/s
+Iteration   1: 605.814 ops/s
+                 gc.alloc.rate:      1571.274 MB/sec
+                 gc.alloc.rate.norm: 2720005.795 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            21.000 ms
+
+Iteration   2: 606.060 ops/s
+                 gc.alloc.rate:      1571.852 MB/sec
+                 gc.alloc.rate.norm: 2720005.817 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            21.000 ms
+
+Iteration   3: 602.496 ops/s
+                 gc.alloc.rate:      1562.587 MB/sec
+                 gc.alloc.rate.norm: 2720005.851 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   4: 603.357 ops/s
+                 gc.alloc.rate:      1564.933 MB/sec
+                 gc.alloc.rate.norm: 2720005.819 B/op
+                 gc.count:           20.000 counts
+                 gc.time:            20.000 ms
+
+Iteration   5: 604.760 ops/s
+                 gc.alloc.rate:      1568.537 MB/sec
+                 gc.alloc.rate.norm: 2720005.805 B/op
+                 gc.count:           21.000 counts
+                 gc.time:            22.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.directRead":
+  605.306 ±(99.9%) 2.467 ops/s [Average]
+  (min, avg, max) = (602.496, 605.306, 608.622), stdev = 1.632
+  CI (99.9%): [602.838, 607.773] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.alloc.rate":
+  1569.934 ±(99.9%) 6.398 MB/sec [Average]
+  (min, avg, max) = (1562.587, 1569.934, 1578.519), stdev = 4.232
+  CI (99.9%): [1563.537, 1576.332] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.alloc.rate.norm":
+  2720005.809 ±(99.9%) 0.034 B/op [Average]
+  (min, avg, max) = (2720005.767, 2720005.809, 2720005.851), stdev = 0.022
+  CI (99.9%): [2720005.776, 2720005.843] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.count":
+  208.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (20.000, 20.800, 21.000), stdev = 0.422
+  CI (99.9%): [208.000, 208.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directRead:gc.time":
+  214.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (20.000, 21.400, 23.000), stdev = 0.966
+  CI (99.9%): [214.000, 214.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.directWrite
+# Parameters: (batchSize = 1000, workload = settlement)
+
+# Run progress: 16.67% complete, ETA 00:05:36
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+196.266 ops/s
+# Warmup Iteration   2: 206.660 ops/s
+# Warmup Iteration   3: 205.584 ops/s
+Iteration   1: 206.135 ops/s
+                 gc.alloc.rate:      1858.681 MB/sec
+                 gc.alloc.rate.norm: 9456017.007 B/op
+                 gc.count:           24.000 counts
+                 gc.time:            24.000 ms
+
+Iteration   2: 204.915 ops/s
+                 gc.alloc.rate:      1847.569 MB/sec
+                 gc.alloc.rate.norm: 9456017.210 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            25.000 ms
+
+Iteration   3: 206.179 ops/s
+                 gc.alloc.rate:      1859.050 MB/sec
+                 gc.alloc.rate.norm: 9456017.007 B/op
+                 gc.count:           24.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   4: 204.427 ops/s
+                 gc.alloc.rate:      1843.251 MB/sec
+                 gc.alloc.rate.norm: 9456017.174 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   5: 205.827 ops/s
+                 gc.alloc.rate:      1855.861 MB/sec
+                 gc.alloc.rate.norm: 9456017.049 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+
+# Run progress: 20.83% complete, ETA 00:05:20
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+202.712 ops/s
+# Warmup Iteration   2: 210.646 ops/s
+# Warmup Iteration   3: 210.118 ops/s
+Iteration   1: 210.432 ops/s
+                 gc.alloc.rate:      1897.367 MB/sec
+                 gc.alloc.rate.norm: 9456016.684 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   2: 210.331 ops/s
+                 gc.alloc.rate:      1896.452 MB/sec
+                 gc.alloc.rate.norm: 9456016.760 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            24.000 ms
+
+Iteration   3: 211.462 ops/s
+                 gc.alloc.rate:      1906.633 MB/sec
+                 gc.alloc.rate.norm: 9456016.681 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   4: 209.897 ops/s
+                 gc.alloc.rate:      1892.591 MB/sec
+                 gc.alloc.rate.norm: 9456016.724 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            27.000 ms
+
+Iteration   5: 211.253 ops/s
+                 gc.alloc.rate:      1904.811 MB/sec
+                 gc.alloc.rate.norm: 9456016.605 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            27.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.directWrite":
+  208.086 ±(99.9%) 4.253 ops/s [Average]
+  (min, avg, max) = (204.427, 208.086, 211.462), stdev = 2.813
+  CI (99.9%): [203.832, 212.339] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.alloc.rate":
+  1876.227 ±(99.9%) 38.352 MB/sec [Average]
+  (min, avg, max) = (1843.251, 1876.227, 1906.633), stdev = 25.368
+  CI (99.9%): [1837.874, 1914.579] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.alloc.rate.norm":
+  9456016.890 ±(99.9%) 0.337 B/op [Average]
+  (min, avg, max) = (9456016.605, 9456016.890, 9456017.210), stdev = 0.223
+  CI (99.9%): [9456016.553, 9456017.227] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.count":
+  249.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (24.000, 24.900, 26.000), stdev = 0.568
+  CI (99.9%): [249.000, 249.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.time":
+  257.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (24.000, 25.700, 27.000), stdev = 1.059
+  CI (99.9%): [257.000, 257.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.directWrite
+# Parameters: (batchSize = 1000, workload = telemetry)
+
+# Run progress: 25.00% complete, ETA 00:05:03
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+651.511 ops/s
+# Warmup Iteration   2: 700.452 ops/s
+# Warmup Iteration   3: 700.844 ops/s
+Iteration   1: 696.136 ops/s
+                 gc.alloc.rate:      3887.284 MB/sec
+                 gc.alloc.rate.norm: 5856005.042 B/op
+                 gc.count:           40.000 counts
+                 gc.time:            44.000 ms
+
+Iteration   2: 697.617 ops/s
+                 gc.alloc.rate:      3895.362 MB/sec
+                 gc.alloc.rate.norm: 5856005.054 B/op
+                 gc.count:           40.000 counts
+                 gc.time:            43.000 ms
+
+Iteration   3: 698.598 ops/s
+                 gc.alloc.rate:      3900.908 MB/sec
+                 gc.alloc.rate.norm: 5856005.047 B/op
+                 gc.count:           39.000 counts
+                 gc.time:            43.000 ms
+
+Iteration   4: 699.784 ops/s
+                 gc.alloc.rate:      3907.634 MB/sec
+                 gc.alloc.rate.norm: 5856005.017 B/op
+                 gc.count:           40.000 counts
+                 gc.time:            42.000 ms
+
+Iteration   5: 703.918 ops/s
+                 gc.alloc.rate:      3930.658 MB/sec
+                 gc.alloc.rate.norm: 5856004.985 B/op
+                 gc.count:           40.000 counts
+                 gc.time:            44.000 ms
+
+
+# Run progress: 29.17% complete, ETA 00:04:46
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+641.597 ops/s
+# Warmup Iteration   2: 698.738 ops/s
+# Warmup Iteration   3: 696.765 ops/s
+Iteration   1: 700.564 ops/s
+                 gc.alloc.rate:      3912.009 MB/sec
+                 gc.alloc.rate.norm: 5856005.010 B/op
+                 gc.count:           38.000 counts
+                 gc.time:            43.000 ms
+
+Iteration   2: 696.052 ops/s
+                 gc.alloc.rate:      3886.562 MB/sec
+                 gc.alloc.rate.norm: 5856005.065 B/op
+                 gc.count:           37.000 counts
+                 gc.time:            41.000 ms
+
+Iteration   3: 693.827 ops/s
+                 gc.alloc.rate:      3874.293 MB/sec
+                 gc.alloc.rate.norm: 5856005.061 B/op
+                 gc.count:           38.000 counts
+                 gc.time:            43.000 ms
+
+Iteration   4: 701.989 ops/s
+                 gc.alloc.rate:      3919.723 MB/sec
+                 gc.alloc.rate.norm: 5856004.999 B/op
+                 gc.count:           38.000 counts
+                 gc.time:            41.000 ms
+
+Iteration   5: 700.127 ops/s
+                 gc.alloc.rate:      3909.449 MB/sec
+                 gc.alloc.rate.norm: 5856005.014 B/op
+                 gc.count:           38.000 counts
+                 gc.time:            42.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.directWrite":
+  698.861 ±(99.9%) 4.591 ops/s [Average]
+  (min, avg, max) = (693.827, 698.861, 703.918), stdev = 3.037
+  CI (99.9%): [694.270, 703.452] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.alloc.rate":
+  3902.388 ±(99.9%) 25.643 MB/sec [Average]
+  (min, avg, max) = (3874.293, 3902.388, 3930.658), stdev = 16.961
+  CI (99.9%): [3876.745, 3928.031] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.alloc.rate.norm":
+  5856005.029 ±(99.9%) 0.042 B/op [Average]
+  (min, avg, max) = (5856004.985, 5856005.029, 5856005.065), stdev = 0.028
+  CI (99.9%): [5856004.987, 5856005.072] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.count":
+  388.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (37.000, 38.800, 40.000), stdev = 1.135
+  CI (99.9%): [388.000, 388.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.directWrite:gc.time":
+  426.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (41.000, 42.600, 44.000), stdev = 1.075
+  CI (99.9%): [426.000, 426.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jacksonRead
+# Parameters: (batchSize = 1000, workload = settlement)
+
+# Run progress: 33.33% complete, ETA 00:04:29
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+380.248 ops/s
+# Warmup Iteration   2: 399.105 ops/s
+# Warmup Iteration   3: 405.630 ops/s
+Iteration   1: 403.000 ops/s
+                 gc.alloc.rate:      1936.797 MB/sec
+                 gc.alloc.rate.norm: 5040008.704 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   2: 402.865 ops/s
+                 gc.alloc.rate:      1936.099 MB/sec
+                 gc.alloc.rate.norm: 5040008.715 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            28.000 ms
+
+Iteration   3: 404.536 ops/s
+                 gc.alloc.rate:      1944.136 MB/sec
+                 gc.alloc.rate.norm: 5040008.672 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            28.000 ms
+
+Iteration   4: 395.759 ops/s
+                 gc.alloc.rate:      1901.967 MB/sec
+                 gc.alloc.rate.norm: 5040008.869 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            27.000 ms
+
+Iteration   5: 406.351 ops/s
+                 gc.alloc.rate:      1952.879 MB/sec
+                 gc.alloc.rate.norm: 5040008.640 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            27.000 ms
+
+
+# Run progress: 37.50% complete, ETA 00:04:12
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+381.780 ops/s
+# Warmup Iteration   2: 401.388 ops/s
+# Warmup Iteration   3: 399.039 ops/s
+Iteration   1: 405.519 ops/s
+                 gc.alloc.rate:      1948.881 MB/sec
+                 gc.alloc.rate.norm: 5040008.650 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            27.000 ms
+
+Iteration   2: 404.558 ops/s
+                 gc.alloc.rate:      1944.208 MB/sec
+                 gc.alloc.rate.norm: 5040008.672 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   3: 402.596 ops/s
+                 gc.alloc.rate:      1934.763 MB/sec
+                 gc.alloc.rate.norm: 5040008.754 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            27.000 ms
+
+Iteration   4: 401.751 ops/s
+                 gc.alloc.rate:      1930.775 MB/sec
+                 gc.alloc.rate.norm: 5040008.736 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   5: 398.378 ops/s
+                 gc.alloc.rate:      1914.542 MB/sec
+                 gc.alloc.rate.norm: 5040008.813 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jacksonRead":
+  402.531 ±(99.9%) 4.930 ops/s [Average]
+  (min, avg, max) = (395.759, 402.531, 406.351), stdev = 3.261
+  CI (99.9%): [397.601, 407.461] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.alloc.rate":
+  1934.505 ±(99.9%) 23.692 MB/sec [Average]
+  (min, avg, max) = (1901.967, 1934.505, 1952.879), stdev = 15.671
+  CI (99.9%): [1910.812, 1958.197] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.alloc.rate.norm":
+  5040008.722 ±(99.9%) 0.111 B/op [Average]
+  (min, avg, max) = (5040008.640, 5040008.722, 5040008.869), stdev = 0.073
+  CI (99.9%): [5040008.611, 5040008.833] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.count":
+  254.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (25.000, 25.400, 26.000), stdev = 0.516
+  CI (99.9%): [254.000, 254.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.time":
+  268.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (26.000, 26.800, 28.000), stdev = 0.789
+  CI (99.9%): [268.000, 268.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jacksonRead
+# Parameters: (batchSize = 1000, workload = telemetry)
+
+# Run progress: 41.67% complete, ETA 00:03:55
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+593.455 ops/s
+# Warmup Iteration   2: 627.052 ops/s
+# Warmup Iteration   3: 621.053 ops/s
+Iteration   1: 627.475 ops/s
+                 gc.alloc.rate:      1938.575 MB/sec
+                 gc.alloc.rate.norm: 3240005.592 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            28.000 ms
+
+Iteration   2: 626.009 ops/s
+                 gc.alloc.rate:      1933.976 MB/sec
+                 gc.alloc.rate.norm: 3240005.631 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   3: 626.827 ops/s
+                 gc.alloc.rate:      1936.515 MB/sec
+                 gc.alloc.rate.norm: 3240005.627 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            26.000 ms
+
+Iteration   4: 628.707 ops/s
+                 gc.alloc.rate:      1942.392 MB/sec
+                 gc.alloc.rate.norm: 3240005.583 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            25.000 ms
+
+Iteration   5: 622.280 ops/s
+                 gc.alloc.rate:      1922.506 MB/sec
+                 gc.alloc.rate.norm: 3240005.642 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            27.000 ms
+
+
+# Run progress: 45.83% complete, ETA 00:03:38
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+582.304 ops/s
+# Warmup Iteration   2: 618.413 ops/s
+# Warmup Iteration   3: 630.143 ops/s
+Iteration   1: 627.640 ops/s
+                 gc.alloc.rate:      1939.095 MB/sec
+                 gc.alloc.rate.norm: 3240005.592 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            25.000 ms
+
+Iteration   2: 628.142 ops/s
+                 gc.alloc.rate:      1940.580 MB/sec
+                 gc.alloc.rate.norm: 3240005.613 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            28.000 ms
+
+Iteration   3: 620.067 ops/s
+                 gc.alloc.rate:      1915.647 MB/sec
+                 gc.alloc.rate.norm: 3240005.686 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            25.000 ms
+
+Iteration   4: 624.358 ops/s
+                 gc.alloc.rate:      1928.924 MB/sec
+                 gc.alloc.rate.norm: 3240005.624 B/op
+                 gc.count:           26.000 counts
+                 gc.time:            27.000 ms
+
+Iteration   5: 628.961 ops/s
+                 gc.alloc.rate:      1943.191 MB/sec
+                 gc.alloc.rate.norm: 3240005.579 B/op
+                 gc.count:           25.000 counts
+                 gc.time:            26.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jacksonRead":
+  626.047 ±(99.9%) 4.449 ops/s [Average]
+  (min, avg, max) = (620.067, 626.047, 628.961), stdev = 2.943
+  CI (99.9%): [621.597, 630.496] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.alloc.rate":
+  1934.140 ±(99.9%) 13.764 MB/sec [Average]
+  (min, avg, max) = (1915.647, 1934.140, 1943.191), stdev = 9.104
+  CI (99.9%): [1920.377, 1947.904] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.alloc.rate.norm":
+  3240005.617 ±(99.9%) 0.049 B/op [Average]
+  (min, avg, max) = (3240005.579, 3240005.617, 3240005.686), stdev = 0.032
+  CI (99.9%): [3240005.568, 3240005.666] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.count":
+  255.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (25.000, 25.500, 26.000), stdev = 0.527
+  CI (99.9%): [255.000, 255.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonRead:gc.time":
+  263.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (25.000, 26.300, 28.000), stdev = 1.160
+  CI (99.9%): [263.000, 263.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jacksonWrite
+# Parameters: (batchSize = 1000, workload = settlement)
+
+# Run progress: 50.00% complete, ETA 00:03:22
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+180.150 ops/s
+# Warmup Iteration   2: 198.732 ops/s
+# Warmup Iteration   3: 199.032 ops/s
+Iteration   1: 198.742 ops/s
+                 gc.alloc.rate:      1247.735 MB/sec
+                 gc.alloc.rate.norm: 6584017.648 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            17.000 ms
+
+Iteration   2: 198.894 ops/s
+                 gc.alloc.rate:      1248.642 MB/sec
+                 gc.alloc.rate.norm: 6584017.729 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            19.000 ms
+
+Iteration   3: 199.024 ops/s
+                 gc.alloc.rate:      1249.419 MB/sec
+                 gc.alloc.rate.norm: 6584017.684 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            17.000 ms
+
+Iteration   4: 198.777 ops/s
+                 gc.alloc.rate:      1247.960 MB/sec
+                 gc.alloc.rate.norm: 6584017.648 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            18.000 ms
+
+Iteration   5: 197.667 ops/s
+                 gc.alloc.rate:      1240.985 MB/sec
+                 gc.alloc.rate.norm: 6584017.737 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            16.000 ms
+
+
+# Run progress: 54.17% complete, ETA 00:03:05
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+177.593 ops/s
+# Warmup Iteration   2: 197.473 ops/s
+# Warmup Iteration   3: 197.876 ops/s
+Iteration   1: 195.610 ops/s
+                 gc.alloc.rate:      1228.037 MB/sec
+                 gc.alloc.rate.norm: 6584017.918 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            17.000 ms
+
+Iteration   2: 197.235 ops/s
+                 gc.alloc.rate:      1238.229 MB/sec
+                 gc.alloc.rate.norm: 6584017.863 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            18.000 ms
+
+Iteration   3: 198.362 ops/s
+                 gc.alloc.rate:      1245.303 MB/sec
+                 gc.alloc.rate.norm: 6584017.773 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            17.000 ms
+
+Iteration   4: 198.410 ops/s
+                 gc.alloc.rate:      1245.651 MB/sec
+                 gc.alloc.rate.norm: 6584017.693 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            18.000 ms
+
+Iteration   5: 196.716 ops/s
+                 gc.alloc.rate:      1234.993 MB/sec
+                 gc.alloc.rate.norm: 6584017.827 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            17.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jacksonWrite":
+  197.944 ±(99.9%) 1.696 ops/s [Average]
+  (min, avg, max) = (195.610, 197.944, 199.024), stdev = 1.122
+  CI (99.9%): [196.248, 199.640] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.alloc.rate":
+  1242.695 ±(99.9%) 10.646 MB/sec [Average]
+  (min, avg, max) = (1228.037, 1242.695, 1249.419), stdev = 7.042
+  CI (99.9%): [1232.049, 1253.342] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.alloc.rate.norm":
+  6584017.752 ±(99.9%) 0.139 B/op [Average]
+  (min, avg, max) = (6584017.648, 6584017.752, 6584017.918), stdev = 0.092
+  CI (99.9%): [6584017.613, 6584017.892] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.count":
+  164.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (16.000, 16.400, 17.000), stdev = 0.516
+  CI (99.9%): [164.000, 164.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.time":
+  174.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (16.000, 17.400, 19.000), stdev = 0.843
+  CI (99.9%): [174.000, 174.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jacksonWrite
+# Parameters: (batchSize = 1000, workload = telemetry)
+
+# Run progress: 58.33% complete, ETA 00:02:48
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+442.776 ops/s
+# Warmup Iteration   2: 490.142 ops/s
+# Warmup Iteration   3: 492.561 ops/s
+Iteration   1: 488.424 ops/s
+                 gc.alloc.rate:      804.792 MB/sec
+                 gc.alloc.rate.norm: 1728007.189 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   2: 489.765 ops/s
+                 gc.alloc.rate:      807.007 MB/sec
+                 gc.alloc.rate.norm: 1728007.167 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            10.000 ms
+
+Iteration   3: 489.985 ops/s
+                 gc.alloc.rate:      807.361 MB/sec
+                 gc.alloc.rate.norm: 1728007.193 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   4: 489.379 ops/s
+                 gc.alloc.rate:      806.359 MB/sec
+                 gc.alloc.rate.norm: 1728007.167 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            11.000 ms
+
+Iteration   5: 495.730 ops/s
+                 gc.alloc.rate:      816.789 MB/sec
+                 gc.alloc.rate.norm: 1728007.081 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            13.000 ms
+
+
+# Run progress: 62.50% complete, ETA 00:02:31
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+434.998 ops/s
+# Warmup Iteration   2: 485.326 ops/s
+# Warmup Iteration   3: 480.845 ops/s
+Iteration   1: 490.503 ops/s
+                 gc.alloc.rate:      808.201 MB/sec
+                 gc.alloc.rate.norm: 1728007.153 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            11.000 ms
+
+Iteration   2: 491.043 ops/s
+                 gc.alloc.rate:      809.082 MB/sec
+                 gc.alloc.rate.norm: 1728007.178 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   3: 487.035 ops/s
+                 gc.alloc.rate:      802.494 MB/sec
+                 gc.alloc.rate.norm: 1728007.237 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   4: 487.909 ops/s
+                 gc.alloc.rate:      803.937 MB/sec
+                 gc.alloc.rate.norm: 1728007.197 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            10.000 ms
+
+Iteration   5: 491.071 ops/s
+                 gc.alloc.rate:      809.154 MB/sec
+                 gc.alloc.rate.norm: 1728007.145 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jacksonWrite":
+  490.084 ±(99.9%) 3.611 ops/s [Average]
+  (min, avg, max) = (487.035, 490.084, 495.730), stdev = 2.388
+  CI (99.9%): [486.473, 493.695] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.alloc.rate":
+  807.518 ±(99.9%) 5.934 MB/sec [Average]
+  (min, avg, max) = (802.494, 807.518, 816.789), stdev = 3.925
+  CI (99.9%): [801.583, 813.452] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.alloc.rate.norm":
+  1728007.171 ±(99.9%) 0.062 B/op [Average]
+  (min, avg, max) = (1728007.081, 1728007.171, 1728007.237), stdev = 0.041
+  CI (99.9%): [1728007.109, 1728007.233] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.count":
+  107.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (10.000, 10.700, 11.000), stdev = 0.483
+  CI (99.9%): [107.000, 107.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jacksonWrite:gc.time":
+  115.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (10.000, 11.500, 13.000), stdev = 0.972
+  CI (99.9%): [115.000, 115.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jaxbRead
+# Parameters: (batchSize = 1000, workload = settlement)
+
+# Run progress: 66.67% complete, ETA 00:02:14
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+96.267 ops/s
+# Warmup Iteration   2: 109.741 ops/s
+# Warmup Iteration   3: 156.637 ops/s
+Iteration   1: 170.617 ops/s
+                 gc.alloc.rate:      1154.412 MB/sec
+                 gc.alloc.rate.norm: 7096026.596 B/op
+                 gc.count:           15.000 counts
+                 gc.time:            18.000 ms
+
+Iteration   2: 171.832 ops/s
+                 gc.alloc.rate:      1162.616 MB/sec
+                 gc.alloc.rate.norm: 7096026.442 B/op
+                 gc.count:           15.000 counts
+                 gc.time:            16.000 ms
+
+Iteration   3: 172.299 ops/s
+                 gc.alloc.rate:      1165.842 MB/sec
+                 gc.alloc.rate.norm: 7096026.667 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            20.000 ms
+
+Iteration   4: 171.906 ops/s
+                 gc.alloc.rate:      1163.190 MB/sec
+                 gc.alloc.rate.norm: 7096026.349 B/op
+                 gc.count:           15.000 counts
+                 gc.time:            17.000 ms
+
+Iteration   5: 171.381 ops/s
+                 gc.alloc.rate:      1159.633 MB/sec
+                 gc.alloc.rate.norm: 7096026.426 B/op
+                 gc.count:           15.000 counts
+                 gc.time:            17.000 ms
+
+
+# Run progress: 70.83% complete, ETA 00:01:57
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+92.210 ops/s
+# Warmup Iteration   2: 94.913 ops/s
+# Warmup Iteration   3: 162.203 ops/s
+Iteration   1: 174.852 ops/s
+                 gc.alloc.rate:      1183.118 MB/sec
+                 gc.alloc.rate.norm: 7096026.286 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            19.000 ms
+
+Iteration   2: 175.706 ops/s
+                 gc.alloc.rate:      1188.870 MB/sec
+                 gc.alloc.rate.norm: 7096026.136 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            19.000 ms
+
+Iteration   3: 176.153 ops/s
+                 gc.alloc.rate:      1191.942 MB/sec
+                 gc.alloc.rate.norm: 7096025.677 B/op
+                 gc.count:           15.000 counts
+                 gc.time:            17.000 ms
+
+Iteration   4: 175.454 ops/s
+                 gc.alloc.rate:      1187.151 MB/sec
+                 gc.alloc.rate.norm: 7096026.211 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            19.000 ms
+
+Iteration   5: 175.913 ops/s
+                 gc.alloc.rate:      1190.298 MB/sec
+                 gc.alloc.rate.norm: 7096026.136 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            19.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jaxbRead":
+  173.611 ±(99.9%) 3.297 ops/s [Average]
+  (min, avg, max) = (170.617, 173.611, 176.153), stdev = 2.181
+  CI (99.9%): [170.314, 176.909] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.alloc.rate":
+  1174.707 ±(99.9%) 22.327 MB/sec [Average]
+  (min, avg, max) = (1154.412, 1174.707, 1191.942), stdev = 14.768
+  CI (99.9%): [1152.380, 1197.034] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.alloc.rate.norm":
+  7096026.293 ±(99.9%) 0.425 B/op [Average]
+  (min, avg, max) = (7096025.677, 7096026.293, 7096026.667), stdev = 0.281
+  CI (99.9%): [7096025.868, 7096026.717] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.count":
+  155.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (15.000, 15.500, 16.000), stdev = 0.527
+  CI (99.9%): [155.000, 155.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.time":
+  181.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (16.000, 18.100, 20.000), stdev = 1.287
+  CI (99.9%): [181.000, 181.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jaxbRead
+# Parameters: (batchSize = 1000, workload = telemetry)
+
+# Run progress: 75.00% complete, ETA 00:01:41
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+118.302 ops/s
+# Warmup Iteration   2: 132.318 ops/s
+# Warmup Iteration   3: 233.591 ops/s
+Iteration   1: 239.842 ops/s
+                 gc.alloc.rate:      799.517 MB/sec
+                 gc.alloc.rate.norm: 3496017.750 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            13.000 ms
+
+Iteration   2: 239.406 ops/s
+                 gc.alloc.rate:      798.064 MB/sec
+                 gc.alloc.rate.norm: 3496017.570 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   3: 238.805 ops/s
+                 gc.alloc.rate:      796.074 MB/sec
+                 gc.alloc.rate.norm: 3496017.824 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   4: 236.958 ops/s
+                 gc.alloc.rate:      789.890 MB/sec
+                 gc.alloc.rate.norm: 3496017.688 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   5: 237.116 ops/s
+                 gc.alloc.rate:      790.422 MB/sec
+                 gc.alloc.rate.norm: 3496017.937 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+
+# Run progress: 79.17% complete, ETA 00:01:24
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+122.815 ops/s
+# Warmup Iteration   2: 142.941 ops/s
+# Warmup Iteration   3: 228.420 ops/s
+Iteration   1: 240.716 ops/s
+                 gc.alloc.rate:      802.470 MB/sec
+                 gc.alloc.rate.norm: 3496017.676 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   2: 238.621 ops/s
+                 gc.alloc.rate:      795.451 MB/sec
+                 gc.alloc.rate.norm: 3496017.607 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            11.000 ms
+
+Iteration   3: 238.581 ops/s
+                 gc.alloc.rate:      795.325 MB/sec
+                 gc.alloc.rate.norm: 3496017.824 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   4: 238.365 ops/s
+                 gc.alloc.rate:      794.598 MB/sec
+                 gc.alloc.rate.norm: 3496017.540 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            12.000 ms
+
+Iteration   5: 239.297 ops/s
+                 gc.alloc.rate:      797.686 MB/sec
+                 gc.alloc.rate.norm: 3496017.787 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            13.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jaxbRead":
+  238.771 ±(99.9%) 1.736 ops/s [Average]
+  (min, avg, max) = (236.958, 238.771, 240.716), stdev = 1.148
+  CI (99.9%): [237.035, 240.506] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.alloc.rate":
+  795.950 ±(99.9%) 5.800 MB/sec [Average]
+  (min, avg, max) = (789.890, 795.950, 802.470), stdev = 3.837
+  CI (99.9%): [790.149, 801.750] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.alloc.rate.norm":
+  3496017.720 ±(99.9%) 0.192 B/op [Average]
+  (min, avg, max) = (3496017.540, 3496017.720, 3496017.937), stdev = 0.127
+  CI (99.9%): [3496017.528, 3496017.912] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.count":
+  106.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (10.000, 10.600, 11.000), stdev = 0.516
+  CI (99.9%): [106.000, 106.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbRead:gc.time":
+  121.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (11.000, 12.100, 13.000), stdev = 0.568
+  CI (99.9%): [121.000, 121.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jaxbWrite
+# Parameters: (batchSize = 1000, workload = settlement)
+
+# Run progress: 83.33% complete, ETA 00:01:07
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+113.664 ops/s
+# Warmup Iteration   2: 127.518 ops/s
+# Warmup Iteration   3: 128.690 ops/s
+Iteration   1: 127.481 ops/s
+                 gc.alloc.rate:      3477.589 MB/sec
+                 gc.alloc.rate.norm: 28608027.545 B/op
+                 gc.count:           37.000 counts
+                 gc.time:            42.000 ms
+
+Iteration   2: 127.329 ops/s
+                 gc.alloc.rate:      3473.417 MB/sec
+                 gc.alloc.rate.norm: 28608027.545 B/op
+                 gc.count:           36.000 counts
+                 gc.time:            39.000 ms
+
+Iteration   3: 128.304 ops/s
+                 gc.alloc.rate:      3500.045 MB/sec
+                 gc.alloc.rate.norm: 28608027.331 B/op
+                 gc.count:           38.000 counts
+                 gc.time:            42.000 ms
+
+Iteration   4: 127.902 ops/s
+                 gc.alloc.rate:      3489.078 MB/sec
+                 gc.alloc.rate.norm: 28608027.438 B/op
+                 gc.count:           37.000 counts
+                 gc.time:            41.000 ms
+
+Iteration   5: 127.444 ops/s
+                 gc.alloc.rate:      3476.541 MB/sec
+                 gc.alloc.rate.norm: 28608027.438 B/op
+                 gc.count:           37.000 counts
+                 gc.time:            41.000 ms
+
+
+# Run progress: 87.50% complete, ETA 00:00:50
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=settlement,batch=1000,input_bytes=2388890,direct_output_bytes=2459,jackson_output_bytes=2387,jaxb_output_bytes=2442
+113.809 ops/s
+# Warmup Iteration   2: 126.072 ops/s
+# Warmup Iteration   3: 126.530 ops/s
+Iteration   1: 126.381 ops/s
+                 gc.alloc.rate:      3447.545 MB/sec
+                 gc.alloc.rate.norm: 28608027.763 B/op
+                 gc.count:           37.000 counts
+                 gc.time:            43.000 ms
+
+Iteration   2: 126.442 ops/s
+                 gc.alloc.rate:      3449.100 MB/sec
+                 gc.alloc.rate.norm: 28608027.889 B/op
+                 gc.count:           37.000 counts
+                 gc.time:            42.000 ms
+
+Iteration   3: 126.115 ops/s
+                 gc.alloc.rate:      3440.285 MB/sec
+                 gc.alloc.rate.norm: 28608027.889 B/op
+                 gc.count:           36.000 counts
+                 gc.time:            39.000 ms
+
+Iteration   4: 125.648 ops/s
+                 gc.alloc.rate:      3427.587 MB/sec
+                 gc.alloc.rate.norm: 28608027.873 B/op
+                 gc.count:           37.000 counts
+                 gc.time:            41.000 ms
+
+Iteration   5: 126.823 ops/s
+                 gc.alloc.rate:      3459.454 MB/sec
+                 gc.alloc.rate.norm: 28608027.780 B/op
+                 gc.count:           36.000 counts
+                 gc.time:            39.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jaxbWrite":
+  126.987 ±(99.9%) 1.273 ops/s [Average]
+  (min, avg, max) = (125.648, 126.987, 128.304), stdev = 0.842
+  CI (99.9%): [125.713, 128.260] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.alloc.rate":
+  3464.064 ±(99.9%) 34.771 MB/sec [Average]
+  (min, avg, max) = (3427.587, 3464.064, 3500.045), stdev = 22.999
+  CI (99.9%): [3429.293, 3498.835] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.alloc.rate.norm":
+  28608027.649 ±(99.9%) 0.322 B/op [Average]
+  (min, avg, max) = (28608027.331, 28608027.649, 28608027.889), stdev = 0.213
+  CI (99.9%): [28608027.327, 28608027.971] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.count":
+  368.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (36.000, 36.800, 38.000), stdev = 0.632
+  CI (99.9%): [368.000, 368.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.time":
+  409.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (39.000, 40.900, 43.000), stdev = 1.449
+  CI (99.9%): [409.000, 409.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 25.0.4.1, OpenJDK 64-Bit Server VM, 25.0.4.1+1-1-26.04.4-Ubuntu
+# VM invoker: /usr/lib/jvm/java-25-openjdk-amd64/bin/java
+# VM options: -Xms256m -Xmx1g
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: io.polyxml.bench.BindingBenchmark.jaxbWrite
+# Parameters: (batchSize = 1000, workload = telemetry)
+
+# Run progress: 91.67% complete, ETA 00:00:33
+# Fork: 1 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+231.169 ops/s
+# Warmup Iteration   2: 245.417 ops/s
+# Warmup Iteration   3: 244.100 ops/s
+Iteration   1: 241.946 ops/s
+                 gc.alloc.rate:      1690.554 MB/sec
+                 gc.alloc.rate.norm: 7328014.579 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            22.000 ms
+
+Iteration   2: 245.260 ops/s
+                 gc.alloc.rate:      1713.752 MB/sec
+                 gc.alloc.rate.norm: 7328014.305 B/op
+                 gc.count:           23.000 counts
+                 gc.time:            25.000 ms
+
+Iteration   3: 244.559 ops/s
+                 gc.alloc.rate:      1708.820 MB/sec
+                 gc.alloc.rate.norm: 7328014.400 B/op
+                 gc.count:           22.000 counts
+                 gc.time:            23.000 ms
+
+Iteration   4: 245.481 ops/s
+                 gc.alloc.rate:      1715.306 MB/sec
+                 gc.alloc.rate.norm: 7328014.276 B/op
+                 gc.count:           23.000 counts
+                 gc.time:            24.000 ms
+
+Iteration   5: 246.196 ops/s
+                 gc.alloc.rate:      1720.285 MB/sec
+                 gc.alloc.rate.norm: 7328014.247 B/op
+                 gc.count:           23.000 counts
+                 gc.time:            25.000 ms
+
+
+# Run progress: 95.83% complete, ETA 00:00:16
+# Fork: 2 of 2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.openjdk.jmh.util.Utils (file:/home/bailey/github/PolyXML/benchmarks/java/target/benchmarks.jar)
+WARNING: Please consider reporting this to the maintainers of class org.openjdk.jmh.util.Utils
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+# Warmup Iteration   1: fixture: workload=telemetry,batch=1000,input_bytes=588890,direct_output_bytes=659,jackson_output_bytes=587,jaxb_output_bytes=642
+236.179 ops/s
+# Warmup Iteration   2: 255.489 ops/s
+# Warmup Iteration   3: 253.075 ops/s
+Iteration   1: 253.727 ops/s
+                 gc.alloc.rate:      1772.949 MB/sec
+                 gc.alloc.rate.norm: 7328013.827 B/op
+                 gc.count:           23.000 counts
+                 gc.time:            24.000 ms
+
+Iteration   2: 254.011 ops/s
+                 gc.alloc.rate:      1774.797 MB/sec
+                 gc.alloc.rate.norm: 7328013.862 B/op
+                 gc.count:           24.000 counts
+                 gc.time:            24.000 ms
+
+Iteration   3: 253.300 ops/s
+                 gc.alloc.rate:      1769.939 MB/sec
+                 gc.alloc.rate.norm: 7328013.854 B/op
+                 gc.count:           23.000 counts
+                 gc.time:            25.000 ms
+
+Iteration   4: 250.438 ops/s
+                 gc.alloc.rate:      1749.917 MB/sec
+                 gc.alloc.rate.norm: 7328014.020 B/op
+                 gc.count:           23.000 counts
+                 gc.time:            24.000 ms
+
+Iteration   5: 252.885 ops/s
+                 gc.alloc.rate:      1766.997 MB/sec
+                 gc.alloc.rate.norm: 7328013.881 B/op
+                 gc.count:           24.000 counts
+                 gc.time:            24.000 ms
+
+
+
+Result "io.polyxml.bench.BindingBenchmark.jaxbWrite":
+  248.780 ±(99.9%) 6.879 ops/s [Average]
+  (min, avg, max) = (241.946, 248.780, 254.011), stdev = 4.550
+  CI (99.9%): [241.901, 255.660] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.alloc.rate":
+  1738.332 ±(99.9%) 48.065 MB/sec [Average]
+  (min, avg, max) = (1690.554, 1738.332, 1774.797), stdev = 31.792
+  CI (99.9%): [1690.266, 1786.397] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.alloc.rate.norm":
+  7328014.125 ±(99.9%) 0.407 B/op [Average]
+  (min, avg, max) = (7328013.827, 7328014.125, 7328014.579), stdev = 0.269
+  CI (99.9%): [7328013.718, 7328014.533] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.count":
+  230.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (22.000, 23.000, 24.000), stdev = 0.667
+  CI (99.9%): [230.000, 230.000] (assumes normal distribution)
+
+Secondary result "io.polyxml.bench.BindingBenchmark.jaxbWrite:gc.time":
+  240.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (22.000, 24.000, 25.000), stdev = 0.943
+  CI (99.9%): [240.000, 240.000] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:06:44
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                         (batchSize)  (workload)   Mode  Cnt         Score    Error   Units
+BindingBenchmark.directRead                              1000  settlement  thrpt   10       380.136 ±  4.846   ops/s
+BindingBenchmark.directRead:gc.alloc.rate                1000  settlement  thrpt   10      1638.383 ± 20.888  MB/sec
+BindingBenchmark.directRead:gc.alloc.rate.norm           1000  settlement  thrpt   10   4520009.249 ±  0.113    B/op
+BindingBenchmark.directRead:gc.count                     1000  settlement  thrpt   10       216.000           counts
+BindingBenchmark.directRead:gc.time                      1000  settlement  thrpt   10       226.000               ms
+BindingBenchmark.directRead                              1000   telemetry  thrpt   10       605.306 ±  2.467   ops/s
+BindingBenchmark.directRead:gc.alloc.rate                1000   telemetry  thrpt   10      1569.934 ±  6.398  MB/sec
+BindingBenchmark.directRead:gc.alloc.rate.norm           1000   telemetry  thrpt   10   2720005.809 ±  0.034    B/op
+BindingBenchmark.directRead:gc.count                     1000   telemetry  thrpt   10       208.000           counts
+BindingBenchmark.directRead:gc.time                      1000   telemetry  thrpt   10       214.000               ms
+BindingBenchmark.directWrite                             1000  settlement  thrpt   10       208.086 ±  4.253   ops/s
+BindingBenchmark.directWrite:gc.alloc.rate               1000  settlement  thrpt   10      1876.227 ± 38.352  MB/sec
+BindingBenchmark.directWrite:gc.alloc.rate.norm          1000  settlement  thrpt   10   9456016.890 ±  0.337    B/op
+BindingBenchmark.directWrite:gc.count                    1000  settlement  thrpt   10       249.000           counts
+BindingBenchmark.directWrite:gc.time                     1000  settlement  thrpt   10       257.000               ms
+BindingBenchmark.directWrite                             1000   telemetry  thrpt   10       698.861 ±  4.591   ops/s
+BindingBenchmark.directWrite:gc.alloc.rate               1000   telemetry  thrpt   10      3902.388 ± 25.643  MB/sec
+BindingBenchmark.directWrite:gc.alloc.rate.norm          1000   telemetry  thrpt   10   5856005.029 ±  0.042    B/op
+BindingBenchmark.directWrite:gc.count                    1000   telemetry  thrpt   10       388.000           counts
+BindingBenchmark.directWrite:gc.time                     1000   telemetry  thrpt   10       426.000               ms
+BindingBenchmark.jacksonRead                             1000  settlement  thrpt   10       402.531 ±  4.930   ops/s
+BindingBenchmark.jacksonRead:gc.alloc.rate               1000  settlement  thrpt   10      1934.505 ± 23.692  MB/sec
+BindingBenchmark.jacksonRead:gc.alloc.rate.norm          1000  settlement  thrpt   10   5040008.722 ±  0.111    B/op
+BindingBenchmark.jacksonRead:gc.count                    1000  settlement  thrpt   10       254.000           counts
+BindingBenchmark.jacksonRead:gc.time                     1000  settlement  thrpt   10       268.000               ms
+BindingBenchmark.jacksonRead                             1000   telemetry  thrpt   10       626.047 ±  4.449   ops/s
+BindingBenchmark.jacksonRead:gc.alloc.rate               1000   telemetry  thrpt   10      1934.140 ± 13.764  MB/sec
+BindingBenchmark.jacksonRead:gc.alloc.rate.norm          1000   telemetry  thrpt   10   3240005.617 ±  0.049    B/op
+BindingBenchmark.jacksonRead:gc.count                    1000   telemetry  thrpt   10       255.000           counts
+BindingBenchmark.jacksonRead:gc.time                     1000   telemetry  thrpt   10       263.000               ms
+BindingBenchmark.jacksonWrite                            1000  settlement  thrpt   10       197.944 ±  1.696   ops/s
+BindingBenchmark.jacksonWrite:gc.alloc.rate              1000  settlement  thrpt   10      1242.695 ± 10.646  MB/sec
+BindingBenchmark.jacksonWrite:gc.alloc.rate.norm         1000  settlement  thrpt   10   6584017.752 ±  0.139    B/op
+BindingBenchmark.jacksonWrite:gc.count                   1000  settlement  thrpt   10       164.000           counts
+BindingBenchmark.jacksonWrite:gc.time                    1000  settlement  thrpt   10       174.000               ms
+BindingBenchmark.jacksonWrite                            1000   telemetry  thrpt   10       490.084 ±  3.611   ops/s
+BindingBenchmark.jacksonWrite:gc.alloc.rate              1000   telemetry  thrpt   10       807.518 ±  5.934  MB/sec
+BindingBenchmark.jacksonWrite:gc.alloc.rate.norm         1000   telemetry  thrpt   10   1728007.171 ±  0.062    B/op
+BindingBenchmark.jacksonWrite:gc.count                   1000   telemetry  thrpt   10       107.000           counts
+BindingBenchmark.jacksonWrite:gc.time                    1000   telemetry  thrpt   10       115.000               ms
+BindingBenchmark.jaxbRead                                1000  settlement  thrpt   10       173.611 ±  3.297   ops/s
+BindingBenchmark.jaxbRead:gc.alloc.rate                  1000  settlement  thrpt   10      1174.707 ± 22.327  MB/sec
+BindingBenchmark.jaxbRead:gc.alloc.rate.norm             1000  settlement  thrpt   10   7096026.293 ±  0.425    B/op
+BindingBenchmark.jaxbRead:gc.count                       1000  settlement  thrpt   10       155.000           counts
+BindingBenchmark.jaxbRead:gc.time                        1000  settlement  thrpt   10       181.000               ms
+BindingBenchmark.jaxbRead                                1000   telemetry  thrpt   10       238.771 ±  1.736   ops/s
+BindingBenchmark.jaxbRead:gc.alloc.rate                  1000   telemetry  thrpt   10       795.950 ±  5.800  MB/sec
+BindingBenchmark.jaxbRead:gc.alloc.rate.norm             1000   telemetry  thrpt   10   3496017.720 ±  0.192    B/op
+BindingBenchmark.jaxbRead:gc.count                       1000   telemetry  thrpt   10       106.000           counts
+BindingBenchmark.jaxbRead:gc.time                        1000   telemetry  thrpt   10       121.000               ms
+BindingBenchmark.jaxbWrite                               1000  settlement  thrpt   10       126.987 ±  1.273   ops/s
+BindingBenchmark.jaxbWrite:gc.alloc.rate                 1000  settlement  thrpt   10      3464.064 ± 34.771  MB/sec
+BindingBenchmark.jaxbWrite:gc.alloc.rate.norm            1000  settlement  thrpt   10  28608027.649 ±  0.322    B/op
+BindingBenchmark.jaxbWrite:gc.count                      1000  settlement  thrpt   10       368.000           counts
+BindingBenchmark.jaxbWrite:gc.time                       1000  settlement  thrpt   10       409.000               ms
+BindingBenchmark.jaxbWrite                               1000   telemetry  thrpt   10       248.780 ±  6.879   ops/s
+BindingBenchmark.jaxbWrite:gc.alloc.rate                 1000   telemetry  thrpt   10      1738.332 ± 48.065  MB/sec
+BindingBenchmark.jaxbWrite:gc.alloc.rate.norm            1000   telemetry  thrpt   10   7328014.125 ±  0.407    B/op
+BindingBenchmark.jaxbWrite:gc.count                      1000   telemetry  thrpt   10       230.000           counts
+BindingBenchmark.jaxbWrite:gc.time                       1000   telemetry  thrpt   10       240.000               ms
+
+Benchmark result is saved to /home/bailey/github/PolyXML/benchmarks/serializer-comparison/target/models-2026-10-04/java-jmh.json

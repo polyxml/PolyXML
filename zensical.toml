@@ -31,6 +31,7 @@ nav = [
     { "Architecture" = "architecture.md" },
     { "Benchmarks" = [
         { "Overview & Map" = "benchmarks/index.md" },
+        { "Serializer Comparisons" = "benchmarks/serializer-comparison-2026-10.md" },
         { "Cross-Language Results" = "benchmarks/language-results-2026-09.md" },
         { "Python AOT vs Dataclass" = "benchmarks/python-aot-vs-dataclass.md" },
         { "Python JSON & Binary AOT" = "benchmarks/python-json-binary-aot-2026-09.md" },

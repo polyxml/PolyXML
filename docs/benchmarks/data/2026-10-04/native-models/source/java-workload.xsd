@@ -1,0 +1,84 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:element name="message" type="Message"/>
+<xs:complexType name="Message"><xs:sequence>
+<xs:element name="id" type="xs:string"/>
+<xs:element name="status" type="xs:string"/>
+<xs:element name="timestamp" type="xs:string"/>
+<xs:element name="amount" type="xs:string"/>
+<xs:element name="latitude" type="xs:string"/>
+<xs:element name="longitude" type="xs:string"/>
+<xs:element name="payload" type="xs:string"/>
+<xs:element name="optional0" type="xs:string" minOccurs="0"/>
+<xs:element name="optional1" type="xs:string" minOccurs="0"/>
+<xs:element name="optional2" type="xs:string" minOccurs="0"/>
+<xs:element name="optional3" type="xs:string" minOccurs="0"/>
+<xs:element name="optional4" type="xs:string" minOccurs="0"/>
+<xs:element name="optional5" type="xs:string" minOccurs="0"/>
+<xs:element name="optional6" type="xs:string" minOccurs="0"/>
+<xs:element name="optional7" type="xs:string" minOccurs="0"/>
+<xs:element name="optional8" type="xs:string" minOccurs="0"/>
+<xs:element name="optional9" type="xs:string" minOccurs="0"/>
+<xs:element name="optional10" type="xs:string" minOccurs="0"/>
+<xs:element name="optional11" type="xs:string" minOccurs="0"/>
+<xs:element name="optional12" type="xs:string" minOccurs="0"/>
+<xs:element name="optional13" type="xs:string" minOccurs="0"/>
+<xs:element name="optional14" type="xs:string" minOccurs="0"/>
+<xs:element name="optional15" type="xs:string" minOccurs="0"/>
+<xs:element name="optional16" type="xs:string" minOccurs="0"/>
+<xs:element name="optional17" type="xs:string" minOccurs="0"/>
+<xs:element name="optional18" type="xs:string" minOccurs="0"/>
+<xs:element name="optional19" type="xs:string" minOccurs="0"/>
+<xs:element name="optional20" type="xs:string" minOccurs="0"/>
+<xs:element name="optional21" type="xs:string" minOccurs="0"/>
+<xs:element name="optional22" type="xs:string" minOccurs="0"/>
+<xs:element name="optional23" type="xs:string" minOccurs="0"/>
+<xs:element name="optional24" type="xs:string" minOccurs="0"/>
+<xs:element name="optional25" type="xs:string" minOccurs="0"/>
+<xs:element name="optional26" type="xs:string" minOccurs="0"/>
+<xs:element name="optional27" type="xs:string" minOccurs="0"/>
+<xs:element name="optional28" type="xs:string" minOccurs="0"/>
+<xs:element name="optional29" type="xs:string" minOccurs="0"/>
+<xs:element name="optional30" type="xs:string" minOccurs="0"/>
+<xs:element name="optional31" type="xs:string" minOccurs="0"/>
+<xs:element name="optional32" type="xs:string" minOccurs="0"/>
+<xs:element name="optional33" type="xs:string" minOccurs="0"/>
+<xs:element name="optional34" type="xs:string" minOccurs="0"/>
+<xs:element name="optional35" type="xs:string" minOccurs="0"/>
+<xs:element name="optional36" type="xs:string" minOccurs="0"/>
+<xs:element name="optional37" type="xs:string" minOccurs="0"/>
+<xs:element name="optional38" type="xs:string" minOccurs="0"/>
+<xs:element name="optional39" type="xs:string" minOccurs="0"/>
+<xs:element name="optional40" type="xs:string" minOccurs="0"/>
+<xs:element name="optional41" type="xs:string" minOccurs="0"/>
+<xs:element name="optional42" type="xs:string" minOccurs="0"/>
+<xs:element name="optional43" type="xs:string" minOccurs="0"/>
+<xs:element name="optional44" type="xs:string" minOccurs="0"/>
+<xs:element name="optional45" type="xs:string" minOccurs="0"/>
+<xs:element name="optional46" type="xs:string" minOccurs="0"/>
+<xs:element name="optional47" type="xs:string" minOccurs="0"/>
+<xs:element name="optional48" type="xs:string" minOccurs="0"/>
+<xs:element name="optional49" type="xs:string" minOccurs="0"/>
+<xs:element name="optional50" type="xs:string" minOccurs="0"/>
+<xs:element name="optional51" type="xs:string" minOccurs="0"/>
+<xs:element name="optional52" type="xs:string" minOccurs="0"/>
+<xs:element name="optional53" type="xs:string" minOccurs="0"/>
+<xs:element name="optional54" type="xs:string" minOccurs="0"/>
+<xs:element name="optional55" type="xs:string" minOccurs="0"/>
+<xs:element name="optional56" type="xs:string" minOccurs="0"/>
+<xs:element name="optional57" type="xs:string" minOccurs="0"/>
+<xs:element name="optional58" type="xs:string" minOccurs="0"/>
+<xs:element name="optional59" type="xs:string" minOccurs="0"/>
+<xs:element name="optional60" type="xs:string" minOccurs="0"/>
+<xs:element name="optional61" type="xs:string" minOccurs="0"/>
+<xs:element name="optional62" type="xs:string" minOccurs="0"/>
+<xs:element name="optional63" type="xs:string" minOccurs="0"/>
+<xs:element name="optional64" type="xs:string" minOccurs="0"/>
+<xs:element name="optional65" type="xs:string" minOccurs="0"/>
+<xs:element name="optional66" type="xs:string" minOccurs="0"/>
+<xs:element name="optional67" type="xs:string" minOccurs="0"/>
+<xs:element name="optional68" type="xs:string" minOccurs="0"/>
+<xs:element name="optional69" type="xs:string" minOccurs="0"/>
+<xs:element name="optional70" type="xs:string" minOccurs="0"/>
+<xs:element name="optional71" type="xs:string" minOccurs="0"/>
+<xs:element name="optional72" type="xs:string" minOccurs="0"/>
+</xs:sequence></xs:complexType></xs:schema>

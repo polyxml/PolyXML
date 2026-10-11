@@ -1,0 +1,10 @@
+memcap: <=7509 MiB (60% of 12515 MiB available) [systemd MemoryMax, swap off]
+dotnet=10.0.12,os=Ubuntu 26.04.1 LTS,cpu=12,iterations=1000
+baseline,size=1,read,ns/op=3294,B/op=12640,xml_bytes=65,output_chars=221,warmup_iterations=361413,warmup_ms=2000
+baseline,size=1,write,ns/op=2044,B/op=15512,xml_bytes=65,output_chars=221,warmup_iterations=361413,warmup_ms=2000
+generated,size=1,read,ns/op=2193,B/op=12592,xml_bytes=65,output_chars=221,warmup_iterations=513527,warmup_ms=2000
+generated,size=1,write,ns/op=1580,B/op=15512,xml_bytes=65,output_chars=221,warmup_iterations=513527,warmup_ms=2000
+baseline,size=1000,read,ns/op=353660,B/op=147648,xml_bytes=53795,output_chars=69935,warmup_iterations=2960,warmup_ms=2000
+baseline,size=1000,write,ns/op=315577,B/op=330120,xml_bytes=53795,output_chars=69935,warmup_iterations=2960,warmup_ms=2000
+generated,size=1000,read,ns/op=338115,B/op=147600,xml_bytes=53795,output_chars=69935,warmup_iterations=3184,warmup_ms=2000
+generated,size=1000,write,ns/op=297128,B/op=330120,xml_bytes=53795,output_chars=69935,warmup_iterations=3184,warmup_ms=2000

@@ -1,0 +1,2048 @@
+[
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "json_read",
+    "lane": "polyxml_dataclass",
+    "median_us": 1461.3897700000002,
+    "process_medians_us": [
+      1467.4646480000001,
+      1474.688514,
+      1463.9092190000001,
+      1455.1698000000001,
+      1458.870321,
+      1451.2462
+    ],
+    "process_range_us": [
+      1451.2462,
+      1474.688514
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "json_read",
+    "lane": "stdlib_json_typed_adapter",
+    "median_us": 524.133086,
+    "process_medians_us": [
+      523.461392,
+      524.80478,
+      517.206799,
+      540.69324,
+      528.9201559999999,
+      519.3082860000001
+    ],
+    "process_range_us": [
+      517.206799,
+      540.69324
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "json_read",
+    "lane": "xsdata_dataclass",
+    "median_us": 9751.4478125,
+    "process_medians_us": [
+      9686.739937999999,
+      9892.95525,
+      10067.2186,
+      9806.844875,
+      9696.05075,
+      9640.520062000001
+    ],
+    "process_range_us": [
+      9640.520062000001,
+      10067.2186
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "json_write",
+    "lane": "polyxml_dataclass",
+    "median_us": 793.797724,
+    "process_medians_us": [
+      803.181866,
+      799.806323,
+      779.486097,
+      779.784263,
+      792.342964,
+      795.2524840000001
+    ],
+    "process_range_us": [
+      779.486097,
+      803.181866
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "json_write",
+    "lane": "stdlib_json_typed_adapter",
+    "median_us": 317.18428,
+    "process_medians_us": [
+      318.602602,
+      315.765958,
+      311.44861,
+      320.802414,
+      321.511037,
+      304.44011700000004
+    ],
+    "process_range_us": [
+      304.44011700000004,
+      321.511037
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "json_write",
+    "lane": "xsdata_dataclass",
+    "median_us": 3669.9662260000005,
+    "process_medians_us": [
+      3699.7755,
+      3640.1569520000003,
+      3705.93519,
+      3718.6386430000002,
+      3618.690452,
+      3599.4787140000003
+    ],
+    "process_range_us": [
+      3599.4787140000003,
+      3718.6386430000002
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "lxml_typed_adapter",
+    "median_us": 3889.2945,
+    "process_medians_us": [
+      4011.2822370000004,
+      4043.288184,
+      3869.4326499999997,
+      3830.643375,
+      3890.092775,
+      3888.496225
+    ],
+    "process_range_us": [
+      3830.643375,
+      4043.288184
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "polyxml_dataclass",
+    "median_us": 1827.3219355,
+    "process_medians_us": [
+      1794.2789639999999,
+      1830.370212,
+      1833.850859,
+      1830.416706,
+      1824.273659,
+      1760.253244
+    ],
+    "process_range_us": [
+      1760.253244,
+      1833.850859
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "pydantic_xml",
+    "median_us": 9449.487226500001,
+    "process_medians_us": [
+      9635.979941,
+      9429.540875,
+      9407.555187999998,
+      9546.790875,
+      9456.634765,
+      9442.339688
+    ],
+    "process_range_us": [
+      9407.555187999998,
+      9635.979941
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "stdlib_elementtree_typed_adapter",
+    "median_us": 1484.4411249999998,
+    "process_medians_us": [
+      1471.1782409999998,
+      1487.869725,
+      1463.008914,
+      1496.686095,
+      1486.428333,
+      1482.4539169999998
+    ],
+    "process_range_us": [
+      1463.008914,
+      1496.686095
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "xsdata_dataclass",
+    "median_us": 14673.547864,
+    "process_medians_us": [
+      14759.811455000001,
+      14587.284273,
+      14761.507545,
+      14312.128091,
+      15039.5972,
+      14359.259636
+    ],
+    "process_range_us": [
+      14312.128091,
+      15039.5972
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "lxml_typed_adapter",
+    "median_us": 1723.376111,
+    "process_medians_us": [
+      1823.628988,
+      1724.395189,
+      1713.369756,
+      1683.607467,
+      1736.4728440000001,
+      1722.357033
+    ],
+    "process_range_us": [
+      1683.607467,
+      1823.628988
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "polyxml_dataclass",
+    "median_us": 841.4811635,
+    "process_medians_us": [
+      844.464306,
+      855.0859320000001,
+      830.72738,
+      835.792583,
+      846.458171,
+      838.498021
+    ],
+    "process_range_us": [
+      830.72738,
+      855.0859320000001
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "pydantic_xml",
+    "median_us": 7953.0911275,
+    "process_medians_us": [
+      8187.683316,
+      7676.6896,
+      7977.207105,
+      7986.405895,
+      7705.4153,
+      7928.97515
+    ],
+    "process_range_us": [
+      7676.6896,
+      8187.683316
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "stdlib_elementtree_typed_adapter",
+    "median_us": 3452.7569,
+    "process_medians_us": [
+      3434.1229780000003,
+      3455.5559559999997,
+      3449.957844,
+      3462.032114,
+      3437.136956,
+      3502.2049559999996
+    ],
+    "process_range_us": [
+      3434.1229780000003,
+      3502.2049559999996
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "xsdata_dataclass",
+    "median_us": 14145.1390455,
+    "process_medians_us": [
+      15159.3879,
+      14344.569,
+      14086.217364,
+      14142.696818,
+      14147.581273,
+      14064.607182
+    ],
+    "process_range_us": [
+      14064.607182,
+      15159.3879
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "json_read",
+    "lane": "polyxml_dataclass",
+    "median_us": 3.3966890000000003,
+    "process_medians_us": [
+      3.472637,
+      3.40481,
+      3.404893,
+      3.327649,
+      3.381544,
+      3.3885680000000002
+    ],
+    "process_range_us": [
+      3.327649,
+      3.472637
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "json_read",
+    "lane": "stdlib_json_typed_adapter",
+    "median_us": 1.8170765,
+    "process_medians_us": [
+      1.808796,
+      1.835791,
+      1.820614,
+      1.813462,
+      1.843653,
+      1.813539
+    ],
+    "process_range_us": [
+      1.808796,
+      1.843653
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "json_read",
+    "lane": "xsdata_dataclass",
+    "median_us": 15.6856085,
+    "process_medians_us": [
+      15.791456,
+      15.906270000000001,
+      15.579761000000001,
+      15.37622,
+      16.282784,
+      15.413957
+    ],
+    "process_range_us": [
+      15.37622,
+      16.282784
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "json_write",
+    "lane": "polyxml_dataclass",
+    "median_us": 2.3798519999999996,
+    "process_medians_us": [
+      2.393526,
+      2.453036,
+      2.329041,
+      2.360967,
+      2.424038,
+      2.3661779999999997
+    ],
+    "process_range_us": [
+      2.329041,
+      2.453036
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "json_write",
+    "lane": "stdlib_json_typed_adapter",
+    "median_us": 1.8601655,
+    "process_medians_us": [
+      1.86152,
+      1.858811,
+      1.856879,
+      1.8569449999999998,
+      1.865865,
+      1.9328889999999999
+    ],
+    "process_range_us": [
+      1.856879,
+      1.9328889999999999
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "json_write",
+    "lane": "xsdata_dataclass",
+    "median_us": 10.0498955,
+    "process_medians_us": [
+      10.381572,
+      9.855034,
+      9.930308,
+      10.305838,
+      9.986,
+      10.113790999999999
+    ],
+    "process_range_us": [
+      9.855034,
+      10.381572
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "lxml_typed_adapter",
+    "median_us": 6.532785499999999,
+    "process_medians_us": [
+      6.638332999999999,
+      6.759981,
+      6.4155690000000005,
+      6.233140000000001,
+      6.792945,
+      6.427238
+    ],
+    "process_range_us": [
+      6.233140000000001,
+      6.792945
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "polyxml_dataclass",
+    "median_us": 4.0666885,
+    "process_medians_us": [
+      4.07518,
+      3.947954,
+      4.094015,
+      4.058197,
+      4.025437,
+      4.1383909999999995
+    ],
+    "process_range_us": [
+      3.947954,
+      4.1383909999999995
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "pydantic_xml",
+    "median_us": 13.20829,
+    "process_medians_us": [
+      13.435737,
+      13.159258,
+      13.380274,
+      13.060504000000002,
+      13.118041999999999,
+      13.257322
+    ],
+    "process_range_us": [
+      13.060504000000002,
+      13.435737
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "stdlib_elementtree_typed_adapter",
+    "median_us": 4.3767045,
+    "process_medians_us": [
+      4.234319,
+      4.3822,
+      4.3712089999999995,
+      4.386311,
+      4.389600000000001,
+      4.354256
+    ],
+    "process_range_us": [
+      4.234319,
+      4.389600000000001
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "xsdata_dataclass",
+    "median_us": 37.402985,
+    "process_medians_us": [
+      38.124507,
+      37.387171,
+      37.418799,
+      37.257914,
+      37.247326,
+      37.423089
+    ],
+    "process_range_us": [
+      37.247326,
+      38.124507
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "lxml_typed_adapter",
+    "median_us": 2.978617,
+    "process_medians_us": [
+      3.2083939999999997,
+      2.974174,
+      2.98306,
+      2.898258,
+      3.004127,
+      2.9678649999999998
+    ],
+    "process_range_us": [
+      2.898258,
+      3.2083939999999997
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "polyxml_dataclass",
+    "median_us": 2.4964370000000002,
+    "process_medians_us": [
+      2.485148,
+      2.474249,
+      2.452005,
+      2.507726,
+      2.514846,
+      2.524655
+    ],
+    "process_range_us": [
+      2.452005,
+      2.524655
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "pydantic_xml",
+    "median_us": 10.8404795,
+    "process_medians_us": [
+      11.586632999999999,
+      11.237757,
+      10.844393,
+      10.609876,
+      10.836566000000001,
+      10.764567999999999
+    ],
+    "process_range_us": [
+      10.609876,
+      11.586632999999999
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "stdlib_elementtree_typed_adapter",
+    "median_us": 8.990595500000001,
+    "process_medians_us": [
+      8.971727999999999,
+      8.897461,
+      9.269011,
+      8.991839,
+      9.008307,
+      8.989352
+    ],
+    "process_range_us": [
+      8.897461,
+      9.269011
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "xsdata_dataclass",
+    "median_us": 30.178441499999998,
+    "process_medians_us": [
+      31.347801,
+      30.182779,
+      30.174104,
+      30.087336999999998,
+      30.564151000000003,
+      29.886112
+    ],
+    "process_range_us": [
+      29.886112,
+      31.347801
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "json_read",
+    "lane": "polyxml_dataclass",
+    "median_us": 1381.6833615,
+    "process_medians_us": [
+      1387.1605,
+      1373.826786,
+      1381.604607,
+      1380.4290090000002,
+      1381.7621159999999,
+      1382.7220619999998
+    ],
+    "process_range_us": [
+      1373.826786,
+      1387.1605
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "json_read",
+    "lane": "stdlib_json_typed_adapter",
+    "median_us": 408.8314435,
+    "process_medians_us": [
+      408.909156,
+      414.369784,
+      408.58279100000004,
+      421.53204800000003,
+      408.753731,
+      406.391211
+    ],
+    "process_range_us": [
+      406.391211,
+      421.53204800000003
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "json_read",
+    "lane": "xsdata_dataclass",
+    "median_us": 9730.9553125,
+    "process_medians_us": [
+      9603.126562000001,
+      9799.391125,
+      9915.52825,
+      9662.5195,
+      10156.868067,
+      9546.546562000001
+    ],
+    "process_range_us": [
+      9546.546562000001,
+      10156.868067
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "json_write",
+    "lane": "polyxml_dataclass",
+    "median_us": 786.6010595,
+    "process_medians_us": [
+      809.061062,
+      793.891672,
+      773.233549,
+      788.228109,
+      782.484959,
+      784.97401
+    ],
+    "process_range_us": [
+      773.233549,
+      809.061062
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "json_write",
+    "lane": "stdlib_json_typed_adapter",
+    "median_us": 272.62811899999997,
+    "process_medians_us": [
+      270.76344,
+      265.70092200000005,
+      273.529363,
+      286.503984,
+      271.726875,
+      273.59555
+    ],
+    "process_range_us": [
+      265.70092200000005,
+      286.503984
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "json_write",
+    "lane": "xsdata_dataclass",
+    "median_us": 3619.62425,
+    "process_medians_us": [
+      3612.013048,
+      3612.148619,
+      3627.099881,
+      3632.076286,
+      3582.117667,
+      3677.733405
+    ],
+    "process_range_us": [
+      3582.117667,
+      3677.733405
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "lxml_typed_adapter",
+    "median_us": 3452.172143,
+    "process_medians_us": [
+      3603.945048,
+      3574.916262,
+      3451.9274,
+      3409.714378,
+      3414.252864,
+      3452.416886
+    ],
+    "process_range_us": [
+      3409.714378,
+      3603.945048
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "polyxml_dataclass",
+    "median_us": 1622.4721715,
+    "process_medians_us": [
+      1619.423344,
+      1614.937635,
+      1623.195812,
+      1649.4199059999999,
+      1621.748531,
+      1668.169122
+    ],
+    "process_range_us": [
+      1614.937635,
+      1668.169122
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "pydantic_xml",
+    "median_us": 8866.6211765,
+    "process_medians_us": [
+      9012.350176000002,
+      8847.193353,
+      8934.487059000001,
+      8711.383056,
+      8858.714941,
+      8874.527412000001
+    ],
+    "process_range_us": [
+      8711.383056,
+      9012.350176000002
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "stdlib_elementtree_typed_adapter",
+    "median_us": 1155.199761,
+    "process_medians_us": [
+      1145.000763,
+      1143.05157,
+      1159.612259,
+      1152.657537,
+      1157.741985,
+      1165.596126
+    ],
+    "process_range_us": [
+      1143.05157,
+      1165.596126
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "xsdata_dataclass",
+    "median_us": 14064.8144545,
+    "process_medians_us": [
+      14374.568818,
+      14010.189273,
+      14119.439636,
+      14377.351,
+      13830.790727,
+      13883.775182
+    ],
+    "process_range_us": [
+      13830.790727,
+      14377.351
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "lxml_typed_adapter",
+    "median_us": 1615.669375,
+    "process_medians_us": [
+      1738.689944,
+      1610.005604,
+      1614.300823,
+      1597.0155730000001,
+      1636.864552,
+      1617.0379269999999
+    ],
+    "process_range_us": [
+      1597.0155730000001,
+      1738.689944
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "polyxml_dataclass",
+    "median_us": 767.0982345,
+    "process_medians_us": [
+      766.432632,
+      767.7638370000001,
+      758.671603,
+      774.740232,
+      766.40937,
+      775.759373
+    ],
+    "process_range_us": [
+      758.671603,
+      775.759373
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "pydantic_xml",
+    "median_us": 7744.326725,
+    "process_medians_us": [
+      8070.694263,
+      7567.6073,
+      7966.481105000001,
+      7659.15995,
+      7562.1265,
+      7829.4935
+    ],
+    "process_range_us": [
+      7562.1265,
+      8070.694263
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "stdlib_elementtree_typed_adapter",
+    "median_us": 3220.8888645,
+    "process_medians_us": [
+      3207.012896,
+      3277.366125,
+      3196.041229,
+      3234.764833,
+      3236.6649580000003,
+      3168.9867919999997
+    ],
+    "process_range_us": [
+      3168.9867919999997,
+      3277.366125
+    ]
+  },
+  {
+    "runtime": "python",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "xsdata_dataclass",
+    "median_us": 14211.823045500001,
+    "process_medians_us": [
+      15053.56,
+      13987.150909,
+      14562.558636,
+      14376.680727,
+      14046.965364,
+      13963.729455
+    ],
+    "process_range_us": [
+      13963.729455,
+      15053.56
+    ]
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "json_read",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 81.9841585,
+    "process_medians_us": [
+      81.748671,
+      81.947489,
+      82.314911,
+      84.431204,
+      82.020828,
+      81.89019400000001
+    ],
+    "process_range_us": [
+      81.748671,
+      84.431204
+    ],
+    "allocation_calls": 1011,
+    "requested_bytes": 91346
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "json_read",
+    "lane": "polyxml_generated_owned",
+    "median_us": 85.288062,
+    "process_medians_us": [
+      85.68800900000001,
+      85.42051,
+      85.810833,
+      84.917006,
+      85.155614,
+      84.879639
+    ],
+    "process_range_us": [
+      84.879639,
+      85.810833
+    ],
+    "allocation_calls": 1011,
+    "requested_bytes": 91346
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "json_read",
+    "lane": "serde_json_handwritten",
+    "median_us": 82.533866,
+    "process_medians_us": [
+      82.197408,
+      82.517215,
+      82.55051700000001,
+      82.847672,
+      82.098351,
+      82.683527
+    ],
+    "process_range_us": [
+      82.098351,
+      82.847672
+    ],
+    "allocation_calls": 1011,
+    "requested_bytes": 91346
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "json_write",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 38.1121705,
+    "process_medians_us": [
+      37.931180999999995,
+      38.079055999999994,
+      38.564047,
+      38.291025000000005,
+      38.145285,
+      37.865517
+    ],
+    "process_range_us": [
+      37.865517,
+      38.564047
+    ],
+    "allocation_calls": 10,
+    "requested_bytes": 130944
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "json_write",
+    "lane": "polyxml_generated_owned",
+    "median_us": 37.5291215,
+    "process_medians_us": [
+      37.134651,
+      39.353792999999996,
+      37.851122000000004,
+      37.600909,
+      37.457334,
+      37.447605
+    ],
+    "process_range_us": [
+      37.134651,
+      39.353792999999996
+    ],
+    "allocation_calls": 10,
+    "requested_bytes": 130944
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "json_write",
+    "lane": "serde_json_handwritten",
+    "median_us": 37.8106375,
+    "process_medians_us": [
+      38.02342,
+      37.337077,
+      38.616601,
+      37.597855,
+      36.998956,
+      38.546489
+    ],
+    "process_range_us": [
+      36.998956,
+      38.616601
+    ],
+    "allocation_calls": 10,
+    "requested_bytes": 130944
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "polyxml_dynamic",
+    "median_us": 790.577156,
+    "process_medians_us": [
+      791.1412809999999,
+      782.045422,
+      794.066161,
+      796.202596,
+      788.2474840000001,
+      790.013031
+    ],
+    "process_range_us": [
+      782.045422,
+      796.202596
+    ],
+    "allocation_calls": 3025,
+    "requested_bytes": 487441
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 363.816827,
+    "process_medians_us": [
+      363.957913,
+      363.627478,
+      362.710368,
+      366.301166,
+      375.357842,
+      363.67574099999996
+    ],
+    "process_range_us": [
+      362.710368,
+      375.357842
+    ],
+    "allocation_calls": 3012,
+    "requested_bytes": 141694
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "polyxml_generated_owned",
+    "median_us": 379.10122049999995,
+    "process_medians_us": [
+      375.927314,
+      377.898311,
+      378.50165999999996,
+      379.937125,
+      380.02063,
+      379.700781
+    ],
+    "process_range_us": [
+      375.927314,
+      380.02063
+    ],
+    "allocation_calls": 4012,
+    "requested_bytes": 149694
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "quick_xml_serde_borrowed",
+    "median_us": 646.779821,
+    "process_medians_us": [
+      645.914525,
+      644.802463,
+      657.283,
+      647.6451169999999,
+      652.363784,
+      645.018933
+    ],
+    "process_range_us": [
+      644.802463,
+      657.283
+    ],
+    "allocation_calls": 4016,
+    "requested_bytes": 167837
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "quick_xml_serde_owned",
+    "median_us": 649.8958905,
+    "process_medians_us": [
+      649.810512,
+      646.6695,
+      656.109213,
+      649.0659039999999,
+      649.981269,
+      656.509571
+    ],
+    "process_range_us": [
+      646.6695,
+      656.509571
+    ],
+    "allocation_calls": 4016,
+    "requested_bytes": 167837
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_read",
+    "lane": "serde_xml_rs_owned",
+    "median_us": 2926.9465090000003,
+    "process_medians_us": [
+      2913.413926,
+      2922.747148,
+      2931.1458700000003,
+      2941.168074,
+      2959.931314,
+      2920.394796
+    ],
+    "process_range_us": [
+      2913.413926,
+      2959.931314
+    ],
+    "allocation_calls": 53041,
+    "requested_bytes": 7029019
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "polyxml_dynamic",
+    "median_us": 170.513565,
+    "process_medians_us": [
+      167.870679,
+      176.289874,
+      176.208032,
+      169.932162,
+      171.094968,
+      163.93801000000002
+    ],
+    "process_range_us": [
+      163.93801000000002,
+      176.289874
+    ],
+    "allocation_calls": 2009,
+    "requested_bytes": 339302
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 133.7142055,
+    "process_medians_us": [
+      132.051008,
+      134.19147,
+      138.869301,
+      133.236941,
+      151.29344899999998,
+      128.663684
+    ],
+    "process_range_us": [
+      128.663684,
+      151.29344899999998
+    ],
+    "allocation_calls": 3015,
+    "requested_bytes": 349806
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "polyxml_generated_owned",
+    "median_us": 133.961928,
+    "process_medians_us": [
+      131.979155,
+      142.035235,
+      139.260926,
+      133.484299,
+      134.439557,
+      127.63031699999999
+    ],
+    "process_range_us": [
+      127.63031699999999,
+      142.035235
+    ],
+    "allocation_calls": 3015,
+    "requested_bytes": 349806
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "quick_xml_serde_borrowed",
+    "median_us": 228.3837,
+    "process_medians_us": [
+      228.101673,
+      224.595061,
+      234.211402,
+      253.01608199999998,
+      228.665727,
+      220.226852
+    ],
+    "process_range_us": [
+      220.226852,
+      253.01608199999998
+    ],
+    "allocation_calls": 4016,
+    "requested_bytes": 633742
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "quick_xml_serde_owned",
+    "median_us": 247.09390050000002,
+    "process_medians_us": [
+      256.095448,
+      249.83250700000002,
+      256.39628,
+      225.686818,
+      241.03614000000002,
+      244.355294
+    ],
+    "process_range_us": [
+      225.686818,
+      256.39628
+    ],
+    "allocation_calls": 4016,
+    "requested_bytes": 633742
+  },
+  {
+    "runtime": "rust",
+    "case": "escaped_1000",
+    "op": "xml_write",
+    "lane": "serde_xml_rs_owned",
+    "median_us": 365.01087199999995,
+    "process_medians_us": [
+      365.20370199999996,
+      361.615888,
+      364.818042,
+      362.53699800000004,
+      368.794748,
+      365.931306
+    ],
+    "process_range_us": [
+      361.615888,
+      368.794748
+    ],
+    "allocation_calls": 9021,
+    "requested_bytes": 298209
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "json_read",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 0.0827945,
+    "process_medians_us": [
+      0.087369,
+      0.08401600000000001,
+      0.081959,
+      0.08259999999999999,
+      0.08298900000000001,
+      0.082069
+    ],
+    "process_range_us": [
+      0.081959,
+      0.087369
+    ],
+    "allocation_calls": 2,
+    "requested_bytes": 136
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "json_read",
+    "lane": "polyxml_generated_owned",
+    "median_us": 0.08385300000000001,
+    "process_medians_us": [
+      0.083846,
+      0.085205,
+      0.083885,
+      0.08386,
+      0.08350199999999999,
+      0.083598
+    ],
+    "process_range_us": [
+      0.08350199999999999,
+      0.085205
+    ],
+    "allocation_calls": 2,
+    "requested_bytes": 136
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "json_read",
+    "lane": "serde_json_handwritten",
+    "median_us": 0.0842565,
+    "process_medians_us": [
+      0.084148,
+      0.08471200000000001,
+      0.08358700000000001,
+      0.08385899999999999,
+      0.085196,
+      0.084365
+    ],
+    "process_range_us": [
+      0.08358700000000001,
+      0.085196
+    ],
+    "allocation_calls": 2,
+    "requested_bytes": 136
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "json_write",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 0.040542999999999996,
+    "process_medians_us": [
+      0.040729,
+      0.040235,
+      0.040156,
+      0.040795000000000005,
+      0.040649,
+      0.040437
+    ],
+    "process_range_us": [
+      0.040156,
+      0.040795000000000005
+    ],
+    "allocation_calls": 1,
+    "requested_bytes": 128
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "json_write",
+    "lane": "polyxml_generated_owned",
+    "median_us": 0.041222999999999996,
+    "process_medians_us": [
+      0.041269,
+      0.040966999999999996,
+      0.041222,
+      0.041224,
+      0.041052,
+      0.041344
+    ],
+    "process_range_us": [
+      0.040966999999999996,
+      0.041344
+    ],
+    "allocation_calls": 1,
+    "requested_bytes": 128
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "json_write",
+    "lane": "serde_json_handwritten",
+    "median_us": 0.0399625,
+    "process_medians_us": [
+      0.03997,
+      0.040046,
+      0.039955,
+      0.039619,
+      0.039822,
+      0.040284
+    ],
+    "process_range_us": [
+      0.039619,
+      0.040284
+    ],
+    "allocation_calls": 1,
+    "requested_bytes": 128
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "polyxml_dynamic",
+    "median_us": 1.044231,
+    "process_medians_us": [
+      1.045163,
+      1.053171,
+      1.043299,
+      1.025082,
+      1.040931,
+      1.0562770000000001
+    ],
+    "process_range_us": [
+      1.025082,
+      1.0562770000000001
+    ],
+    "allocation_calls": 17,
+    "requested_bytes": 11376
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 0.29862200000000005,
+    "process_medians_us": [
+      0.300377,
+      0.29797,
+      0.314907,
+      0.298588,
+      0.29865600000000003,
+      0.29619799999999996
+    ],
+    "process_range_us": [
+      0.29619799999999996,
+      0.314907
+    ],
+    "allocation_calls": 4,
+    "requested_bytes": 184
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "polyxml_generated_owned",
+    "median_us": 0.31886899999999996,
+    "process_medians_us": [
+      0.317844,
+      0.320364,
+      0.31881099999999996,
+      0.318927,
+      0.317193,
+      0.325041
+    ],
+    "process_range_us": [
+      0.317193,
+      0.325041
+    ],
+    "allocation_calls": 6,
+    "requested_bytes": 200
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "quick_xml_serde_borrowed",
+    "median_us": 0.7372765,
+    "process_medians_us": [
+      0.7302390000000001,
+      0.736413,
+      0.737885,
+      0.762383,
+      0.747572,
+      0.736668
+    ],
+    "process_range_us": [
+      0.7302390000000001,
+      0.762383
+    ],
+    "allocation_calls": 8,
+    "requested_bytes": 437
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "quick_xml_serde_owned",
+    "median_us": 0.7438225,
+    "process_medians_us": [
+      0.7437590000000001,
+      0.735349,
+      0.7438859999999999,
+      0.746324,
+      0.7404980000000001,
+      0.7440789999999999
+    ],
+    "process_range_us": [
+      0.735349,
+      0.746324
+    ],
+    "allocation_calls": 9,
+    "requested_bytes": 445
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_read",
+    "lane": "serde_xml_rs_owned",
+    "median_us": 3.461106,
+    "process_medians_us": [
+      3.424815,
+      3.475615,
+      3.446597,
+      3.3642939999999997,
+      3.48127,
+      3.583527
+    ],
+    "process_range_us": [
+      3.3642939999999997,
+      3.583527
+    ],
+    "allocation_calls": 81,
+    "requested_bytes": 11790
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "polyxml_dynamic",
+    "median_us": 0.1570835,
+    "process_medians_us": [
+      0.15678,
+      0.158058,
+      0.157212,
+      0.161248,
+      0.156955,
+      0.156338
+    ],
+    "process_range_us": [
+      0.156338,
+      0.161248
+    ],
+    "allocation_calls": 1,
+    "requested_bytes": 512
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 0.18671349999999998,
+    "process_medians_us": [
+      0.16769499999999998,
+      0.184727,
+      0.19180699999999998,
+      0.19196700000000003,
+      0.181051,
+      0.18869999999999998
+    ],
+    "process_range_us": [
+      0.16769499999999998,
+      0.19196700000000003
+    ],
+    "allocation_calls": 6,
+    "requested_bytes": 258
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "polyxml_generated_owned",
+    "median_us": 0.1879745,
+    "process_medians_us": [
+      0.188366,
+      0.18024199999999999,
+      0.187583,
+      0.19426,
+      0.182725,
+      0.190738
+    ],
+    "process_range_us": [
+      0.18024199999999999,
+      0.19426
+    ],
+    "allocation_calls": 6,
+    "requested_bytes": 258
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "quick_xml_serde_borrowed",
+    "median_us": 0.410827,
+    "process_medians_us": [
+      0.414125,
+      0.428288,
+      0.409248,
+      0.412406,
+      0.406493,
+      0.396568
+    ],
+    "process_range_us": [
+      0.396568,
+      0.428288
+    ],
+    "allocation_calls": 10,
+    "requested_bytes": 430
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "quick_xml_serde_owned",
+    "median_us": 0.417732,
+    "process_medians_us": [
+      0.426244,
+      0.42594099999999996,
+      0.39981599999999995,
+      0.435307,
+      0.409523,
+      0.401531
+    ],
+    "process_range_us": [
+      0.39981599999999995,
+      0.435307
+    ],
+    "allocation_calls": 10,
+    "requested_bytes": 430
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1",
+    "op": "xml_write",
+    "lane": "serde_xml_rs_owned",
+    "median_us": 0.7118565,
+    "process_medians_us": [
+      0.712287,
+      0.7514489999999999,
+      0.703115,
+      0.72089,
+      0.710938,
+      0.711426
+    ],
+    "process_range_us": [
+      0.703115,
+      0.7514489999999999
+    ],
+    "allocation_calls": 20,
+    "requested_bytes": 741
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "json_read",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 61.685843000000006,
+    "process_medians_us": [
+      61.921436,
+      61.429627,
+      61.92342,
+      61.697013,
+      61.5945,
+      61.674673000000006
+    ],
+    "process_range_us": [
+      61.429627,
+      61.92342
+    ],
+    "allocation_calls": 1009,
+    "requested_bytes": 75298
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "json_read",
+    "lane": "polyxml_generated_owned",
+    "median_us": 64.02893549999999,
+    "process_medians_us": [
+      64.96653,
+      63.936955999999995,
+      63.593342,
+      64.120915,
+      63.744548,
+      64.325958
+    ],
+    "process_range_us": [
+      63.593342,
+      64.96653
+    ],
+    "allocation_calls": 1009,
+    "requested_bytes": 75298
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "json_read",
+    "lane": "serde_json_handwritten",
+    "median_us": 62.263468,
+    "process_medians_us": [
+      62.320186,
+      62.209648,
+      61.822048,
+      61.996241000000005,
+      62.826057999999996,
+      62.317288
+    ],
+    "process_range_us": [
+      61.822048,
+      62.826057999999996
+    ],
+    "allocation_calls": 1009,
+    "requested_bytes": 75298
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "json_write",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 26.871088999999998,
+    "process_medians_us": [
+      27.605438999999997,
+      26.727444,
+      27.154557,
+      26.757354,
+      26.179655999999998,
+      26.984824
+    ],
+    "process_range_us": [
+      26.179655999999998,
+      27.605438999999997
+    ],
+    "allocation_calls": 9,
+    "requested_bytes": 65408
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "json_write",
+    "lane": "polyxml_generated_owned",
+    "median_us": 26.9482255,
+    "process_medians_us": [
+      26.800572,
+      27.625467,
+      26.341436,
+      27.509901000000003,
+      26.430266,
+      27.095879
+    ],
+    "process_range_us": [
+      26.341436,
+      27.625467
+    ],
+    "allocation_calls": 9,
+    "requested_bytes": 65408
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "json_write",
+    "lane": "serde_json_handwritten",
+    "median_us": 27.162756,
+    "process_medians_us": [
+      26.63318,
+      27.353330000000003,
+      27.279854,
+      27.045658,
+      26.609313999999998,
+      27.614192
+    ],
+    "process_range_us": [
+      26.609313999999998,
+      27.614192
+    ],
+    "allocation_calls": 9,
+    "requested_bytes": 65408
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "polyxml_dynamic",
+    "median_us": 638.544196,
+    "process_medians_us": [
+      648.937833,
+      634.065555,
+      640.2849669999999,
+      639.152967,
+      637.935425,
+      635.75955
+    ],
+    "process_range_us": [
+      634.065555,
+      648.937833
+    ],
+    "allocation_calls": 3024,
+    "requested_bytes": 471402
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 191.6183285,
+    "process_medians_us": [
+      190.51768299999998,
+      191.845202,
+      191.39145499999998,
+      192.38405,
+      193.059597,
+      190.44378
+    ],
+    "process_range_us": [
+      190.44378,
+      193.059597
+    ],
+    "allocation_calls": 12,
+    "requested_bytes": 65464
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "polyxml_generated_owned",
+    "median_us": 232.1281395,
+    "process_medians_us": [
+      230.34494899999999,
+      235.659535,
+      231.648391,
+      234.73630799999998,
+      232.607888,
+      231.345215
+    ],
+    "process_range_us": [
+      230.34494899999999,
+      235.659535
+    ],
+    "allocation_calls": 2012,
+    "requested_bytes": 83354
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "quick_xml_serde_borrowed",
+    "median_us": 408.99740049999997,
+    "process_medians_us": [
+      408.332471,
+      417.858787,
+      406.636438,
+      408.51951299999996,
+      409.475288,
+      411.345455
+    ],
+    "process_range_us": [
+      406.636438,
+      417.858787
+    ],
+    "allocation_calls": 16,
+    "requested_bytes": 65717
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "quick_xml_serde_owned",
+    "median_us": 436.12325999999996,
+    "process_medians_us": [
+      434.32118199999996,
+      437.383904,
+      443.55178,
+      437.141139,
+      435.10538099999997,
+      434.785301
+    ],
+    "process_range_us": [
+      434.32118199999996,
+      443.55178
+    ],
+    "allocation_calls": 1016,
+    "requested_bytes": 75607
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_read",
+    "lane": "serde_xml_rs_owned",
+    "median_us": 2407.8482035,
+    "process_medians_us": [
+      2413.609062,
+      2430.9132969999996,
+      2408.844719,
+      2401.346391,
+      2405.987063,
+      2406.851688
+    ],
+    "process_range_us": [
+      2401.346391,
+      2430.9132969999996
+    ],
+    "allocation_calls": 49040,
+    "requested_bytes": 6913011
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "polyxml_dynamic",
+    "median_us": 89.68247,
+    "process_medians_us": [
+      89.821195,
+      92.281958,
+      89.543745,
+      88.711829,
+      89.02003500000001,
+      90.62857000000001
+    ],
+    "process_range_us": [
+      88.711829,
+      92.281958
+    ],
+    "allocation_calls": 8,
+    "requested_bytes": 130560
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "polyxml_generated_borrowed",
+    "median_us": 54.5077825,
+    "process_medians_us": [
+      53.489654,
+      55.720085,
+      55.164704,
+      54.621396999999995,
+      53.915651,
+      54.394168
+    ],
+    "process_range_us": [
+      53.489654,
+      55.720085
+    ],
+    "allocation_calls": 1014,
+    "requested_bytes": 141064
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "polyxml_generated_owned",
+    "median_us": 54.045161,
+    "process_medians_us": [
+      53.945779,
+      54.796451,
+      54.144543,
+      53.613315,
+      53.933704,
+      54.777506
+    ],
+    "process_range_us": [
+      53.613315,
+      54.796451
+    ],
+    "allocation_calls": 1014,
+    "requested_bytes": 141064
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "quick_xml_serde_borrowed",
+    "median_us": 198.315777,
+    "process_medians_us": [
+      197.730609,
+      191.723391,
+      203.229385,
+      198.900945,
+      197.33808499999998,
+      204.931142
+    ],
+    "process_range_us": [
+      191.723391,
+      204.931142
+    ],
+    "allocation_calls": 4016,
+    "requested_bytes": 449272
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "quick_xml_serde_owned",
+    "median_us": 198.83876600000002,
+    "process_medians_us": [
+      198.912856,
+      187.40577299999998,
+      198.764676,
+      192.340128,
+      202.835378,
+      204.047293
+    ],
+    "process_range_us": [
+      187.40577299999998,
+      204.047293
+    ],
+    "allocation_calls": 4016,
+    "requested_bytes": 449272
+  },
+  {
+    "runtime": "rust",
+    "case": "sensor_1000",
+    "op": "xml_write",
+    "lane": "serde_xml_rs_owned",
+    "median_us": 323.458884,
+    "process_medians_us": [
+      327.73658,
+      323.51188,
+      333.441583,
+      323.405888,
+      322.003302,
+      323.365138
+    ],
+    "process_range_us": [
+      322.003302,
+      333.441583
+    ],
+    "allocation_calls": 9020,
+    "requested_bytes": 175329
+  }
+]
