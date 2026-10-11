@@ -15,6 +15,8 @@ pub struct Document {
     groups: BTreeMap<QName, Model>,
     named: BTreeMap<QName, Model>,
     anonymous: Vec<(String, Model)>,
+    #[serde(default)]
+    unsupported_attribute_types: BTreeSet<QName>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 enum Model {
@@ -115,14 +117,7 @@ fn node(
                 Event::Start(child)
                     if matches!(
                         strip_prefix(child.name().into_inner()),
-                        "annotation"
-                            | "simpleType"
-                            | "attribute"
-                            | "attributeGroup"
-                            | "anyAttribute"
-                            | "unique"
-                            | "key"
-                            | "keyref"
+                        "annotation" | "simpleType" | "unique" | "key" | "keyref"
                     ) =>
                 {
                     reader.read_to_end(child.name())?;
@@ -130,14 +125,7 @@ fn node(
                 Event::Empty(child)
                     if matches!(
                         strip_prefix(child.name().into_inner()),
-                        "annotation"
-                            | "simpleType"
-                            | "attribute"
-                            | "attributeGroup"
-                            | "anyAttribute"
-                            | "unique"
-                            | "key"
-                            | "keyref"
+                        "annotation" | "simpleType" | "unique" | "key" | "keyref"
                     ) => {}
                 Event::Start(child) => {
                     result
@@ -256,6 +244,28 @@ fn particle(node: &Node, ns: Option<&str>, qualified: bool) -> Option<Model> {
     Some(repeat(node, model))
 }
 impl Document {
+    /// Whether a named type has plain sequence content in one element namespace.
+    /// Source QNames retain local `form` and `elementFormDefault` distinctions.
+    pub(crate) fn uniform_sequence(
+        &self,
+        name: &QName,
+        namespace: &Option<String>,
+    ) -> Option<bool> {
+        fn uniform(model: &Model, namespace: &Option<String>) -> bool {
+            match model {
+                Model::Element(q, _) => &q.namespace == namespace,
+                Model::Sequence(parts) => parts.iter().all(|p| uniform(p, namespace)),
+                Model::Repeat(part, _, _) if matches!(part.as_ref(), Model::Element(..)) => {
+                    uniform(part, namespace)
+                }
+                _ => false,
+            }
+        }
+        self.named.get(name).map(|model| {
+            !self.unsupported_attribute_types.contains(name) && uniform(model, namespace)
+        })
+    }
+
     pub fn parse(xml: &str) -> Result<Self, SchemaError> {
         let mut reader = Reader::from_str(xml);
         let root = loop {
@@ -273,13 +283,38 @@ impl Document {
             groups: BTreeMap::new(),
             named: BTreeMap::new(),
             anonymous: Vec::new(),
+            unsupported_attribute_types: BTreeSet::new(),
         };
-        fn collect(node: &Node, document: &mut Document, qualified: bool) {
+        fn qualified_attributes(node: &Node, default_qualified: bool) -> bool {
+            matches!(node.tag.as_str(), "attributeGroup" | "anyAttribute")
+                || (node.tag == "attribute"
+                    && (node.attr("ref").is_some()
+                        || match node.attr("form") {
+                            Some("qualified") => true,
+                            Some("unqualified") => false,
+                            _ => default_qualified,
+                        }))
+                || node
+                    .children
+                    .iter()
+                    .any(|child| qualified_attributes(child, default_qualified))
+        }
+        fn collect(
+            node: &Node,
+            document: &mut Document,
+            qualified: bool,
+            attributes_qualified: bool,
+        ) {
             let ns = document.namespace.as_deref();
             if node.tag == "complexType" {
                 let model = content(node, ns, qualified);
                 if let Some(name) = node.attr("name") {
                     document.named.insert(QName::new(ns, name), model);
+                    if qualified_attributes(node, attributes_qualified) {
+                        document
+                            .unsupported_attribute_types
+                            .insert(QName::new(ns, name));
+                    }
                 } else {
                     document.anonymous.push((
                         format!("anonymous complexType at byte {}", node.position),
@@ -288,7 +323,7 @@ impl Document {
                 }
             }
             for child in &node.children {
-                collect(child, document, qualified);
+                collect(child, document, qualified, attributes_qualified);
             }
         }
         for child in &root.children {
@@ -301,7 +336,12 @@ impl Document {
                 }
             }
         }
-        collect(&root, &mut document, qualified);
+        collect(
+            &root,
+            &mut document,
+            qualified,
+            root.attr("attributeFormDefault") == Some("qualified"),
+        );
         Ok(document)
     }
     pub fn adopt_namespace(&mut self, namespace: &str) {
@@ -344,6 +384,13 @@ impl Document {
                 _ => {}
             }
         }
+        self.unsupported_attribute_types = std::mem::take(&mut self.unsupported_attribute_types)
+            .into_iter()
+            .map(|mut q| {
+                name(&mut q, namespace);
+                q
+            })
+            .collect();
         for collection in [&mut self.groups, &mut self.named] {
             *collection = std::mem::take(collection)
                 .into_iter()
