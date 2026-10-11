@@ -1,3 +1,10 @@
+# [0.35.0](https://github.com/polyxml/PolyXML/compare/v0.34.8...v0.35.0) (2026-10-11)
+
+
+### Features
+
+* **rust:** add schema-aware incremental item writer ([#127](https://github.com/polyxml/PolyXML/issues/127)) ([#149](https://github.com/polyxml/PolyXML/issues/149)) ([a66d408](https://github.com/polyxml/PolyXML/commit/a66d408f87b2129d63192c3c81a46f469b7393ca))
+
 ## [0.34.8](https://github.com/polyxml/PolyXML/compare/v0.34.7...v0.34.8) (2026-10-04)
 
 
