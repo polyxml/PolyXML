@@ -57,6 +57,30 @@ output = polyxml.serialize(plane, indent=2)
 print(output.decode("utf-8"))
 ```
 
+### Binary fields
+
+Keep binary values typed as `bytes` and specify their XML encoding in field metadata:
+
+```python
+@dataclass
+class Packet:
+    payload: bytes = field(metadata={"type": "Element", "format": "base16"})
+
+packet = polyxml.deserialize("<Packet><payload>00aBFF</payload></Packet>", Packet)
+assert packet.payload == b"\x00\xab\xff"
+assert b"00ABFF" in polyxml.serialize(packet)
+```
+
+`base16` and `base64` codecs run in the native extension, with the encoding cached
+alongside the field schema. They support elements, attributes, text, optional
+values, and repeated `list[bytes]` elements. For Pydantic, put the same metadata
+in `Field(json_schema_extra={"format": "base16"})` (or `xsdata_metadata`).
+Hex output is uppercase; input accepts either case. XML whitespace is ignored in
+both encodings, matching xsdata binary conversion. Malformed input and unsupported
+binary formats raise `ValueError`. Empty content becomes `b""`; omitted optional
+fields retain their defaults. Fields without binary format metadata keep their
+existing behavior. JSON serde uses the same encoded strings and codecs.
+
 ---
 
 ## 2. Nested Dataclasses & Repeated Collections (`list[T]`)

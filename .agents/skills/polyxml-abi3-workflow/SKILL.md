@@ -45,8 +45,11 @@ Ensure no unstable C-API calls or non-limited API symbols leaked into the compil
 
 ```bash
 # Check shared library with abi3audit
-uv run abi3audit $(find ../../target/ -name "polyxml*.so" | head -n 1)
+uvx abi3audit --assume-minimum-abi3 3.12 --summary python/polyxml/_polyxml.abi3.so
 ```
+
+A standalone `.abi3.so` filename does not encode its Python minimum. Pass
+`--assume-minimum-abi3 3.12` to avoid reporting a spurious version mismatch.
 
 ## 4. Full Quality & Verification Checklist
 
@@ -60,7 +63,7 @@ Before committing any Python or PyO3 changes, run the one-shot gate script or ex
 # 1. Rust checks across all crates
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+PATH="$PWD/crates/polyxml-python/.venv/bin:$PATH" cargo test --workspace
 
 # 2. Recompile Python extension
 cd crates/polyxml-python && maturin develop && cd ../..
@@ -104,3 +107,17 @@ must select lexical integer conversion instead of the handwritten-model i64
 converter, then construct Python int from the complete decimal string. Apply
 metadata to dataclasses and Pydantic, including list items; int annotations alone
 do not distinguish xs:integer from fixed-width integer types.
+
+Binary `bytes` fields use cached `BinaryCodec` metadata in the PyO3 binding.
+Read `format` from dataclass metadata or Pydantic xsdata/json_schema_extra metadata
+at schema extraction, keep the core schema lexical (`String`), and perform native
+base16/base64 conversion when crossing the Python boundary. Apply codecs to both
+scalar and repeated fields; preserve `None` separately from empty bytes. Decode
+straight into ABI3-compatible `PyBytes::new_with` buffers. The core represents
+empty record text as absent; `record_field_value` supplies empty lexical text only
+for binary text fields so required constructors receive `b""`. Regression tests live in
+`tests/test_binary_fields.py`, including XML/JSON serde and streaming reads.
+
+Rust consumer tests also launch `python3` to import generated Pydantic models.
+Use the package dev virtual environment on `PATH` for workspace tests, not just
+pytest, to ensure Pydantic and Ruff are visible to child processes.

@@ -16,16 +16,134 @@ use polyxml::schema::{
 };
 use polyxml::value::PolyValue;
 
+use base64::Engine;
 use smallvec::SmallVec;
+use std::borrow::Cow;
 
 type PyObject = Py<PyAny>;
 
+#[derive(Clone, Copy)]
+enum BinaryCodec {
+    Base16,
+    Base64,
+}
+
+impl BinaryCodec {
+    fn from_metadata(
+        annotation: &Bound<'_, PyAny>,
+        metadata: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Option<Self>> {
+        let mut target = unwrap_optional_type(annotation);
+        while let Ok(args) = target.getattr("__args__") {
+            let Ok(item) = args.get_item(0) else { break };
+            target = unwrap_optional_type(&item);
+        }
+        if !target.is(annotation.py().get_type::<PyBytes>()) {
+            return Ok(None);
+        }
+        let format = metadata
+            .and_then(|m| m.get_item("format").ok())
+            .filter(|v| !v.is_none());
+        let Some(format) = format else {
+            return Ok(None);
+        };
+        match format.extract::<String>()?.as_str() {
+            "base16" => Ok(Some(Self::Base16)),
+            "base64" => Ok(Some(Self::Base64)),
+            other => Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "Unsupported bytes format: {other}"
+            ))),
+        }
+    }
+
+    fn decode(self, py: Python<'_>, text: &str) -> PyResult<PyObject> {
+        // Match xsdata binary fields: ignore XML whitespace, reject malformed data.
+        let text = if text
+            .bytes()
+            .any(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\n'))
+        {
+            Cow::Owned(
+                text.chars()
+                    .filter(|c| !matches!(c, ' ' | '\t' | '\r' | '\n'))
+                    .collect::<String>(),
+            )
+        } else {
+            Cow::Borrowed(text)
+        };
+        let bytes = match self {
+            Self::Base16 => PyBytes::new_with(py, text.len() / 2, |out| {
+                hex::decode_to_slice(text.as_bytes(), out).map_err(|e| {
+                    pyo3::exceptions::PyValueError::new_err(format!("Invalid base16 bytes: {e}"))
+                })
+            })?,
+            Self::Base64 => {
+                let padding = text.bytes().rev().take_while(|b| *b == b'=').count().min(2);
+                let len = (text.len() / 4 * 3).saturating_sub(padding);
+                PyBytes::new_with(py, len, |out| {
+                    base64::engine::general_purpose::STANDARD
+                        .decode_slice(text.as_bytes(), out)
+                        .map(|_| ())
+                        .map_err(|e| {
+                            pyo3::exceptions::PyValueError::new_err(format!(
+                                "Invalid base64 bytes: {e}"
+                            ))
+                        })
+                })?
+            }
+        };
+        Ok(bytes.into_any().unbind())
+    }
+
+    fn encode(self, value: &Bound<'_, PyAny>, val_type: &ValueType) -> PyResult<PolyValue> {
+        if value.is_none() {
+            return Ok(PolyValue::Null);
+        }
+        if let ValueType::List(inner) = val_type {
+            let list = value.cast::<PyList>()?;
+            return Ok(PolyValue::List(
+                list.iter()
+                    .map(|item| self.encode(&item, inner))
+                    .collect::<PyResult<_>>()?,
+            ));
+        }
+        let bytes = value.cast::<PyBytes>()?;
+        let text = match self {
+            Self::Base16 => hex::encode_upper(bytes.as_bytes()),
+            Self::Base64 => base64::engine::general_purpose::STANDARD.encode(bytes.as_bytes()),
+        };
+        Ok(PolyValue::String(text))
+    }
+}
+
+fn binary_lexical_type(val_type: &mut ValueType) {
+    match val_type {
+        ValueType::List(inner) => binary_lexical_type(inner),
+        _ => *val_type = ValueType::Scalar(ScalarType::String),
+    }
+}
+
 struct CachedFieldMeta {
+    binary_codec: Option<BinaryCodec>,
     py_string: Py<PyString>,
     is_init: bool,
     #[allow(dead_code)]
     is_kw_only: bool,
     py_type: Option<PyObject>,
+}
+
+// The streaming core represents an empty record text field as absent. At the
+// Python binary boundary, empty text is an empty byte string, not a missing arg.
+fn record_field_value<'a>(
+    values: &'a [Option<PolyValue>],
+    index: usize,
+    field: &FieldSchema,
+    metadata: Option<&CachedFieldMeta>,
+) -> Option<&'a PolyValue> {
+    static EMPTY_TEXT: PolyValue = PolyValue::String(String::new());
+    values.get(index).and_then(Option::as_ref).or_else(|| {
+        (field.kind == FieldKind::Text && metadata.is_some_and(|m| m.binary_codec.is_some()))
+            .then_some(&EMPTY_TEXT)
+    })
 }
 
 struct CachedSchemaMeta {
@@ -414,9 +532,14 @@ fn extract_schema_from_class<'py>(
                 field_obj.getattr("annotation")?
             };
             let unwrapped_type = unwrap_optional_type(&field_type);
-            let val_type = resolve_value_type(py, &field_type)?;
+            let mut val_type = resolve_value_type(py, &field_type)?;
 
+            let binary_codec = BinaryCodec::from_metadata(&field_type, meta.as_ref())?;
+            if binary_codec.is_some() {
+                binary_lexical_type(&mut val_type);
+            }
             cached_fields.push(CachedFieldMeta {
+                binary_codec,
                 py_string,
                 is_init: true,
                 is_kw_only: false,
@@ -528,9 +651,15 @@ fn extract_schema_from_class<'py>(
                 field_obj.getattr("type")?
             };
             let unwrapped_type = unwrap_optional_type(&field_type);
-            let val_type = resolve_value_type(py, &field_type)?;
+            let mut val_type = resolve_value_type(py, &field_type)?;
 
+            let metadata = field_obj.getattr("metadata").ok();
+            let binary_codec = BinaryCodec::from_metadata(&field_type, metadata.as_ref())?;
+            if binary_codec.is_some() {
+                binary_lexical_type(&mut val_type);
+            }
             cached_fields.push(CachedFieldMeta {
+                binary_codec,
                 py_string,
                 is_init,
                 is_kw_only,
@@ -876,6 +1005,9 @@ fn poly_value_to_py<'py>(
     cls: Option<&Bound<'py, PyAny>>,
     field_meta: Option<&CachedFieldMeta>,
 ) -> PyResult<PyObject> {
+    if let (PolyValue::String(text), Some(codec)) = (val, field_meta.and_then(|m| m.binary_codec)) {
+        return codec.decode(py, text);
+    }
     match val {
         PolyValue::Null => Ok(py.None()),
         PolyValue::Bool(b) => b.into_py_any(py),
@@ -964,7 +1096,9 @@ fn poly_value_to_py<'py>(
                                 let mut all_found = true;
 
                                 for (i, field) in schema.fields.iter().enumerate() {
-                                    if let Some(Some(field_val)) = values.get(i) {
+                                    if let Some(field_val) =
+                                        record_field_value(values, i, field, meta.fields.get(i))
+                                    {
                                         let field_cls =
                                             if let ValueType::Nested(ref s) = field.val_type {
                                                 lookup_py_class(py, &s.name)
@@ -1011,7 +1145,12 @@ fn poly_value_to_py<'py>(
                     let mut post_init_fields: Vec<(Py<PyString>, PyObject)> = Vec::new();
 
                     for (i, field) in schema.fields.iter().enumerate() {
-                        if let Some(Some(field_val)) = values.get(i) {
+                        if let Some(field_val) = record_field_value(
+                            values,
+                            i,
+                            field,
+                            meta_opt.as_ref().and_then(|m| m.fields.get(i)),
+                        ) {
                             let field_cls = if let ValueType::Nested(ref s) = field.val_type {
                                 lookup_py_class(py, &s.name)
                             } else {
@@ -1361,6 +1500,11 @@ fn py_to_poly_value<'py>(
                         values[i] = Some(PolyValue::List(items));
                         continue;
                     }
+                }
+
+                if let Some(codec) = meta.fields.get(i).and_then(|m| m.binary_codec) {
+                    values[i] = Some(codec.encode(&val, &field.val_type)?);
+                    continue;
                 }
 
                 match &field.val_type {
