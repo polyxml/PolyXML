@@ -1,3 +1,10 @@
+## [0.35.1](https://github.com/polyxml/PolyXML/compare/v0.35.0...v0.35.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **python:** honor binary field encoding metadata ([f8c0611](https://github.com/polyxml/PolyXML/commit/f8c0611890b667121ad9975466d97c41eb4ea50e))
+
 # [0.35.0](https://github.com/polyxml/PolyXML/compare/v0.34.8...v0.35.0) (2026-10-11)
 
 

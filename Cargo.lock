@@ -620,7 +620,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml"
-version = "0.35.0"
+version = "0.35.1"
 dependencies = [
  "criterion",
  "heck",
@@ -641,14 +641,14 @@ dependencies = [
 
 [[package]]
 name = "polyxml-c"
-version = "0.35.0"
+version = "0.35.1"
 dependencies = [
  "polyxml",
 ]
 
 [[package]]
 name = "polyxml-cli"
-version = "0.35.0"
+version = "0.35.1"
 dependencies = [
  "clap",
  "glob",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml-js"
-version = "0.35.0"
+version = "0.35.1"
 dependencies = [
  "napi",
  "napi-build",
@@ -672,7 +672,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml-python"
-version = "0.35.0"
+version = "0.35.1"
 dependencies = [
  "base64",
  "hex",
@@ -684,7 +684,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml-wasm"
-version = "0.35.0"
+version = "0.35.1"
 dependencies = [
  "polyxml",
  "quick-xml",
