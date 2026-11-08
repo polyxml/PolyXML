@@ -6,6 +6,8 @@ import hashlib
 import json
 import subprocess
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -35,7 +37,26 @@ def main():
     for relative, digest in manifest.items():
         path = schema_dir / relative
         if not path.exists():
-            data = urllib.request.urlopen(BASE + relative, timeout=60).read()
+            data = None
+            last_err = None
+            for attempt in range(5):
+                try:
+                    req = urllib.request.Request(
+                        BASE + relative,
+                        headers={
+                            "User-Agent": "PolyXML-CI/1.0 (https://github.com/polyxml/PolyXML)"
+                        },
+                    )
+                    with urllib.request.urlopen(req, timeout=60) as resp:
+                        data = resp.read()
+                    break
+                except (urllib.error.URLError, TimeoutError, OSError) as err:
+                    last_err = err
+                    time.sleep(1 + attempt * 2)
+            if data is None:
+                raise RuntimeError(
+                    f"Failed to fetch {relative} after retries: {last_err}"
+                )
             if hashlib.sha256(data).hexdigest() != digest:
                 raise RuntimeError(f"Official schema hash changed: {relative}")
             path.parent.mkdir(parents=True, exist_ok=True)
