@@ -73,7 +73,7 @@ jobs:
             if [ -n "$MAVEN_GPG_PASSPHRASE" ]; then
               GPG_ARGS="-Dgpg.passphrase=$MAVEN_GPG_PASSPHRASE"
             fi
-            output=$(mvn --batch-mode deploy -P release -DskipTests $GPG_ARGS 2>&1) && { echo "$output"; exit 0; }
+            output=$(mvn --batch-mode clean deploy -P release -DskipTests $GPG_ARGS 2>&1) && { echo "$output"; exit 0; }
             if echo "$output" | grep -qiE "(already exists|already been published|is currently being published)"; then
               echo "$output"
               echo ""
@@ -84,5 +84,5 @@ jobs:
             exit 1
           else
             echo "Maven Central credentials or GPG key not configured; running verify dry-run..."
-            mvn --batch-mode package -DskipTests
+            mvn --batch-mode clean package -DskipTests
           fi
