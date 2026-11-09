@@ -1,3 +1,10 @@
+## [0.35.3](https://github.com/polyxml/PolyXML/compare/v0.35.2...v0.35.3) (2026-11-09)
+
+
+### Bug Fixes
+
+* **docs:** update markdown_extensions config for zensical strict build ([c61f4dd](https://github.com/polyxml/PolyXML/commit/c61f4ddc4ee85db1544d7eb8943d5e268c90780b))
+
 ## [0.35.2](https://github.com/polyxml/PolyXML/compare/v0.35.1...v0.35.2) (2026-11-08)
 
 
