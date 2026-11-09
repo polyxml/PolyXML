@@ -1,3 +1,10 @@
+## [0.35.2](https://github.com/polyxml/PolyXML/compare/v0.35.1...v0.35.2) (2026-11-08)
+
+
+### Bug Fixes
+
+* **ci:** add retry backoff and custom user-agent for UBL 2.4 schema fetching ([4f5b4ea](https://github.com/polyxml/PolyXML/commit/4f5b4ea17725ab0190e7f59519d4b1df2326ad09))
+
 ## [0.35.1](https://github.com/polyxml/PolyXML/compare/v0.35.0...v0.35.1) (2026-10-19)
 
 
