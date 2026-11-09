@@ -1,3 +1,10 @@
+## [0.35.4](https://github.com/polyxml/PolyXML/compare/v0.35.3...v0.35.4) (2026-11-09)
+
+
+### Bug Fixes
+
+* **ci:** update macos runners to macos-latest and bump central plugin to 0.12.0 ([2ce1a50](https://github.com/polyxml/PolyXML/commit/2ce1a5036c1550dc7197516a4772d775a27681f4))
+
 ## [0.35.3](https://github.com/polyxml/PolyXML/compare/v0.35.2...v0.35.3) (2026-11-09)
 
 
