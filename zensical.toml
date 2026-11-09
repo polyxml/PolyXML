@@ -88,7 +88,7 @@ accent = "custom"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to system preference"
 
-[project.markdown.extensions]
+[project.markdown_extensions]
 toc = { permalink = "#" }
 admonition = {}
 codehilite = {}
@@ -97,17 +97,16 @@ attr_list = {}
 md_in_html = {}
 def_list = {}
 
-[project.markdown.extensions.pymdownx.superfences]
+[project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
   { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
 ]
 
-[project.markdown.extensions.pymdownx.highlight]
+[project.markdown_extensions.pymdownx.highlight]
 anchor_linenums = true
 line_spans = "__span"
 pygments_lang_class = true
 
-[project.markdown.extensions.pymdownx.tabbed]
+[project.markdown_extensions.pymdownx.tabbed]
 alternate_style = true
 combine_header_slug = true
-slugify = "pymdownx.slugs:slugify"
