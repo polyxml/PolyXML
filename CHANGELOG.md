@@ -1,3 +1,11 @@
+# [0.36.0](https://github.com/polyxml/PolyXML/compare/v0.35.6...v0.36.0) (2026-11-13)
+
+
+### Features
+
+* **go:** support split_crates chunked Go sub-packages ([7bc5b78](https://github.com/polyxml/PolyXML/commit/7bc5b78d0ae9bb605df7a75a94e48cb8f18d6714))
+* **rust:** add split_crates multi-crate Cargo workspace emission ([e00474e](https://github.com/polyxml/PolyXML/commit/e00474e90d1f5a00ee59a46c787e8871bec908dc))
+
 ## [0.35.6](https://github.com/polyxml/PolyXML/compare/v0.35.5...v0.35.6) (2026-11-13)
 
 
