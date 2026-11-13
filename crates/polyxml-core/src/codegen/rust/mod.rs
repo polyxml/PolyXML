@@ -3327,9 +3327,15 @@ impl RustCodegen {
             "    pub fn decode_xml(reader: {}, start: &BytesStart<'_>) -> Result<Self> {{",
             reader_arg
         );
+        let decode_text_expr = if self.options.zero_copy && !borrowed {
+            "read_element_text(reader, &tag)?.into_owned()"
+        } else {
+            "read_element_text(reader, &tag)?"
+        };
         let _ = writeln!(
             out,
-            "        let tag = start.local_name().as_ref().to_owned();\n        Self::parse_lexical(read_element_text(reader, &tag)?)",
+            "        let tag = start.local_name().as_ref().to_owned();\n        Self::parse_lexical({})",
+            decode_text_expr
         );
         out.push_str("    }\n\n");
         out.push_str("    pub fn decode_xml_empty(_start: &BytesStart<'_>) -> Result<Self> {\n        Self::parse_lexical(Default::default())\n    }\n\n");

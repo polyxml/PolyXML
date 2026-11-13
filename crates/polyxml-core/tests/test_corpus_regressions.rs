@@ -218,4 +218,20 @@ fn rust_avoids_prelude_and_event_collisions_and_handles_boxed_any_and_simple_lis
     assert!(!combined.contains("Box::decode_xml"));
     assert!(!combined.contains("Cow::decode_xml"));
     assert!(!combined.contains("FlagList::decode_xml"));
+
+    let union_xsd = r#"
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+               targetNamespace="urn:test" xmlns:tns="urn:test" elementFormDefault="qualified">
+        <xs:simpleType name="NumOrBool">
+            <xs:union memberTypes="xs:int xs:boolean"/>
+        </xs:simpleType>
+    </xs:schema>"#;
+    let union_ir = SchemaParser::new().parse_str(union_xsd).unwrap();
+    let zc_code = RustCodegen::new(RustOptions {
+        emit_codecs: true,
+        zero_copy: true,
+        ..Default::default()
+    })
+    .generate_module(&union_ir);
+    assert!(zc_code.contains("Self::parse_lexical(read_element_text(reader, &tag)?.into_owned())"));
 }
