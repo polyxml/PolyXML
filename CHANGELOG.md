@@ -1,3 +1,15 @@
+# [0.37.0](https://github.com/polyxml/PolyXML/compare/v0.36.0...v0.37.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **go:** deduplicate abstract Base type aliases in chunked imports ([4907552](https://github.com/polyxml/PolyXML/commit/49075529168adfc150026c09e3c7f8cd6e5c720d))
+
+
+### Features
+
+* **cpp:** support split_units chunked .cpp TUs and tagged large unions ([68f8bf8](https://github.com/polyxml/PolyXML/commit/68f8bf80f57bbf16dff4525c998d124ab2e12ccc))
+
 # [0.36.0](https://github.com/polyxml/PolyXML/compare/v0.35.6...v0.36.0) (2026-11-13)
 
 
