@@ -1,3 +1,10 @@
+# [0.38.0](https://github.com/polyxml/PolyXML/compare/v0.37.0...v0.38.0) (2026-11-13)
+
+
+### Features
+
+* **cpp:** isolate large (>64 branch) unions into dedicated .cpp TUs ([f526ce1](https://github.com/polyxml/PolyXML/commit/f526ce127cdd75c9f2885e6a89bff0a80f62f3ae))
+
 # [0.37.0](https://github.com/polyxml/PolyXML/compare/v0.36.0...v0.37.0) (2026-11-13)
 
 
