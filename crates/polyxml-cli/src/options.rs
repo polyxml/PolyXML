@@ -109,6 +109,7 @@ impl<'a> TargetEmitOptions<'a> {
         }
         let supported_features: &[&str] = match target {
             "rust" => &["zero-copy", "rkyv", "phf", "split-units", "split-crates"],
+            "go" => &["split-crates"],
             "java" => &["builder", "direct-codec", "validation"],
             "python" => &["slots", "kw-only"],
             _ => &[],

@@ -468,6 +468,102 @@ split_crates = true
 }
 
 #[test]
+fn test_cli_go_split_crates_workspace() {
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("common.xsd"),
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="urn:test:common" xmlns:tns="urn:test:common" elementFormDefault="qualified">
+  <xs:simpleType name="CurrencyCode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="USD"/>
+      <xs:enumeration value="EUR"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Money">
+    <xs:sequence>
+      <xs:element name="amount" type="xs:decimal"/>
+      <xs:element name="currency" type="tns:CurrencyCode"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("billing.xsd"),
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="urn:test:billing" xmlns:tns="urn:test:billing"
+    xmlns:c="urn:test:common" elementFormDefault="qualified">
+  <xs:import namespace="urn:test:common" schemaLocation="common.xsd"/>
+  <xs:complexType name="Invoice">
+    <xs:sequence>
+      <xs:element name="total" type="c:Money"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="invoice" type="tns:Invoice"/>
+</xs:schema>"#,
+    )
+    .unwrap();
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"[workspace]
+name = "split-go-test"
+output_base_dir = "generated"
+go_module = "example.com/splitgotest"
+
+[modules.common]
+schemas = ["common.xsd"]
+depends_on = []
+
+[modules.billing]
+schemas = ["billing.xsd"]
+depends_on = ["common"]
+
+[[generate]]
+target = "go"
+output = "go"
+chunk_size = 1
+split_crates = true
+"#,
+    )
+    .unwrap();
+
+    let res = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        res.status.success(),
+        "polyxml build failed:\n{}",
+        String::from_utf8_lossy(&res.stderr)
+    );
+
+    let go_dir = dir.path().join("generated/go");
+    assert!(go_dir.join("go.mod").exists());
+    assert!(go_dir.join("common/utils/utils.go").exists());
+    assert!(go_dir.join("common/chunk_00/chunk_00.go").exists());
+    assert!(go_dir.join("common/chunk_01/chunk_01.go").exists());
+    assert!(go_dir.join("common/common.go").exists());
+    assert!(go_dir.join("billing/billing.go").exists());
+
+    if Command::new("go").arg("version").output().is_ok() {
+        let check_res = Command::new("go")
+            .args(["test", "-p", "1", "./..."])
+            .current_dir(&go_dir)
+            .output()
+            .unwrap();
+        assert!(
+            check_res.status.success(),
+            "go test -p 1 ./... failed:\n{}{}",
+            String::from_utf8_lossy(&check_res.stdout),
+            String::from_utf8_lossy(&check_res.stderr)
+        );
+    }
+}
+
+#[test]
 fn test_root_selection_keeps_imported_module_types() {
     let dir = tempdir().unwrap();
     let fixtures =

@@ -793,6 +793,25 @@ fn run_module_build(
             module_target.namespace = None;
             let opts = target_options(&module_target).resolve(&module_target.target)?;
             let fake_schema = PathBuf::from(format!("{name}.xsd"));
+            if language == "go" && opts.split_crates == Some(true) {
+                let go_module = manifest
+                    .workspace
+                    .as_ref()
+                    .and_then(|workspace| workspace.go_module.as_deref())
+                    .unwrap_or("polyxml/generated");
+                if emit_go_chunked_module(
+                    name,
+                    &module_dir,
+                    &ir,
+                    &opts,
+                    &owners,
+                    &owner_exported_names,
+                    go_module,
+                    format,
+                )? {
+                    continue;
+                }
+            }
             emit_target_code(&language, opts, &module_dir, &fake_schema, &ir)?;
             let references = referenced_external_types(&ir, &language);
             inject_module_imports(
@@ -832,6 +851,261 @@ fn run_module_build(
     }
     println!("Module build finished successfully.");
     Ok(())
+}
+
+fn inject_go_imports_and_aliases(
+    code: &mut String,
+    imports: &BTreeMap<String, String>,
+    aliases: &[(String, String, String, bool)],
+) {
+    if !imports.is_empty() {
+        let import_block = imports
+            .iter()
+            .map(|(alias, path)| format!("    {alias} \"{path}\"\n"))
+            .collect::<String>();
+        if let Some(pos) = code.find("import (\n") {
+            code.insert_str(pos + "import (\n".len(), &import_block);
+        } else if let Some(pos) = code
+            .find("\npackage ")
+            .and_then(|start| code[start + 1..].find('\n').map(|end| start + 1 + end))
+        {
+            code.insert_str(pos + 1, &format!("\nimport (\n{import_block})\n"));
+        }
+    }
+    if !aliases.is_empty() {
+        let alias_block = aliases
+            .iter()
+            .map(|(local_name, pkg_alias, orig_name, is_abstract)| {
+                if *is_abstract {
+                    format!(
+                        "type {local_name} = {pkg_alias}.{orig_name}\ntype {local_name}Base = {pkg_alias}.{orig_name}Base\n"
+                    )
+                } else {
+                    format!("type {local_name} = {pkg_alias}.{orig_name}\n")
+                }
+            })
+            .collect::<String>();
+        code.push_str(&format!("\n{alias_block}"));
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_go_chunked_module(
+    name: &str,
+    module_dir: &Path,
+    ir: &SchemaIR,
+    opts: &TargetEmitOptions<'_>,
+    owners: &BTreeMap<QName, String>,
+    owner_exported_names: &BTreeMap<QName, String>,
+    go_module: &str,
+    format: bool,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let chunk_budget = opts.chunk_size.unwrap_or(250);
+    let plan = ir.partition_topological_chunks(chunk_budget);
+    if plan.chunks.len() <= 1 {
+        return Ok(false);
+    }
+
+    let go_backend = opts
+        .backend
+        .and_then(GoBackend::from_str_loose)
+        .unwrap_or(GoBackend::Standard);
+
+    let utils_import = format!("{go_module}/{name}/utils");
+    let utils_dir = module_dir.join("utils");
+    fs::create_dir_all(&utils_dir)?;
+    let utils_codegen = GoCodegen::new(GoOptions {
+        backend: go_backend,
+        package_name: "utils".to_string(),
+        emit_xml_tags: true,
+        emit_json_tags: true,
+        validate_choice_exclusivity: true,
+        validate_facets: true,
+        emit_root_aliases: false,
+        custom_header: opts.custom_header.map(|s| s.to_string()),
+    });
+    fs::write(
+        utils_dir.join("utils.go"),
+        utils_codegen.generate_shared_utils("utils"),
+    )?;
+    if format {
+        run_language_formatter("go", &utils_dir);
+    }
+
+    let mut type_to_chunk: BTreeMap<QName, usize> = BTreeMap::new();
+    for (idx, chunk) in plan.chunks.iter().enumerate() {
+        for qname in &chunk.types {
+            type_to_chunk.insert(qname.clone(), idx);
+        }
+    }
+    let mut chunk_exported_names: BTreeMap<QName, String> = BTreeMap::new();
+
+    for (idx, chunk) in plan.chunks.iter().enumerate() {
+        let chunk_name = &chunk.name;
+        let chunk_dir = module_dir.join(chunk_name);
+        fs::create_dir_all(&chunk_dir)?;
+
+        let chunk_set: std::collections::HashSet<&QName> = chunk.types.iter().collect();
+        let mut chunk_ir = ir.clone();
+        chunk_ir.elements.clear();
+        chunk_ir.types.retain(|q, _| {
+            q.namespace
+                .as_deref()
+                .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+                || chunk_set.contains(q)
+                || ir.external_types.contains_key(q)
+                || type_to_chunk.get(q).is_some_and(|&j| j < idx)
+        });
+        for (q, j) in &type_to_chunk {
+            if *j < idx {
+                chunk_ir
+                    .external_types
+                    .insert(q.clone(), format!("{name}/chunk_{j:02}"));
+            }
+        }
+
+        let chunk_names = build_type_name_map(&chunk_ir, polyxml::codegen::go::to_go_type_name);
+        for qname in &chunk.types {
+            if let Some(exported) = chunk_names.get(qname) {
+                chunk_exported_names.insert(qname.clone(), exported.clone());
+            }
+        }
+
+        let codegen = GoCodegen::new(GoOptions {
+            backend: go_backend,
+            package_name: chunk_name.clone(),
+            emit_xml_tags: true,
+            emit_json_tags: true,
+            validate_choice_exclusivity: true,
+            validate_facets: true,
+            emit_root_aliases: false,
+            custom_header: opts.custom_header.map(|s| s.to_string()),
+        })
+        .with_shared_utils_import(&utils_import);
+        let files = codegen.generate_files(&chunk_ir, chunk_name);
+        let refs = referenced_external_types(&chunk_ir, "go");
+
+        let mut imports: BTreeMap<String, String> = BTreeMap::new();
+        let mut aliases: Vec<(String, String, String, bool)> = Vec::new();
+        for qname in refs {
+            let local_name = chunk_names
+                .get(&qname)
+                .cloned()
+                .unwrap_or_else(|| polyxml::codegen::go::to_go_type_name(&qname.local));
+            let is_abstract = matches!(
+                chunk_ir.types.get(&qname),
+                Some(polyxml::ir::TypeDef::Struct(s)) if s.is_abstract
+            );
+            if let Some(&j) = type_to_chunk.get(&qname) {
+                let pkg_alias = format!("chunk_{j:02}");
+                let orig_name = chunk_exported_names
+                    .get(&qname)
+                    .cloned()
+                    .unwrap_or_else(|| local_name.clone());
+                imports.insert(pkg_alias.clone(), format!("{go_module}/{name}/{pkg_alias}"));
+                aliases.push((local_name, pkg_alias, orig_name, is_abstract));
+            } else if let Some(owner) = owners.get(&qname) {
+                let orig_name = owner_exported_names
+                    .get(&qname)
+                    .cloned()
+                    .unwrap_or_else(|| local_name.clone());
+                imports.insert(owner.clone(), format!("{go_module}/{owner}"));
+                aliases.push((local_name, owner.clone(), orig_name, is_abstract));
+            }
+        }
+
+        for (filename, mut code) in files {
+            inject_go_imports_and_aliases(&mut code, &imports, &aliases);
+            fs::write(chunk_dir.join(filename), code)?;
+        }
+        if format {
+            run_language_formatter("go", &chunk_dir);
+        }
+    }
+
+    let mut root_ir = ir.clone();
+    for (q, j) in &type_to_chunk {
+        root_ir
+            .external_types
+            .insert(q.clone(), format!("{name}/chunk_{j:02}"));
+    }
+    let root_names = build_type_name_map(&root_ir, polyxml::codegen::go::to_go_type_name);
+    let root_codegen = GoCodegen::new(GoOptions {
+        backend: go_backend,
+        package_name: opts.package.unwrap_or(name).to_string(),
+        emit_xml_tags: true,
+        emit_json_tags: true,
+        validate_choice_exclusivity: true,
+        validate_facets: true,
+        emit_root_aliases: true,
+        custom_header: opts.custom_header.map(|s| s.to_string()),
+    })
+    .with_shared_utils_import(&utils_import);
+    let root_files = root_codegen.generate_files(&root_ir, name);
+    let mut imports: BTreeMap<String, String> = BTreeMap::new();
+    for chunk in &plan.chunks {
+        imports.insert(
+            chunk.name.clone(),
+            format!("{go_module}/{name}/{}", chunk.name),
+        );
+    }
+    let mut aliases: Vec<(String, String, String, bool)> = Vec::new();
+    let mut seen_aliases: std::collections::HashSet<QName> = std::collections::HashSet::new();
+    for (qname, &idx) in &type_to_chunk {
+        if qname
+            .namespace
+            .as_deref()
+            .is_some_and(|ns| ns.starts_with("urn:polyxml:builtins"))
+        {
+            continue;
+        }
+        if seen_aliases.insert(qname.clone()) {
+            let pkg_alias = format!("chunk_{idx:02}");
+            let local_name = root_names
+                .get(qname)
+                .cloned()
+                .unwrap_or_else(|| polyxml::codegen::go::to_go_type_name(&qname.local));
+            let orig_name = chunk_exported_names
+                .get(qname)
+                .cloned()
+                .unwrap_or_else(|| local_name.clone());
+            let is_abstract = matches!(
+                ir.types.get(qname),
+                Some(polyxml::ir::TypeDef::Struct(s)) if s.is_abstract
+            );
+            aliases.push((local_name, pkg_alias, orig_name, is_abstract));
+        }
+    }
+    for qname in referenced_external_types(&root_ir, "go") {
+        if !seen_aliases.insert(qname.clone()) {
+            continue;
+        }
+        if let Some(owner) = owners.get(&qname) {
+            let local_name = root_names
+                .get(&qname)
+                .cloned()
+                .unwrap_or_else(|| polyxml::codegen::go::to_go_type_name(&qname.local));
+            let orig_name = owner_exported_names
+                .get(&qname)
+                .cloned()
+                .unwrap_or_else(|| local_name.clone());
+            let is_abstract = matches!(
+                ir.types.get(&qname),
+                Some(polyxml::ir::TypeDef::Struct(s)) if s.is_abstract
+            );
+            imports.insert(owner.clone(), format!("{go_module}/{owner}"));
+            aliases.push((local_name, owner.clone(), orig_name, is_abstract));
+        }
+    }
+
+    for (filename, mut code) in root_files {
+        inject_go_imports_and_aliases(&mut code, &imports, &aliases);
+        fs::write(module_dir.join(filename), code)?;
+    }
+    if format {
+        run_language_formatter("go", module_dir);
+    }
+    Ok(true)
 }
 
 fn write_rust_crate_manifest(
@@ -1121,12 +1395,34 @@ fn referenced_external_types(ir: &SchemaIR, language: &str) -> BTreeSet<QName> {
             TypeDef::Struct(structure) => {
                 if let Some(base) = &structure.base_type {
                     names.insert(base.clone());
-                    if matches!(language, "java" | "rust" | "rs") {
+                    if matches!(language, "java" | "rust" | "rs" | "go") {
                         collect_base_fields(base, ir, &mut names, &mut BTreeSet::new());
                     }
                 }
                 for field in &structure.fields {
                     collect(&field.type_ref, &mut names);
+                    if language == "go" && ir.has_ordered_content(structure) {
+                        let mut inner = BTreeSet::new();
+                        collect(&field.type_ref, &mut inner);
+                        for qname in inner {
+                            match ir.types.get(&qname) {
+                                Some(TypeDef::Union(u)) => {
+                                    for branch in &u.branches {
+                                        collect(&branch.type_ref, &mut names);
+                                    }
+                                }
+                                Some(TypeDef::Struct(_)) => {
+                                    collect_base_fields(
+                                        &qname,
+                                        ir,
+                                        &mut names,
+                                        &mut BTreeSet::new(),
+                                    );
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
                 }
             }
             TypeDef::Union(union) => {
@@ -1389,34 +1685,24 @@ fn inject_module_imports(
                 code = code.replacen(&ns, &format!("{ns}\n{aliases}"), 1);
             }
             "go" => {
-                let imports = by_owner
+                let imports: BTreeMap<String, String> = by_owner
                     .keys()
-                    .map(|owner| format!("    {owner} \"{go_module}/{owner}\"\n"))
-                    .collect::<String>();
-                if let Some(pos) = code.find("import (\n") {
-                    code.insert_str(pos + "import (\n".len(), &imports);
-                } else if let Some(pos) = code
-                    .find("\npackage ")
-                    .and_then(|start| code[start + 1..].find('\n').map(|end| start + 1 + end))
-                {
-                    code.insert_str(pos + 1, &format!("\nimport (\n{imports})\n"));
-                }
-                let aliases = by_owner
+                    .map(|owner| (owner.clone(), format!("{go_module}/{owner}")))
+                    .collect();
+                let aliases: Vec<(String, String, String, bool)> = by_owner
                     .iter()
                     .flat_map(|(owner, types)| {
                         types.iter().map(move |t| {
-                            if t.is_abstract {
-                                format!(
-                                    "type {} = {owner}.{}\ntype {}Base = {owner}.{}Base\n",
-                                    t.local_name, t.orig_name, t.local_name, t.orig_name
-                                )
-                            } else {
-                                format!("type {} = {owner}.{}\n", t.local_name, t.orig_name)
-                            }
+                            (
+                                t.local_name.clone(),
+                                owner.clone(),
+                                t.orig_name.clone(),
+                                t.is_abstract,
+                            )
                         })
                     })
-                    .collect::<String>();
-                code.push_str(&format!("\n{aliases}"));
+                    .collect();
+                inject_go_imports_and_aliases(&mut code, &imports, &aliases);
             }
             "csharp" | "cs" | "c#" => {
                 let root = package_root.unwrap_or("Generated");
