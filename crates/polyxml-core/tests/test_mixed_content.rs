@@ -63,7 +63,7 @@ fn generated_models_keep_typed_content_items_in_all_targets() {
     let rust = RustCodegen::new(RustOptions::default()).generate_module(&ir);
     assert!(rust.contains("pub enum RichTextItem"));
     assert!(rust.contains("pub items: Vec<RichTextItem"));
-    assert!(rust.contains("writer.write_event(Event::Text(BytesText::new(val.as_ref())))"));
+    assert!(rust.contains("writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_ref())))"));
 
     let python = PythonCodegen::new(PythonOptions::default()).generate_module(&ir);
     assert!(python.contains("class RichTextItem:"));
