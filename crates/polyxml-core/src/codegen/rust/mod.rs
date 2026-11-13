@@ -1312,14 +1312,23 @@ impl RustCodegen {
     }
 
     fn field_is_enum(&self, type_ref: &TypeRef, ir: &SchemaIR) -> Option<String> {
-        match type_ref {
-            TypeRef::Named(qname) => match ir.types.get(qname) {
-                Some(TypeDef::Enum(_)) => Some(type_ident(qname)),
-                Some(TypeDef::Simple(s)) => self.field_is_enum(&s.base_type, ir),
-                _ => None,
-            },
-            TypeRef::Boxed(inner) => self.field_is_enum(inner, ir),
-            _ => None,
+        let mut current = type_ref;
+        let mut visited = HashSet::new();
+        loop {
+            match current {
+                TypeRef::Named(qname) => {
+                    if !visited.insert(qname) {
+                        return None;
+                    }
+                    match ir.types.get(qname) {
+                        Some(TypeDef::Enum(_)) => return Some(type_ident(qname)),
+                        Some(TypeDef::Simple(s)) => current = &s.base_type,
+                        _ => return None,
+                    }
+                }
+                TypeRef::Boxed(inner) => current = inner,
+                _ => return None,
+            }
         }
     }
 
@@ -2549,13 +2558,22 @@ impl RustCodegen {
         type_ref: &'a TypeRef,
         ir: &'a SchemaIR,
     ) -> Option<&'a TypeRef> {
-        match type_ref {
-            TypeRef::List(inner) => Some(inner.as_ref()),
-            TypeRef::Named(q) => match ir.types.get(q) {
-                Some(TypeDef::Simple(s)) => self.resolve_list_item_type(&s.base_type, ir),
-                _ => None,
-            },
-            _ => None,
+        let mut current = type_ref;
+        let mut visited = HashSet::new();
+        loop {
+            match current {
+                TypeRef::List(inner) => return Some(inner.as_ref()),
+                TypeRef::Named(q) => {
+                    if !visited.insert(q) {
+                        return None;
+                    }
+                    match ir.types.get(q) {
+                        Some(TypeDef::Simple(s)) => current = &s.base_type,
+                        _ => return None,
+                    }
+                }
+                _ => return None,
+            }
         }
     }
 
@@ -3025,16 +3043,7 @@ impl RustCodegen {
                     "                let text = read_element_text(reader, \"{}\")?;",
                     branch.xml_name
                 );
-                let text_val = if self.options.zero_copy {
-                    "text"
-                } else {
-                    "text.into_owned()"
-                };
-                let _ = writeln!(
-                    out,
-                    "                Ok({}::{}({}))",
-                    union_name, var_id, text_val
-                );
+                let _ = writeln!(out, "                Ok({}::{}(text))", union_name, var_id);
             } else if let Some(num) = self.field_numeric_type(&branch.type_ref, ir) {
                 let _ = writeln!(
                     out,
@@ -3318,15 +3327,9 @@ impl RustCodegen {
             "    pub fn decode_xml(reader: {}, start: &BytesStart<'_>) -> Result<Self> {{",
             reader_arg
         );
-        let decode_text_expr = if borrowed {
-            "read_element_text(reader, &tag)?"
-        } else {
-            "read_element_text(reader, &tag)?.into_owned()"
-        };
         let _ = writeln!(
             out,
-            "        let tag = start.local_name().as_ref().to_owned();\n        Self::parse_lexical({})",
-            decode_text_expr
+            "        let tag = start.local_name().as_ref().to_owned();\n        Self::parse_lexical(read_element_text(reader, &tag)?)",
         );
         out.push_str("    }\n\n");
         out.push_str("    pub fn decode_xml_empty(_start: &BytesStart<'_>) -> Result<Self> {\n        Self::parse_lexical(Default::default())\n    }\n\n");
