@@ -873,18 +873,21 @@ fn inject_go_imports_and_aliases(
         }
     }
     if !aliases.is_empty() {
-        let alias_block = aliases
-            .iter()
-            .map(|(local_name, pkg_alias, orig_name, is_abstract)| {
-                if *is_abstract {
-                    format!(
-                        "type {local_name} = {pkg_alias}.{orig_name}\ntype {local_name}Base = {pkg_alias}.{orig_name}Base\n"
-                    )
-                } else {
-                    format!("type {local_name} = {pkg_alias}.{orig_name}\n")
+        let mut emitted = std::collections::HashSet::new();
+        let mut alias_block = String::new();
+        for (local_name, pkg_alias, orig_name, is_abstract) in aliases {
+            if emitted.insert(local_name.clone()) {
+                alias_block.push_str(&format!("type {local_name} = {pkg_alias}.{orig_name}\n"));
+            }
+            if *is_abstract {
+                let base_local = format!("{local_name}Base");
+                if emitted.insert(base_local.clone()) {
+                    alias_block.push_str(&format!(
+                        "type {base_local} = {pkg_alias}.{orig_name}Base\n"
+                    ));
                 }
-            })
-            .collect::<String>();
+            }
+        }
         code.push_str(&format!("\n{alias_block}"));
     }
 }
