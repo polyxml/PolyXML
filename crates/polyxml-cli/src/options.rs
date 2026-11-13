@@ -27,6 +27,7 @@ pub(crate) fn target_options(target: &config::TargetConfig) -> TargetEmitOptions
         validation: None,
         custom_header: target.custom_header.as_deref(),
         split_units: target.split_units,
+        split_crates: target.split_crates,
         chunk_size: target.chunk_size,
     }
 }
@@ -107,7 +108,7 @@ impl<'a> TargetEmitOptions<'a> {
             return Err(invalid("slots and kw_only are Python-only options."));
         }
         let supported_features: &[&str] = match target {
-            "rust" => &["zero-copy", "rkyv", "phf", "split-units"],
+            "rust" => &["zero-copy", "rkyv", "phf", "split-units", "split-crates"],
             "java" => &["builder", "direct-codec", "validation"],
             "python" => &["slots", "kw-only"],
             _ => &[],
@@ -121,6 +122,7 @@ impl<'a> TargetEmitOptions<'a> {
                 "rkyv" => &mut self.rkyv,
                 "phf" => &mut self.phf,
                 "split-units" => &mut self.split_units,
+                "split-crates" => &mut self.split_crates,
                 "builder" => &mut self.builder,
                 "validation" => &mut self.validation,
                 "slots" => &mut self.slots,

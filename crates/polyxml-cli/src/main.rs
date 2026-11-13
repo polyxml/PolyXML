@@ -134,6 +134,10 @@ pub struct GenerateArgs {
     #[arg(long = "split-units", default_missing_value = "true", num_args = 0..=1)]
     pub split_units: Option<bool>,
 
+    /// Emit a multi-crate Cargo workspace for Rust modules/chunks (optional setting, default: false)
+    #[arg(long = "split-crates", default_missing_value = "true", num_args = 0..=1)]
+    pub split_crates: Option<bool>,
+
     /// Target maximum types per compilation unit chunk (default: 250)
     #[arg(long = "chunk-size", value_name = "N")]
     pub chunk_size: Option<usize>,
@@ -247,6 +251,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
             || args.strict_facets
             || !args.root_elements.is_empty()
             || args.split_units.is_some()
+            || args.split_crates.is_some()
             || args.chunk_size.is_some()
         {
             return Err("Generation options require explicit schema paths. For manifest builds, set target options in polyxml.toml.".into());
@@ -288,6 +293,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         validation: None,
         custom_header: args.custom_header.as_deref(),
         split_units: args.split_units,
+        split_crates: args.split_crates,
         chunk_size: args.chunk_size,
     };
     let resolved_options = languages
@@ -818,8 +824,219 @@ fn run_module_build(
         if !rust_root.is_empty() {
             fs::write(target_root.join("mod.rs"), rust_root)?;
         }
+        if (language == "rust" || language == "rs")
+            && target_options(target).resolve(&target.target)?.split_crates == Some(true)
+        {
+            emit_rust_workspace_crates(&target_root, &order, manifest)?;
+        }
     }
     println!("Module build finished successfully.");
+    Ok(())
+}
+
+fn write_rust_crate_manifest(
+    crate_dir: &Path,
+    crate_name: &str,
+    lib_path: &str,
+    path_deps: &[(String, String)],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut toml = format!(
+        "[package]\nname = \"{crate_name}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"{lib_path}\"\n\n[dependencies]\npolyxml = {{ workspace = true }}\nquick-xml = {{ workspace = true }}\nserde = {{ workspace = true }}\nserde_json = {{ workspace = true }}\nregex = {{ workspace = true }}\n"
+    );
+    for (dep_name, rel_path) in path_deps {
+        toml.push_str(&format!("{dep_name} = {{ path = \"{rel_path}\" }}\n"));
+    }
+    fs::write(crate_dir.join("Cargo.toml"), toml)?;
+    Ok(())
+}
+
+fn rewrite_rust_external_refs(
+    mut code: String,
+    dep_modules: &[String],
+    super_prefix: &str,
+) -> String {
+    for dep in dep_modules {
+        let safe_dep = polyxml::codegen::rust::sanitize_rust_module_name(dep);
+        code = code.replace(
+            &format!("{super_prefix}{safe_dep}::"),
+            &format!("{safe_dep}::"),
+        );
+    }
+    code
+}
+
+fn emit_rust_workspace_crates(
+    target_root: &Path,
+    order: &[String],
+    manifest: &WorkspaceManifest,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut members = Vec::new();
+    for name in order {
+        let safe_mod = polyxml::codegen::rust::sanitize_rust_module_name(name);
+        let module_dir = target_root.join(name);
+        let visible = visible_modules_for(name, manifest);
+        let ext_deps: Vec<String> = visible.into_iter().filter(|m| m != name).collect();
+
+        let mut chunks: Vec<PathBuf> = fs::read_dir(&module_dir)?
+            .filter_map(|e| e.ok().map(|e| e.path()))
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.starts_with("chunk_") && n.ends_with(".rs"))
+            })
+            .collect();
+        chunks.sort();
+
+        if chunks.is_empty() {
+            let entry_name = if module_dir.join(format!("{safe_mod}.rs")).exists() {
+                format!("{safe_mod}.rs")
+            } else {
+                "mod.rs".to_string()
+            };
+            let entry_path = module_dir.join(&entry_name);
+            let code = fs::read_to_string(&entry_path)?;
+            let prefix = if entry_name == "mod.rs" {
+                "super::"
+            } else {
+                "super::super::"
+            };
+            let code = rewrite_rust_external_refs(code, &ext_deps, prefix);
+            fs::write(&entry_path, code)?;
+            let path_deps: Vec<(String, String)> = ext_deps
+                .iter()
+                .map(|d| {
+                    (
+                        polyxml::codegen::rust::sanitize_rust_module_name(d),
+                        format!("../{d}"),
+                    )
+                })
+                .collect();
+            write_rust_crate_manifest(&module_dir, &safe_mod, &entry_name, &path_deps)?;
+            members.push(name.clone());
+            continue;
+        }
+
+        let mod_path = module_dir.join("mod.rs");
+        let mod_src = fs::read_to_string(&mod_path)?;
+        let utils_start = [
+            mod_src.find("pub(crate) fn skip_xml_element"),
+            mod_src.find("pub(crate) fn read_element_text"),
+        ]
+        .into_iter()
+        .flatten()
+        .min();
+
+        let mut utils_crate = None;
+        let mod_tail = if let Some(start) = utils_start {
+            let end = mod_src[start..]
+                .find("\npub type ")
+                .map(|off| start + off)
+                .unwrap_or(mod_src.len());
+            let utils_body = mod_src[start..end].replace("pub(crate) fn ", "pub fn ");
+            let utils_dir = module_dir.join("utils");
+            fs::create_dir_all(&utils_dir)?;
+            let utils_code = format!(
+                "#![allow(dead_code, unused_imports, unused_mut, unused_variables, unused_assignments, non_camel_case_types, non_snake_case)]\n\
+                use quick_xml::events::Event as QuickXmlEvent;\n\
+                use quick_xml::Reader;\n\
+                use std::borrow::Cow;\n\
+                use polyxml::{{PolyXmlError, Result}};\n\n\
+                {utils_body}"
+            );
+            fs::write(utils_dir.join("lib.rs"), utils_code)?;
+            let u_name = format!("{safe_mod}_utils");
+            write_rust_crate_manifest(&utils_dir, &u_name, "lib.rs", &[])?;
+            members.push(format!("{name}/utils"));
+            utils_crate = Some(u_name);
+            mod_src[end..].to_string()
+        } else {
+            String::new()
+        };
+
+        let mut prev_chunks: Vec<(String, String)> = Vec::new();
+        for ch_path in &chunks {
+            let ch_stem = ch_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("chunk")
+                .to_string();
+            let ch_crate = format!("{safe_mod}_{ch_stem}");
+            let mut code = fs::read_to_string(ch_path)?;
+            code = rewrite_rust_external_refs(code, &ext_deps, "super::super::");
+            if let Some(ref u_name) = utils_crate {
+                code = code.replace(
+                    "use super::{read_element_text, skip_xml_element};",
+                    &format!("use {u_name}::{{read_element_text, skip_xml_element}};"),
+                );
+            }
+            for (prev_stem, prev_crate) in &prev_chunks {
+                code = code.replace(
+                    &format!("use super::{prev_stem}::*;"),
+                    &format!("use {prev_crate}::*;"),
+                );
+            }
+            fs::write(ch_path, code)?;
+
+            let ch_dir = module_dir.join(&ch_stem);
+            fs::create_dir_all(&ch_dir)?;
+            let mut path_deps = Vec::new();
+            if let Some(ref u_name) = utils_crate {
+                path_deps.push((u_name.clone(), "../utils".to_string()));
+            }
+            for d in &ext_deps {
+                path_deps.push((
+                    polyxml::codegen::rust::sanitize_rust_module_name(d),
+                    format!("../../{d}"),
+                ));
+            }
+            for (prev_stem, prev_crate) in &prev_chunks {
+                path_deps.push((prev_crate.clone(), format!("../{prev_stem}")));
+            }
+            write_rust_crate_manifest(&ch_dir, &ch_crate, &format!("../{ch_stem}.rs"), &path_deps)?;
+            members.push(format!("{name}/{ch_stem}"));
+            prev_chunks.push((ch_stem, ch_crate));
+        }
+
+        let mut root_mod = String::from(
+            "// @generated by PolyXML Compiler (https://github.com/polyxml/PolyXML)\n\
+            #![allow(dead_code, unused_imports, unused_mut, unused_variables, unused_assignments, non_camel_case_types, non_snake_case)]\n\n",
+        );
+        for line in mod_src.lines() {
+            if line.starts_with("use ") {
+                let rewritten = rewrite_rust_external_refs(line.to_string(), &ext_deps, "super::");
+                root_mod.push_str(&rewritten);
+                root_mod.push('\n');
+            }
+        }
+        root_mod.push('\n');
+        for (_, ch_crate) in &prev_chunks {
+            root_mod.push_str(&format!("pub use {ch_crate}::*;\n"));
+        }
+        if !mod_tail.is_empty() {
+            root_mod.push_str(&rewrite_rust_external_refs(mod_tail, &ext_deps, "super::"));
+        }
+        fs::write(&mod_path, root_mod)?;
+
+        let mut root_deps = Vec::new();
+        for d in &ext_deps {
+            root_deps.push((
+                polyxml::codegen::rust::sanitize_rust_module_name(d),
+                format!("../{d}"),
+            ));
+        }
+        for (ch_stem, ch_crate) in &prev_chunks {
+            root_deps.push((ch_crate.clone(), ch_stem.clone()));
+        }
+        write_rust_crate_manifest(&module_dir, &safe_mod, "mod.rs", &root_deps)?;
+        members.push(name.clone());
+    }
+
+    let mut ws = String::from("[workspace]\nresolver = \"2\"\nmembers = [\n");
+    for m in &members {
+        ws.push_str(&format!("    \"{m}\",\n"));
+    }
+    ws.push_str("]\n\n[profile.dev]\ndebug = 0\nincremental = false\n\n[workspace.dependencies]\npolyxml = \"0.35\"\nquick-xml = { version = \"0.42\", features = [\"serialize\"] }\nserde = { version = \"1\", features = [\"derive\"] }\nserde_json = \"1\"\nregex = \"1\"\n");
+    fs::write(target_root.join("Cargo.toml"), ws)?;
     Ok(())
 }
 
@@ -1332,6 +1549,7 @@ pub struct TargetEmitOptions<'a> {
     pub validation: Option<bool>,
     pub custom_header: Option<&'a str>,
     pub split_units: Option<bool>,
+    pub split_crates: Option<bool>,
     pub chunk_size: Option<usize>,
 }
 

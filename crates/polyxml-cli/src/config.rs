@@ -97,6 +97,7 @@ pub struct TargetConfig {
     pub style: Option<String>,
     pub custom_header: Option<String>,
     pub split_units: Option<bool>,
+    pub split_crates: Option<bool>,
     pub chunk_size: Option<usize>,
 }
 
@@ -124,6 +125,7 @@ pub struct CodegenTargetConfig {
     pub style: Option<String>,
     pub custom_header: Option<String>,
     pub split_units: Option<bool>,
+    pub split_crates: Option<bool>,
     pub chunk_size: Option<usize>,
 }
 
@@ -194,6 +196,7 @@ impl WorkspaceManifest {
                         style: cfg.style.clone(),
                         custom_header: cfg.custom_header.clone().or_else(|| ws_header.clone()),
                         split_units: cfg.split_units,
+                        split_crates: cfg.split_crates,
                         chunk_size: cfg.chunk_size,
                     });
                 }

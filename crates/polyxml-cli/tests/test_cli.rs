@@ -400,6 +400,74 @@ pub fn verify_usage() {
 }
 
 #[test]
+fn test_cli_rust_split_crates_workspace() {
+    let dir = tempdir().unwrap();
+    let fixtures =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/shared_modules");
+    for name in ["common.xsd", "auth.xsd", "billing.xsd"] {
+        fs::copy(fixtures.join(name), dir.path().join(name)).unwrap();
+    }
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"[workspace]
+name = "split-crates-test"
+output_base_dir = "generated"
+
+[modules.common]
+schemas = ["common.xsd"]
+depends_on = []
+
+[modules.billing]
+schemas = ["billing.xsd"]
+depends_on = ["common"]
+
+[[generate]]
+target = "rust"
+output = "rust"
+split_units = true
+chunk_size = 1
+split_crates = true
+"#,
+    )
+    .unwrap();
+
+    let build_res = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config", manifest.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        build_res.status.success(),
+        "{}",
+        String::from_utf8_lossy(&build_res.stderr)
+    );
+
+    let ws_dir = dir.path().join("generated/rust");
+    let ws_toml_path = ws_dir.join("Cargo.toml");
+    assert!(ws_toml_path.exists());
+    let core_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("polyxml-core");
+    let ws_toml = fs::read_to_string(&ws_toml_path).unwrap().replace(
+        "polyxml = \"0.35\"",
+        &format!("polyxml = {{ path = \"{}\" }}", core_path.display()),
+    );
+    fs::write(&ws_toml_path, ws_toml).unwrap();
+
+    let check_res = Command::new("cargo")
+        .args(["check", "--workspace", "-j", "1"])
+        .current_dir(&ws_dir)
+        .output()
+        .unwrap();
+    assert!(
+        check_res.status.success(),
+        "cargo check --workspace failed:\n{}",
+        String::from_utf8_lossy(&check_res.stderr)
+    );
+}
+
+#[test]
 fn test_root_selection_keeps_imported_module_types() {
     let dir = tempdir().unwrap();
     let fixtures =
