@@ -409,11 +409,29 @@ impl CppCodegen {
                 files.push((format!("{}.hpp", stem), self.generate_header(ir)));
                 if let Some(chunk_size) = self.split_units {
                     let plan = ir.partition_topological_chunks(chunk_size);
+                    let mut large_union_idx = 0usize;
                     for chunk in &plan.chunks {
-                        files.push((
-                            format!("{}_{}.cpp", stem, chunk.name),
-                            self.generate_chunk_impl(ir, stem, &chunk.types),
-                        ));
+                        let mut regular_types = Vec::with_capacity(chunk.types.len());
+                        for qname in &chunk.types {
+                            if matches!(
+                                ir.types.get(qname),
+                                Some(TypeDef::Union(u)) if u.branches.len() > 64
+                            ) {
+                                files.push((
+                                    format!("{}_union_{:02}.cpp", stem, large_union_idx),
+                                    self.generate_chunk_impl(ir, stem, std::slice::from_ref(qname)),
+                                ));
+                                large_union_idx += 1;
+                            } else {
+                                regular_types.push(qname.clone());
+                            }
+                        }
+                        if !regular_types.is_empty() {
+                            files.push((
+                                format!("{}_{}.cpp", stem, chunk.name),
+                                self.generate_chunk_impl(ir, stem, &regular_types),
+                            ));
+                        }
                     }
                 }
             }
