@@ -1,3 +1,10 @@
+## [0.39.1](https://github.com/polyxml/PolyXML/compare/v0.39.0...v0.39.1) (2026-11-13)
+
+
+### Performance Improvements
+
+* **cpp:** keep tagged large unions inside regular chunk TUs ([8d5d61c](https://github.com/polyxml/PolyXML/commit/8d5d61cdb33c050c6c06ef0dad8084e1ea498957))
+
 # [0.39.0](https://github.com/polyxml/PolyXML/compare/v0.38.0...v0.39.0) (2026-11-13)
 
 
