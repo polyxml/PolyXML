@@ -1,3 +1,11 @@
+## [0.35.5](https://github.com/polyxml/PolyXML/compare/v0.35.4...v0.35.5) (2026-11-13)
+
+
+### Bug Fixes
+
+* **codegen:** resolve heavy corpus compilation failures and update Cargo.lock ([93a3e1a](https://github.com/polyxml/PolyXML/commit/93a3e1a19a5e48b58991390094b9203ff11c6b0a))
+* **rust:** guard simple-type cycles and owned union text decoding ([260b7b2](https://github.com/polyxml/PolyXML/commit/260b7b2e9759d833dc043ec086205cece4f07195))
+
 ## [0.35.4](https://github.com/polyxml/PolyXML/compare/v0.35.3...v0.35.4) (2026-11-09)
 
 
