@@ -1,3 +1,10 @@
+## [0.35.6](https://github.com/polyxml/PolyXML/compare/v0.35.5...v0.35.6) (2026-11-13)
+
+
+### Bug Fixes
+
+* **rust:** convert Cow to String for non-borrowed lexical unions under zero_copy ([6adf45e](https://github.com/polyxml/PolyXML/commit/6adf45e7c6e59857a228f04480f1783e42d79dc7))
+
 ## [0.35.5](https://github.com/polyxml/PolyXML/compare/v0.35.4...v0.35.5) (2026-11-13)
 
 
