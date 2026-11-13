@@ -2053,7 +2053,10 @@ fn emit_target_code(
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
 
-            let codegen = CppCodegen::new(options);
+            let mut codegen = CppCodegen::new(options);
+            if opts.split_units == Some(true) || opts.split_crates == Some(true) {
+                codegen = codegen.with_split_units(opts.chunk_size.unwrap_or(250));
+            }
             let files = codegen.generate_files(ir, &file_stem);
 
             for (filename, code) in files {

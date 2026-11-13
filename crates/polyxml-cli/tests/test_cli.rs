@@ -564,6 +564,106 @@ split_crates = true
 }
 
 #[test]
+fn test_cli_cpp_split_units_workspace() {
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("common.xsd"),
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="urn:test:common" xmlns:tns="urn:test:common" elementFormDefault="qualified">
+  <xs:simpleType name="CurrencyCode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="USD"/>
+      <xs:enumeration value="EUR"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Money">
+    <xs:sequence>
+      <xs:element name="amount" type="xs:decimal"/>
+      <xs:element name="currency" type="tns:CurrencyCode"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("billing.xsd"),
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="urn:test:billing" xmlns:tns="urn:test:billing"
+    xmlns:c="urn:test:common" elementFormDefault="qualified">
+  <xs:import namespace="urn:test:common" schemaLocation="common.xsd"/>
+  <xs:complexType name="Invoice">
+    <xs:sequence>
+      <xs:element name="total" type="c:Money"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="invoice" type="tns:Invoice"/>
+</xs:schema>"#,
+    )
+    .unwrap();
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"[workspace]
+name = "split-cpp-test"
+output_base_dir = "generated"
+
+[modules.common]
+schemas = ["common.xsd"]
+depends_on = []
+
+[modules.billing]
+schemas = ["billing.xsd"]
+depends_on = ["common"]
+
+[[generate]]
+target = "cpp"
+output = "cpp"
+package = "polyxml::split_test"
+chunk_size = 1
+split_units = true
+"#,
+    )
+    .unwrap();
+
+    let res = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        res.status.success(),
+        "polyxml build failed:\n{}",
+        String::from_utf8_lossy(&res.stderr)
+    );
+
+    let cpp_dir = dir.path().join("generated/cpp");
+    assert!(cpp_dir.join("common/common.hpp").exists());
+    assert!(cpp_dir.join("common/common_chunk_00.cpp").exists());
+    assert!(cpp_dir.join("common/common_chunk_01.cpp").exists());
+    assert!(cpp_dir.join("billing/billing.hpp").exists());
+    assert!(cpp_dir.join("billing/billing_chunk_00.cpp").exists());
+
+    if Command::new("c++").arg("--version").output().is_ok() {
+        for tu in [
+            "common/common_chunk_00.cpp",
+            "common/common_chunk_01.cpp",
+            "billing/billing_chunk_00.cpp",
+        ] {
+            let check_res = Command::new("c++")
+                .args(["-std=c++20", "-fsyntax-only", tu])
+                .current_dir(&cpp_dir)
+                .output()
+                .unwrap();
+            assert!(
+                check_res.status.success(),
+                "c++ check on {tu} failed:\n{}",
+                String::from_utf8_lossy(&check_res.stderr)
+            );
+        }
+    }
+}
+
+#[test]
 fn test_root_selection_keeps_imported_module_types() {
     let dir = tempdir().unwrap();
     let fixtures =
