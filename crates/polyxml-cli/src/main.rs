@@ -721,6 +721,9 @@ fn run_module_build(
                 "typescript" | "ts" => {
                     build_type_name_map(&ir, polyxml::codegen::typescript::to_ts_type_name)
                 }
+                "rust" | "rs" => {
+                    build_type_name_map(&ir, polyxml::codegen::rust::to_rust_type_name)
+                }
                 _ => build_type_name_map(&ir, |n| AsPascalCase(n).to_string()),
             };
             for (qname, owner) in &owners {
@@ -901,7 +904,7 @@ fn referenced_external_types(ir: &SchemaIR, language: &str) -> BTreeSet<QName> {
             TypeDef::Struct(structure) => {
                 if let Some(base) = &structure.base_type {
                     names.insert(base.clone());
-                    if language == "java" {
+                    if matches!(language, "java" | "rust" | "rs") {
                         collect_base_fields(base, ir, &mut names, &mut BTreeSet::new());
                     }
                 }
@@ -929,6 +932,7 @@ fn referenced_external_types(ir: &SchemaIR, language: &str) -> BTreeSet<QName> {
 struct ModuleImportedType {
     orig_name: String,
     local_name: String,
+    is_abstract: bool,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -957,6 +961,7 @@ fn inject_module_imports(
         "typescript" | "ts" => {
             build_type_name_map(ir, polyxml::codegen::typescript::to_ts_type_name)
         }
+        "rust" | "rs" => build_type_name_map(ir, polyxml::codegen::rust::to_rust_type_name),
         _ => build_type_name_map(ir, |name| AsPascalCase(name).to_string()),
     };
     let mut by_owner = BTreeMap::<String, Vec<ModuleImportedType>>::new();
@@ -967,12 +972,14 @@ fn inject_module_imports(
             .get(qname)
             .cloned()
             .unwrap_or_else(|| local_name.clone());
+        let is_abstract = matches!(ir.types.get(qname), Some(TypeDef::Struct(s)) if s.is_abstract);
         by_owner
             .entry(owner.clone())
             .or_default()
             .push(ModuleImportedType {
                 orig_name,
                 local_name,
+                is_abstract,
             });
     }
     let package_root = target.package.as_deref().or(target.namespace.as_deref());
@@ -1000,10 +1007,13 @@ fn inject_module_imports(
             "csharp" | "cs" | "c#" => "cs",
             _ => continue,
         };
+        let is_mod_rs = path.file_stem().is_some_and(|stem| stem == "mod");
         if extension != expected
-            || path
-                .file_stem()
-                .is_some_and(|stem| stem == "mod" || stem == "index" || stem == "__init__")
+            || path.file_stem().is_some_and(|stem| {
+                (stem == "mod" && !matches!(language, "rust" | "rs"))
+                    || stem == "index"
+                    || stem == "__init__"
+            })
         {
             continue;
         }
@@ -1044,7 +1054,8 @@ fn inject_module_imports(
                             })
                             .collect::<Vec<_>>()
                             .join(", ");
-                        format!("use super::super::{owner}::{{{items}}};\n")
+                        let prefix = if is_mod_rs { "super" } else { "super::super" };
+                        format!("use {prefix}::{owner}::{{{items}}};\n")
                     })
                     .collect::<String>();
                 if let Some(pos) = code.find("\n\n") {
@@ -1177,7 +1188,14 @@ fn inject_module_imports(
                     .iter()
                     .flat_map(|(owner, types)| {
                         types.iter().map(move |t| {
-                            format!("type {} = {owner}.{}\n", t.local_name, t.orig_name)
+                            if t.is_abstract {
+                                format!(
+                                    "type {} = {owner}.{}\ntype {}Base = {owner}.{}Base\n",
+                                    t.local_name, t.orig_name, t.local_name, t.orig_name
+                                )
+                            } else {
+                                format!("type {} = {owner}.{}\n", t.local_name, t.orig_name)
+                            }
                         })
                     })
                     .collect::<String>();
@@ -1185,36 +1203,18 @@ fn inject_module_imports(
             }
             "csharp" | "cs" | "c#" => {
                 let root = package_root.unwrap_or("Generated");
-                let imports = by_owner
-                    .keys()
-                    .map(|owner| {
-                        format!(
-                            "using {};\n",
-                            polyxml::codegen::csharp::to_csharp_namespace(&format!(
-                                "{root}.{owner}"
-                            ))
-                        )
-                    })
-                    .collect::<String>();
                 let aliases = by_owner
                     .iter()
                     .flat_map(|(owner, types)| {
                         let owner_ns = polyxml::codegen::csharp::to_csharp_namespace(&format!(
                             "{root}.{owner}"
                         ));
-                        types.iter().filter_map(move |t| {
-                            if t.orig_name != t.local_name {
-                                Some(format!(
-                                    "using {} = {owner_ns}.{};\n",
-                                    t.local_name, t.orig_name
-                                ))
-                            } else {
-                                None
-                            }
+                        types.iter().map(move |t| {
+                            format!("using {} = {owner_ns}.{};\n", t.local_name, t.orig_name)
                         })
                     })
                     .collect::<String>();
-                code = format!("{imports}{aliases}{code}");
+                code = format!("{aliases}{code}");
             }
             _ => {}
         }

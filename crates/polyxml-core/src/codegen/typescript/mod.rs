@@ -248,6 +248,9 @@ impl TypeScriptCodegen {
                 "import { Type, Static, FormatRegistry }",
             );
         }
+        if !out.contains("export ") {
+            out.push_str("export {};\n");
+        }
         out
     }
 

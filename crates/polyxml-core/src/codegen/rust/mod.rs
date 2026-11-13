@@ -247,10 +247,37 @@ pub struct RustCodegen {
     context: RustLanguageContext,
 }
 
+fn union_variant_names(u: &UnionDef) -> Vec<String> {
+    let mut seen_variants = HashSet::new();
+    u.branches
+        .iter()
+        .map(|branch| {
+            let base = to_rust_variant_identifier(&branch.variant_name);
+            let mut var_id = base.clone();
+            let mut counter = 1;
+            while !seen_variants.insert(var_id.clone()) {
+                counter += 1;
+                var_id = format!("{base}{counter}");
+            }
+            var_id
+        })
+        .collect()
+}
+
+/// Convert an XML type name to a PascalCase Rust type identifier,
+/// avoiding shadowing standard prelude/runtime types.
+pub fn to_rust_type_name(local: &str) -> String {
+    let raw = AsPascalCase(local).to_string();
+    match raw.as_str() {
+        "Option" | "Result" | "Vec" | "String" | "Box" | "Cow" => format!("{raw}Type"),
+        _ => raw,
+    }
+}
+
 /// Emitted Rust identifier for a named type, disambiguated across
 /// namespaces for the IR currently being generated.
 fn type_ident(q: &QName) -> String {
-    lookup_type_name(q, || AsPascalCase(&q.local).to_string())
+    lookup_type_name(q, || to_rust_type_name(&q.local))
 }
 
 impl RustCodegen {
@@ -263,9 +290,7 @@ impl RustCodegen {
     }
 
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
-        set_type_name_map(build_type_name_map(ir, |local| {
-            AsPascalCase(local).to_string()
-        }));
+        set_type_name_map(build_type_name_map(ir, to_rust_type_name));
         let mut out = String::new();
 
         if let Some(ref header) = self.options.custom_header {
@@ -337,9 +362,7 @@ impl RustCodegen {
     /// When `split_units` is requested, emits topologically sorted, bounded chunk modules
     /// (`chunk_00.rs`, `chunk_01.rs`, ...) and a parent `mod.rs` that re-exports all chunks.
     pub fn generate_files(&self, ir: &SchemaIR, base_name: &str) -> Vec<(String, String)> {
-        set_type_name_map(build_type_name_map(ir, |local| {
-            AsPascalCase(local).to_string()
-        }));
+        set_type_name_map(build_type_name_map(ir, to_rust_type_name));
 
         let should_split = self.options.split_units.unwrap_or(false);
         let chunk_size = self.options.chunk_size.unwrap_or(250);
@@ -572,7 +595,7 @@ impl RustCodegen {
             out.push_str("use pyo3::types::PyModule;\n");
             out.push_str("use serde::{Deserialize, Serialize};\n");
             out.push_str("use std::str::FromStr;\n");
-            out.push_str("use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};\n");
+            out.push_str("use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event as QuickXmlEvent};\n");
             out.push_str("use quick_xml::{Reader, Writer};\n\n");
             self.emit_pyo3_error_type(out);
             return;
@@ -585,7 +608,7 @@ impl RustCodegen {
         }
         if self.options.emit_codecs {
             out.push_str("use std::str::FromStr;\n");
-            out.push_str("use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};\n");
+            out.push_str("use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event as QuickXmlEvent};\n");
             out.push_str("use quick_xml::{Reader, Writer};\n");
             out.push_str("use polyxml::{PolyXmlError, Result};\n");
         }
@@ -824,20 +847,8 @@ impl RustCodegen {
 
         let _ = writeln!(out, "pub enum {} {{", type_signature);
 
-        let mut seen_variants = HashSet::new();
-        for branch in &u.branches {
-            let mut var_id = to_rust_variant_identifier(&branch.variant_name);
-            let mut counter = 1;
-            while seen_variants.contains(&var_id) {
-                counter += 1;
-                var_id = format!(
-                    "{}{}",
-                    to_rust_variant_identifier(&branch.variant_name),
-                    counter
-                );
-            }
-            seen_variants.insert(var_id.clone());
-
+        let variant_names = union_variant_names(u);
+        for (branch, var_id) in u.branches.iter().zip(&variant_names) {
             let branch_type = self.format_rust_type_ref(&branch.type_ref, types_with_lifetime);
 
             if let Some(ref doc) = branch.documentation {
@@ -1025,7 +1036,7 @@ impl RustCodegen {
 
         // Compute Rust type
         let inner_ref = match &field.type_ref {
-            TypeRef::List(inner) => inner.as_ref(),
+            TypeRef::List(inner) | TypeRef::Boxed(inner) => inner.as_ref(),
             other => other,
         };
 
@@ -1123,14 +1134,14 @@ impl RustCodegen {
         out.push_str("    let mut depth = 1;\n");
         out.push_str("    loop {\n");
         out.push_str("        match reader.read_event()? {\n");
-        out.push_str("            Event::Start(_) => depth += 1,\n");
-        out.push_str("            Event::End(_) => {\n");
+        out.push_str("            QuickXmlEvent::Start(_) => depth += 1,\n");
+        out.push_str("            QuickXmlEvent::End(_) => {\n");
         out.push_str("                depth -= 1;\n");
         out.push_str("                if depth == 0 {\n");
         out.push_str("                    break;\n");
         out.push_str("                }\n");
         out.push_str("            }\n");
-        out.push_str("            Event::Eof => break,\n");
+        out.push_str("            QuickXmlEvent::Eof => break,\n");
         out.push_str("            _ => {}\n");
         out.push_str("        }\n");
         out.push_str("    }\n");
@@ -1143,7 +1154,7 @@ impl RustCodegen {
             out.push_str("    let mut text = Cow::Borrowed(\"\");\n");
             out.push_str("    loop {\n");
             out.push_str("        match reader.read_event()? {\n");
-            out.push_str("            Event::Text(t) => {\n");
+            out.push_str("            QuickXmlEvent::Text(t) => {\n");
             out.push_str("                let raw = match t.into_inner() {\n");
             out.push_str(
                 "                    Cow::Borrowed(b) => match quick_xml::escape::unescape(b)? {\n",
@@ -1159,10 +1170,10 @@ impl RustCodegen {
             out.push_str("                    text.to_mut().push_str(&raw);\n");
             out.push_str("                }\n");
             out.push_str("            }\n");
-            out.push_str("            Event::CData(c) => {\n");
+            out.push_str("            QuickXmlEvent::CData(c) => {\n");
             out.push_str("                text.to_mut().push_str(c.as_ref());\n");
             out.push_str("            }\n");
-            out.push_str("            Event::GeneralRef(r) => {\n");
+            out.push_str("            QuickXmlEvent::GeneralRef(r) => {\n");
             out.push_str("                if r.is_char_ref() {\n");
             out.push_str("                    if let Some(ch) = r.resolve_char_ref()? {\n");
             out.push_str("                        text.to_mut().push(ch);\n");
@@ -1176,9 +1187,9 @@ impl RustCodegen {
             out.push_str("                }\n");
             out.push_str("            }\n");
             out.push_str(
-                "            Event::End(e) if e.local_name().as_ref() == tag_name => break,\n",
+                "            QuickXmlEvent::End(e) if e.local_name().as_ref() == tag_name => break,\n",
             );
-            out.push_str("            Event::Eof => break,\n");
+            out.push_str("            QuickXmlEvent::Eof => break,\n");
             out.push_str("            _ => {}\n");
             out.push_str("        }\n");
             out.push_str("    }\n");
@@ -1190,16 +1201,16 @@ impl RustCodegen {
             out.push_str("    let mut text = String::new();\n");
             out.push_str("    loop {\n");
             out.push_str("        match reader.read_event()? {\n");
-            out.push_str("            Event::Text(t) => {\n");
+            out.push_str("            QuickXmlEvent::Text(t) => {\n");
             out.push_str(
                 "                let unescaped = quick_xml::escape::unescape(t.as_ref())?;\n",
             );
             out.push_str("                text.push_str(&unescaped);\n");
             out.push_str("            }\n");
-            out.push_str("            Event::CData(c) => {\n");
+            out.push_str("            QuickXmlEvent::CData(c) => {\n");
             out.push_str("                text.push_str(c.as_ref());\n");
             out.push_str("            }\n");
-            out.push_str("            Event::GeneralRef(r) => {\n");
+            out.push_str("            QuickXmlEvent::GeneralRef(r) => {\n");
             out.push_str("                if r.is_char_ref() {\n");
             out.push_str("                    if let Some(ch) = r.resolve_char_ref()? {\n");
             out.push_str("                        text.push(ch);\n");
@@ -1213,9 +1224,9 @@ impl RustCodegen {
             out.push_str("                }\n");
             out.push_str("            }\n");
             out.push_str(
-                "            Event::End(e) if e.local_name().as_ref() == tag_name => break,\n",
+                "            QuickXmlEvent::End(e) if e.local_name().as_ref() == tag_name => break,\n",
             );
-            out.push_str("            Event::Eof => break,\n");
+            out.push_str("            QuickXmlEvent::Eof => break,\n");
             out.push_str("            _ => {}\n");
             out.push_str("        }\n");
             out.push_str("    }\n");
@@ -1267,6 +1278,7 @@ impl RustCodegen {
                     | PrimitiveType::Base64Binary
                     | PrimitiveType::HexBinary
                     | PrimitiveType::AnySimpleType
+                    | PrimitiveType::AnyType
             ),
             _ => false,
         }
@@ -1301,14 +1313,12 @@ impl RustCodegen {
 
     fn field_is_enum(&self, type_ref: &TypeRef, ir: &SchemaIR) -> Option<String> {
         match type_ref {
-            TypeRef::Named(qname) => {
-                if let Some(TypeDef::Enum(_)) = ir.types.get(qname) {
-                    Some(type_ident(qname))
-                } else {
-                    None
-                }
-            }
-            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_is_enum(inner, ir),
+            TypeRef::Named(qname) => match ir.types.get(qname) {
+                Some(TypeDef::Enum(_)) => Some(type_ident(qname)),
+                Some(TypeDef::Simple(s)) => self.field_is_enum(&s.base_type, ir),
+                _ => None,
+            },
+            TypeRef::Boxed(inner) => self.field_is_enum(inner, ir),
             _ => None,
         }
     }
@@ -1438,10 +1448,12 @@ impl RustCodegen {
         out.push_str("        loop {\n");
         out.push_str("            match reader.read_event()? {\n");
         out.push_str(
-            "                Event::Start(e) => return Self::decode_xml(&mut reader, &e),\n",
+            "                QuickXmlEvent::Start(e) => return Self::decode_xml(&mut reader, &e),\n",
         );
-        out.push_str("                Event::Empty(e) => return Self::decode_xml_empty(&e),\n");
-        out.push_str("                Event::Eof => break,\n");
+        out.push_str(
+            "                QuickXmlEvent::Empty(e) => return Self::decode_xml_empty(&e),\n",
+        );
+        out.push_str("                QuickXmlEvent::Eof => break,\n");
         out.push_str("                _ => {}\n");
         out.push_str("            }\n");
         out.push_str("        }\n");
@@ -1524,12 +1536,12 @@ impl RustCodegen {
             out.push_str("            match reader.read_event()? {\n");
             if phf_variant_of.is_empty() {
                 out.push_str(
-                    "                Event::Start(e) => match e.local_name().as_ref() {\n",
+                    "                QuickXmlEvent::Start(e) => match e.local_name().as_ref() {\n",
                 );
             } else {
                 let _ = writeln!(
                     out,
-                    "                Event::Start(e) => match {}.get(e.local_name().as_ref()) {{",
+                    "                QuickXmlEvent::Start(e) => match {}.get(e.local_name().as_ref()) {{",
                     phf_static_name
                 );
             }
@@ -1608,12 +1620,12 @@ impl RustCodegen {
 
             if phf_variant_of.is_empty() {
                 out.push_str(
-                    "                Event::Empty(e) => match e.local_name().as_ref() {\n",
+                    "                QuickXmlEvent::Empty(e) => match e.local_name().as_ref() {\n",
                 );
             } else {
                 let _ = writeln!(
                     out,
-                    "                Event::Empty(e) => match {}.get(e.local_name().as_ref()) {{",
+                    "                QuickXmlEvent::Empty(e) => match {}.get(e.local_name().as_ref()) {{",
                     phf_static_name
                 );
             }
@@ -1686,7 +1698,7 @@ impl RustCodegen {
             out.push_str("                    _ => {}\n");
             out.push_str("                },\n");
 
-            out.push_str("                Event::End(e) if e.local_name().as_ref() == start.local_name().as_ref() => break,\n");
+            out.push_str("                QuickXmlEvent::End(e) if e.local_name().as_ref() == start.local_name().as_ref() => break,\n");
             if ir.has_ordered_content(s) {
                 let item_union = field_metas.iter().find_map(|meta| {
                     self.resolve_union_def(&meta.field.type_ref, ir)
@@ -1700,12 +1712,12 @@ impl RustCodegen {
                     } else {
                         "String::from"
                     };
-                    let _ = writeln!(out, "                Event::Text(e) => var_{}.push({}::Text({wrap}(quick_xml::escape::unescape(e.as_ref())?.into_owned()))),", meta.rust_name, union_name);
-                    let _ = writeln!(out, "                Event::CData(e) => var_{}.push({}::Text({wrap}(e.as_ref().to_string()))),", meta.rust_name, union_name);
-                    let _ = writeln!(out, "                Event::GeneralRef(e) => {{ let text = if e.is_char_ref() {{ e.resolve_char_ref()?.map(|ch| ch.to_string()).unwrap_or_default() }} else if let Some(value) = quick_xml::escape::resolve_xml_entity(e.as_ref()) {{ value.to_string() }} else {{ e.as_ref().to_string() }}; var_{}.push({}::Text({wrap}(text))); }},", meta.rust_name, union_name);
+                    let _ = writeln!(out, "                QuickXmlEvent::Text(e) => var_{}.push({}::Text({wrap}(quick_xml::escape::unescape(e.as_ref())?.into_owned()))),", meta.rust_name, union_name);
+                    let _ = writeln!(out, "                QuickXmlEvent::CData(e) => var_{}.push({}::Text({wrap}(e.as_ref().to_string()))),", meta.rust_name, union_name);
+                    let _ = writeln!(out, "                QuickXmlEvent::GeneralRef(e) => {{ let text = if e.is_char_ref() {{ e.resolve_char_ref()?.map(|ch| ch.to_string()).unwrap_or_default() }} else if let Some(value) = quick_xml::escape::resolve_xml_entity(e.as_ref()) {{ value.to_string() }} else {{ e.as_ref().to_string() }}; var_{}.push({}::Text({wrap}(text))); }},", meta.rust_name, union_name);
                 }
             }
-            out.push_str("                Event::Eof => break,\n");
+            out.push_str("                QuickXmlEvent::Eof => break,\n");
             out.push_str("                _ => {}\n");
             out.push_str("            }\n");
             out.push_str("        }\n");
@@ -1920,7 +1932,7 @@ impl RustCodegen {
             self.emit_attr_serialize(out, &meta.field, &meta.rust_name, ir);
         }
 
-        out.push_str("        writer.write_event(Event::Start(start))?;\n");
+        out.push_str("        writer.write_event(QuickXmlEvent::Start(start))?;\n");
 
         // simpleContent value: write the element's own text content between
         // Start and End. Text and child content are mutually exclusive in the
@@ -1935,7 +1947,7 @@ impl RustCodegen {
             self.emit_element_serialize(out, &meta.field, &meta.rust_name, ir);
         }
 
-        out.push_str("        writer.write_event(Event::End(BytesEnd::new(tag)))?;\n");
+        out.push_str("        writer.write_event(QuickXmlEvent::End(BytesEnd::new(tag)))?;\n");
         out.push_str("        Ok(())\n");
         out.push_str("    }\n");
 
@@ -2057,7 +2069,7 @@ impl RustCodegen {
             if let Some(ns) = &root.qname.namespace {
                 writeln!(out, "        start.push_attribute((\"xmlns\", {ns:?}));").unwrap();
             }
-            out.push_str("        writer.write_event(Event::Start(start))?;\n        let mut count = 0usize;\n");
+            out.push_str("        writer.write_event(QuickXmlEvent::Start(start))?;\n        let mut count = 0usize;\n");
             let mut checks = String::new();
             if let crate::ir::OccursLimit::Count(max) = field.cardinality.max_occurs {
                 writeln!(checks, "            if count == {max} {{ return Err(PolyXmlError::SchemaError(\"maxOccurs exceeded\".into())); }}").unwrap();
@@ -2068,7 +2080,7 @@ impl RustCodegen {
             if field.cardinality.min_occurs > 0 {
                 writeln!(out, "        if count < {} {{ return Err(PolyXmlError::SchemaError(\"minOccurs not satisfied\".into())); }}", field.cardinality.min_occurs).unwrap();
             }
-            writeln!(out, "        writer.write_event(Event::End(BytesEnd::new({:?})))?;\n        Ok(())\n    }}\n}}", root.qname.local).unwrap();
+            writeln!(out, "        writer.write_event(QuickXmlEvent::End(BytesEnd::new({:?})))?;\n        Ok(())\n    }}\n}}", root.qname.local).unwrap();
         }
     }
 
@@ -2149,6 +2161,13 @@ impl RustCodegen {
                 out,
                 "                    let val = {}::from_str(s).map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
                 enum_name, field.name, enum_name
+            );
+            let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
+        } else if let Some(item_ref) = self.resolve_list_item_type(&field.type_ref, ir) {
+            let item_parse = self.parse_list_item_expr(item_ref, &field.name, ir);
+            let _ = writeln!(
+                out,
+                "                    let val = attr.value.as_ref().split_whitespace().map(|tok| Ok({item_parse})).collect::<Result<Vec<_>>>()?;",
             );
             let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
         }
@@ -2242,8 +2261,32 @@ impl RustCodegen {
                     rust_name
                 );
             }
+        } else if let Some(item_ref) = self.resolve_list_item_type(&field.type_ref, ir) {
+            let _ = writeln!(
+                out,
+                "                        let text = read_element_text(reader, \"{}\")?;",
+                field.xml_name
+            );
+            let item_parse = self.parse_list_item_expr(item_ref, &field.name, ir);
+            let _ = writeln!(
+                out,
+                "                        let val = text.split_whitespace().map(|tok| Ok({item_parse})).collect::<Result<Vec<_>>>()?;",
+            );
+            if is_list {
+                let _ = writeln!(out, "                        var_{}.push(val);", rust_name);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some(val);",
+                    rust_name
+                );
+            }
         } else {
-            let target_type = self.format_rust_type_ref(&field.type_ref, types_with_lifetime);
+            let unboxed_ref = match &field.type_ref {
+                TypeRef::Boxed(inner) => inner.as_ref(),
+                other => other,
+            };
+            let target_type = self.format_rust_type_ref(unboxed_ref, types_with_lifetime);
             let target_clean = target_type.split('<').next().unwrap_or(&target_type);
             let decode = if self.resolve_union_def(&field.type_ref, ir).is_some() {
                 "decode_xml_wrapped"
@@ -2317,11 +2360,29 @@ impl RustCodegen {
                     );
                 }
             }
+        } else if self.resolve_list_item_type(&field.type_ref, ir).is_some() {
+            if is_list {
+                let _ = writeln!(
+                    out,
+                    "                        var_{}.push(Vec::new());",
+                    rust_name
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some(Vec::new());",
+                    rust_name
+                );
+            }
         } else if self.field_numeric_type(&field.type_ref, ir).is_none()
             && !self.field_is_bool(&field.type_ref, ir)
             && self.field_is_enum(&field.type_ref, ir).is_none()
         {
-            let target_type = self.format_rust_type_ref(&field.type_ref, types_with_lifetime);
+            let unboxed_ref = match &field.type_ref {
+                TypeRef::Boxed(inner) => inner.as_ref(),
+                other => other,
+            };
+            let target_type = self.format_rust_type_ref(unboxed_ref, types_with_lifetime);
             let target_clean = target_type.split('<').next().unwrap_or(&target_type);
             let _ = writeln!(
                 out,
@@ -2405,12 +2466,12 @@ impl RustCodegen {
             if is_optional {
                 let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
                 out.push_str(
-                    "            writer.write_event(Event::Text(BytesText::new(val.as_ref())))?;\n        }\n",
+                    "            writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_ref())))?;\n        }\n",
                 );
             } else {
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Text(BytesText::new(self.{}.as_ref())))?;",
+                    "        writer.write_event(QuickXmlEvent::Text(BytesText::new(self.{}.as_ref())))?;",
                     rust_name
                 );
             }
@@ -2420,12 +2481,12 @@ impl RustCodegen {
             if is_optional {
                 let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
                 out.push_str(
-                    "            writer.write_event(Event::Text(BytesText::new(&val.to_string())))?;\n        }\n",
+                    "            writer.write_event(QuickXmlEvent::Text(BytesText::new(&val.to_string())))?;\n        }\n",
                 );
             } else {
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Text(BytesText::new(&self.{}.to_string())))?;",
+                    "        writer.write_event(QuickXmlEvent::Text(BytesText::new(&self.{}.to_string())))?;",
                     rust_name
                 );
             }
@@ -2433,12 +2494,12 @@ impl RustCodegen {
             if is_optional {
                 let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
                 out.push_str(
-                    "            writer.write_event(Event::Text(BytesText::new(val.as_str())))?;\n        }\n",
+                    "            writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_str())))?;\n        }\n",
                 );
             } else {
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Text(BytesText::new(self.{}.as_str())))?;",
+                    "        writer.write_event(QuickXmlEvent::Text(BytesText::new(self.{}.as_str())))?;",
                     rust_name
                 );
             }
@@ -2483,6 +2544,39 @@ impl RustCodegen {
         }
     }
 
+    fn resolve_list_item_type<'a>(
+        &self,
+        type_ref: &'a TypeRef,
+        ir: &'a SchemaIR,
+    ) -> Option<&'a TypeRef> {
+        match type_ref {
+            TypeRef::List(inner) => Some(inner.as_ref()),
+            TypeRef::Named(q) => match ir.types.get(q) {
+                Some(TypeDef::Simple(s)) => self.resolve_list_item_type(&s.base_type, ir),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    fn parse_list_item_expr(&self, item_ref: &TypeRef, field_name: &str, ir: &SchemaIR) -> String {
+        if self.field_is_string(item_ref, ir) {
+            if self.options.zero_copy {
+                "Cow::Owned(tok.to_owned())".to_string()
+            } else {
+                "tok.to_owned()".to_string()
+            }
+        } else if let Some(num) = self.field_numeric_type(item_ref, ir) {
+            format!("tok.parse::<{num}>().map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{field_name}\".into(), expected: \"{num}\", value: tok.into() }})?")
+        } else if self.field_is_bool(item_ref, ir) {
+            "tok == \"true\" || tok == \"1\"".to_string()
+        } else if let Some(enum_name) = self.field_is_enum(item_ref, ir) {
+            format!("{enum_name}::from_str(tok).map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{field_name}\".into(), expected: \"{enum_name}\", value: tok.into() }})?")
+        } else {
+            "tok.to_owned()".to_string()
+        }
+    }
+
     fn emit_attr_serialize(
         &self,
         out: &mut String,
@@ -2491,7 +2585,35 @@ impl RustCodegen {
         ir: &SchemaIR,
     ) {
         let is_optional = field.cardinality.is_optional() || field.nillable;
-        if self.field_is_string(&field.type_ref, ir) {
+        let is_list = field.cardinality.is_list()
+            || field.type_ref.is_list()
+            || self.resolve_list_item_type(&field.type_ref, ir).is_some();
+        if is_list {
+            if is_optional {
+                let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
+                let _ = writeln!(
+                    out,
+                    "            let val_s = val.iter().map(|item| item.to_string()).collect::<Vec<_>>().join(\" \");"
+                );
+                let _ = writeln!(
+                    out,
+                    "            start.push_attribute((\"{}\", val_s.as_str()));",
+                    field.xml_name
+                );
+                out.push_str("        }\n");
+            } else {
+                let _ = writeln!(
+                    out,
+                    "        let val_s_{} = self.{}.iter().map(|item| item.to_string()).collect::<Vec<_>>().join(\" \");",
+                    rust_name, rust_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        start.push_attribute((\"{}\", val_s_{}.as_str()));",
+                    field.xml_name, rust_name
+                );
+            }
+        } else if self.field_is_string(&field.type_ref, ir) {
             if is_optional {
                 let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
                 let _ = writeln!(
@@ -2555,6 +2677,7 @@ impl RustCodegen {
         let is_scalar = self.field_numeric_type(&field.type_ref, ir).is_some()
             || self.field_is_bool(&field.type_ref, ir);
         let is_enum = self.field_is_enum(&field.type_ref, ir).is_some();
+        let is_simple_list = self.resolve_list_item_type(&field.type_ref, ir).is_some();
 
         if is_list {
             let source = source
@@ -2565,37 +2688,50 @@ impl RustCodegen {
             if is_string {
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
-                out.push_str("            writer.write_event(Event::Text(BytesText::new(item.as_ref())))?;\n");
+                out.push_str("            writer.write_event(QuickXmlEvent::Text(BytesText::new(item.as_ref())))?;\n");
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if is_scalar {
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
-                out.push_str("            writer.write_event(Event::Text(BytesText::new(&item.to_string())))?;\n");
+                out.push_str("            writer.write_event(QuickXmlEvent::Text(BytesText::new(&item.to_string())))?;\n");
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if is_enum {
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
-                out.push_str("            writer.write_event(Event::Text(BytesText::new(item.as_str())))?;\n");
+                out.push_str("            writer.write_event(QuickXmlEvent::Text(BytesText::new(item.as_str())))?;\n");
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_simple_list {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str("            let joined = item.iter().map(|elem| elem.to_string()).collect::<Vec<_>>().join(\" \");\n");
+                out.push_str("            writer.write_event(QuickXmlEvent::Text(BytesText::new(&joined)))?;\n");
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
@@ -2621,41 +2757,54 @@ impl RustCodegen {
             if is_string {
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
                 out.push_str(
-                    "            writer.write_event(Event::Text(BytesText::new(val.as_ref())))?;\n",
+                    "            writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_ref())))?;\n",
                 );
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if is_scalar {
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
-                out.push_str("            writer.write_event(Event::Text(BytesText::new(&val.to_string())))?;\n");
+                out.push_str("            writer.write_event(QuickXmlEvent::Text(BytesText::new(&val.to_string())))?;\n");
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if is_enum {
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
                 out.push_str(
-                    "            writer.write_event(Event::Text(BytesText::new(val.as_str())))?;\n",
+                    "            writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_str())))?;\n",
                 );
                 let _ = writeln!(
                     out,
-                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_simple_list {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str("            let joined = val.iter().map(|item| item.to_string()).collect::<Vec<_>>().join(\" \");\n");
+                out.push_str("            writer.write_event(QuickXmlEvent::Text(BytesText::new(&joined)))?;\n");
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
@@ -2680,45 +2829,66 @@ impl RustCodegen {
             if is_string {
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "        writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Text(BytesText::new(self.{}.as_ref())))?;",
+                    "        writer.write_event(QuickXmlEvent::Text(BytesText::new(self.{}.as_ref())))?;",
                     rust_name
                 );
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "        writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if is_scalar {
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "        writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
-                let _ = writeln!(out, "        writer.write_event(Event::Text(BytesText::new(&self.{}.to_string())))?;", rust_name);
+                let _ = writeln!(out, "        writer.write_event(QuickXmlEvent::Text(BytesText::new(&self.{}.to_string())))?;", rust_name);
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "        writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if is_enum {
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    "        writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
                     field.xml_name
                 );
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::Text(BytesText::new(self.{}.as_str())))?;",
+                    "        writer.write_event(QuickXmlEvent::Text(BytesText::new(self.{}.as_str())))?;",
                     rust_name
                 );
                 let _ = writeln!(
                     out,
-                    "        writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    "        writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_simple_list {
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(QuickXmlEvent::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        let joined_{} = self.{}.iter().map(|item| item.to_string()).collect::<Vec<_>>().join(\" \");",
+                    rust_name, rust_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(QuickXmlEvent::Text(BytesText::new(&joined_{})))?;",
+                    rust_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(QuickXmlEvent::End(BytesEnd::new(\"{}\")))?;",
                     field.xml_name
                 );
             } else if self.resolve_union_def(&field.type_ref, ir).is_some() {
@@ -2769,26 +2939,26 @@ impl RustCodegen {
         out.push_str(r#"        let mut value = None;
         loop {
             match reader.read_event()? {
-                Event::Start(e) => {
+                QuickXmlEvent::Start(e) => {
                     if value.is_some() { return Err(PolyXmlError::SchemaError("Multiple choice alternatives".into())); }
                     value = Some(Self::decode_xml(reader, &e)?);
                 }
-                Event::Empty(e) => {
+                QuickXmlEvent::Empty(e) => {
                     if value.is_some() { return Err(PolyXmlError::SchemaError("Multiple choice alternatives".into())); }
                     let mut empty_reader = Reader::from_str("");
                     value = Some(Self::decode_xml(&mut empty_reader, &e)?);
                 }
-                Event::End(e) if e.name() == start.name() => break,
-                Event::Eof => return Err(PolyXmlError::SchemaError("Unclosed choice wrapper".into())),
+                QuickXmlEvent::End(e) if e.name() == start.name() => break,
+                QuickXmlEvent::Eof => return Err(PolyXmlError::SchemaError("Unclosed choice wrapper".into())),
                 _ => {}
             }
         }
         value.ok_or_else(|| PolyXmlError::SchemaError("Missing choice alternative".into()))
     }
     pub fn encode_xml_wrapped<W: std::io::Write>(&self, writer: &mut Writer<W>, tag: &str) -> Result<()> {
-        writer.write_event(Event::Start(BytesStart::new(tag)))?;
+        writer.write_event(QuickXmlEvent::Start(BytesStart::new(tag)))?;
         self.encode_xml(writer, None)?;
-        writer.write_event(Event::End(BytesEnd::new(tag)))?;
+        writer.write_event(QuickXmlEvent::End(BytesEnd::new(tag)))?;
         Ok(())
     }
 "#);
@@ -2804,9 +2974,9 @@ impl RustCodegen {
         out.push_str("        loop {\n");
         out.push_str("            match reader.read_event()? {\n");
         out.push_str(
-            "                Event::Start(e) => return Self::decode_xml(&mut reader, &e),\n",
+            "                QuickXmlEvent::Start(e) => return Self::decode_xml(&mut reader, &e),\n",
         );
-        out.push_str("                Event::Eof => break,\n");
+        out.push_str("                QuickXmlEvent::Eof => break,\n");
         out.push_str("                _ => {}\n");
         out.push_str("            }\n");
         out.push_str("        }\n");
@@ -2837,19 +3007,34 @@ impl RustCodegen {
         out.push_str("    {\n");
         out.push_str("        match start.local_name().as_ref() {\n");
 
-        for branch in &u.branches {
-            let var_id = to_rust_variant_identifier(&branch.variant_name);
+        let variant_names = union_variant_names(u);
+        let mut seen_xml_names = HashSet::new();
+        for (branch, var_id) in u.branches.iter().zip(&variant_names) {
             if u.is_mixed_content() && branch.xml_name == "#text" {
                 continue;
             }
+            if !seen_xml_names.insert(branch.xml_name.as_str()) {
+                continue;
+            }
             let _ = writeln!(out, "            \"{}\" => {{", branch.xml_name);
-            if self.field_is_string(&branch.type_ref, ir) {
+            if self.field_is_string(&branch.type_ref, ir)
+                || matches!(&branch.type_ref, TypeRef::Primitive(PrimitiveType::AnyType))
+            {
                 let _ = writeln!(
                     out,
                     "                let text = read_element_text(reader, \"{}\")?;",
                     branch.xml_name
                 );
-                let _ = writeln!(out, "                Ok({}::{}(text))", union_name, var_id);
+                let text_val = if self.options.zero_copy {
+                    "text"
+                } else {
+                    "text.into_owned()"
+                };
+                let _ = writeln!(
+                    out,
+                    "                Ok({}::{}({}))",
+                    union_name, var_id, text_val
+                );
             } else if let Some(num) = self.field_numeric_type(&branch.type_ref, ir) {
                 let _ = writeln!(
                     out,
@@ -2877,15 +3062,36 @@ impl RustCodegen {
                 out.push_str("                let s = text.trim();\n");
                 let _ = writeln!(out, "                let val = {}::from_str(s).map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;", enum_name, branch.xml_name, enum_name);
                 let _ = writeln!(out, "                Ok({}::{}(val))", union_name, var_id);
+            } else if let Some(item_ref) = self.resolve_list_item_type(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "                let text = read_element_text(reader, \"{}\")?;",
+                    branch.xml_name
+                );
+                let item_parse = self.parse_list_item_expr(item_ref, &branch.xml_name, ir);
+                out.push_str(&format!(
+                    "                let val = text.split_whitespace().map(|tok| Ok({item_parse})).collect::<Result<Vec<_>>>()?;\n"
+                ));
+                let _ = writeln!(out, "                Ok({}::{}(val))", union_name, var_id);
             } else {
-                let target_type = self.format_rust_type_ref(&branch.type_ref, types_with_lifetime);
+                let is_boxed = branch.type_ref.is_boxed();
+                let unboxed_ref = match &branch.type_ref {
+                    TypeRef::Boxed(inner) => inner.as_ref(),
+                    other => other,
+                };
+                let target_type = self.format_rust_type_ref(unboxed_ref, types_with_lifetime);
                 let target_clean = target_type.split('<').next().unwrap_or(&target_type);
                 let _ = writeln!(
                     out,
                     "                let val = {}::decode_xml(reader, start)?;",
                     target_clean
                 );
-                let _ = writeln!(out, "                Ok({}::{}(val))", union_name, var_id);
+                let wrapped = if is_boxed { "Box::new(val)" } else { "val" };
+                let _ = writeln!(
+                    out,
+                    "                Ok({}::{}({}))",
+                    union_name, var_id, wrapped
+                );
             }
             out.push_str("            }\n");
         }
@@ -2939,14 +3145,15 @@ impl RustCodegen {
 
         out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
         out.push_str("        match self {\n");
-        for branch in &u.branches {
-            let var_id = to_rust_variant_identifier(&branch.variant_name);
+        for (branch, var_id) in u.branches.iter().zip(&variant_names) {
             if u.is_mixed_content() && branch.xml_name == "#text" {
                 let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
-                out.push_str("                writer.write_event(Event::Text(BytesText::new(val.as_ref())))?;\n                Ok(())\n            }\n");
+                out.push_str("                writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_ref())))?;\n                Ok(())\n            }\n");
                 continue;
             }
-            if self.field_is_string(&branch.type_ref, ir) {
+            if self.field_is_string(&branch.type_ref, ir)
+                || matches!(&branch.type_ref, TypeRef::Primitive(PrimitiveType::AnyType))
+            {
                 let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
                 let _ = writeln!(
                     out,
@@ -2954,11 +3161,11 @@ impl RustCodegen {
                     branch.xml_name
                 );
                 out.push_str(
-                    "                writer.write_event(Event::Start(BytesStart::new(tag)))?;\n",
+                    "                writer.write_event(QuickXmlEvent::Start(BytesStart::new(tag)))?;\n",
                 );
-                out.push_str("                writer.write_event(Event::Text(BytesText::new(val.as_ref())))?;\n");
+                out.push_str("                writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_ref())))?;\n");
                 out.push_str(
-                    "                writer.write_event(Event::End(BytesEnd::new(tag)))?;\n",
+                    "                writer.write_event(QuickXmlEvent::End(BytesEnd::new(tag)))?;\n",
                 );
                 out.push_str("                Ok(())\n");
                 out.push_str("            }\n");
@@ -2972,11 +3179,11 @@ impl RustCodegen {
                     branch.xml_name
                 );
                 out.push_str(
-                    "                writer.write_event(Event::Start(BytesStart::new(tag)))?;\n",
+                    "                writer.write_event(QuickXmlEvent::Start(BytesStart::new(tag)))?;\n",
                 );
-                out.push_str("                writer.write_event(Event::Text(BytesText::new(&val.to_string())))?;\n");
+                out.push_str("                writer.write_event(QuickXmlEvent::Text(BytesText::new(&val.to_string())))?;\n");
                 out.push_str(
-                    "                writer.write_event(Event::End(BytesEnd::new(tag)))?;\n",
+                    "                writer.write_event(QuickXmlEvent::End(BytesEnd::new(tag)))?;\n",
                 );
                 out.push_str("                Ok(())\n");
                 out.push_str("            }\n");
@@ -2988,11 +3195,28 @@ impl RustCodegen {
                     branch.xml_name
                 );
                 out.push_str(
-                    "                writer.write_event(Event::Start(BytesStart::new(tag)))?;\n",
+                    "                writer.write_event(QuickXmlEvent::Start(BytesStart::new(tag)))?;\n",
                 );
-                out.push_str("                writer.write_event(Event::Text(BytesText::new(val.as_str())))?;\n");
+                out.push_str("                writer.write_event(QuickXmlEvent::Text(BytesText::new(val.as_str())))?;\n");
                 out.push_str(
-                    "                writer.write_event(Event::End(BytesEnd::new(tag)))?;\n",
+                    "                writer.write_event(QuickXmlEvent::End(BytesEnd::new(tag)))?;\n",
+                );
+                out.push_str("                Ok(())\n");
+                out.push_str("            }\n");
+            } else if self.resolve_list_item_type(&branch.type_ref, ir).is_some() {
+                let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
+                let _ = writeln!(
+                    out,
+                    "                let tag = tag_name.unwrap_or(\"{}\");",
+                    branch.xml_name
+                );
+                out.push_str(
+                    "                writer.write_event(QuickXmlEvent::Start(BytesStart::new(tag)))?;\n",
+                );
+                out.push_str("                let joined = val.iter().map(|item| item.to_string()).collect::<Vec<_>>().join(\" \");\n");
+                out.push_str("                writer.write_event(QuickXmlEvent::Text(BytesText::new(&joined)))?;\n");
+                out.push_str(
+                    "                writer.write_event(QuickXmlEvent::End(BytesEnd::new(tag)))?;\n",
                 );
                 out.push_str("                Ok(())\n");
                 out.push_str("            }\n");
@@ -3082,7 +3306,7 @@ impl RustCodegen {
             "    pub fn from_xml(xml: {}) -> Result<Self> {{",
             xml_arg
         );
-        out.push_str("        let mut reader = Reader::from_str(xml);\n        loop {\n            match reader.read_event()? {\n                Event::Start(e) => return Self::decode_xml(&mut reader, &e),\n                Event::Empty(e) => return Self::decode_xml_empty(&e),\n                Event::Eof => return Err(PolyXmlError::SchemaError(\"Unexpected EOF while parsing union\".into())),\n                _ => {}\n            }\n        }\n    }\n\n");
+        out.push_str("        let mut reader = Reader::from_str(xml);\n        loop {\n            match reader.read_event()? {\n                QuickXmlEvent::Start(e) => return Self::decode_xml(&mut reader, &e),\n                QuickXmlEvent::Empty(e) => return Self::decode_xml_empty(&e),\n                QuickXmlEvent::Eof => return Err(PolyXmlError::SchemaError(\"Unexpected EOF while parsing union\".into())),\n                _ => {}\n            }\n        }\n    }\n\n");
         let _ = writeln!(
             out,
             "    pub fn from_xml_bytes(xml_bytes: {}) -> Result<Self> {{",
@@ -3094,7 +3318,17 @@ impl RustCodegen {
             "    pub fn decode_xml(reader: {}, start: &BytesStart<'_>) -> Result<Self> {{",
             reader_arg
         );
-        out.push_str("        let tag = start.local_name().as_ref().to_owned();\n        Self::parse_lexical(read_element_text(reader, &tag)?)\n    }\n\n");
+        let decode_text_expr = if borrowed {
+            "read_element_text(reader, &tag)?"
+        } else {
+            "read_element_text(reader, &tag)?.into_owned()"
+        };
+        let _ = writeln!(
+            out,
+            "        let tag = start.local_name().as_ref().to_owned();\n        Self::parse_lexical({})",
+            decode_text_expr
+        );
+        out.push_str("    }\n\n");
         out.push_str("    pub fn decode_xml_empty(_start: &BytesStart<'_>) -> Result<Self> {\n        Self::parse_lexical(Default::default())\n    }\n\n");
         out.push_str("    pub fn to_xml(&self) -> Result<Vec<u8>> {\n        let mut buf = Vec::new();\n        let mut writer = Writer::new(std::io::Cursor::new(&mut buf));\n        self.encode_xml(&mut writer, None)?;\n        Ok(buf)\n    }\n\n");
         out.push_str("    pub fn to_xml_string(&self) -> Result<String> {\n        String::from_utf8(self.to_xml()?).map_err(|e| PolyXmlError::Utf8Error(e.utf8_error()))\n    }\n\n");
@@ -3107,7 +3341,7 @@ impl RustCodegen {
         }
         out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n        let tag = tag_name.unwrap_or(");
         let _ = writeln!(out, "{:?});", name);
-        out.push_str("        writer.write_event(Event::Start(BytesStart::new(tag)))?;\n        let text = match self {\n");
+        out.push_str("        writer.write_event(QuickXmlEvent::Start(BytesStart::new(tag)))?;\n        let text = match self {\n");
         for branch in &u.branches {
             let variant = to_rust_variant_identifier(&branch.variant_name);
             let expr = if self.field_is_enum(&branch.type_ref, ir).is_some() {
@@ -3117,7 +3351,29 @@ impl RustCodegen {
             };
             let _ = writeln!(out, "            Self::{}(value) => {},", variant, expr);
         }
-        out.push_str("        };\n        writer.write_event(Event::Text(BytesText::new(&text)))?;\n        writer.write_event(Event::End(BytesEnd::new(tag)))?;\n        Ok(())\n    }\n}\n");
+        out.push_str("        };\n        writer.write_event(QuickXmlEvent::Text(BytesText::new(&text)))?;\n        writer.write_event(QuickXmlEvent::End(BytesEnd::new(tag)))?;\n        Ok(())\n    }\n}\n");
+
+        let display_header = if borrowed {
+            format!("impl<'a> std::fmt::Display for {}<'a>", name)
+        } else {
+            format!("impl std::fmt::Display for {}", name)
+        };
+        let _ = writeln!(out, "\n{} {{", display_header);
+        out.push_str("    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        match self {\n");
+        for branch in &u.branches {
+            let variant = to_rust_variant_identifier(&branch.variant_name);
+            let expr = if self.field_is_enum(&branch.type_ref, ir).is_some() {
+                "value.as_str()"
+            } else {
+                "value"
+            };
+            let _ = writeln!(
+                out,
+                "            Self::{}(value) => std::fmt::Display::fmt({}, f),",
+                variant, expr
+            );
+        }
+        out.push_str("        }\n    }\n}\n");
     }
 
     fn emit_pyo3_error_type(&self, out: &mut String) {

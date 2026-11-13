@@ -183,19 +183,18 @@ impl JavaCodegen {
                 );
             }
             TypeDef::Union(u) => {
+                let variant_names = super::union_variant_names(u);
                 if u.is_lexical() {
                     out.push_str("            String text = reader.getElementText();\n");
-                    for b in &u.branches {
+                    for (b, variant) in u.branches.iter().zip(&variant_names) {
                         let expr = self.parse_scalar(&b.type_ref, "text", ir);
-                        let variant = union_variant_name(b);
                         let _ = writeln!(out, "            try {{ return new {name}.{variant}({expr}); }} catch (RuntimeException ignored) {{ }}");
                     }
                     let _ = writeln!(out, "            throw new XMLStreamException(\"No {} union member accepts: \" + text);", name);
                 } else {
                     let _=writeln!(out,"            {name} result = null;\n            while (reader.hasNext()) {{\n                int event = reader.next();\n                if (event == XMLStreamConstants.END_ELEMENT) return result;\n                if (event != XMLStreamConstants.START_ELEMENT) continue;");
-                    for (i, b) in u.branches.iter().enumerate() {
+                    for (i, (b, variant)) in u.branches.iter().zip(&variant_names).enumerate() {
                         let expr = self.read_value(&b.type_ref, ir);
-                        let variant = union_variant_name(b);
                         let _=writeln!(out,"                {}if (reader.getLocalName().equals({:?})) result = new {name}.{variant}({expr});",if i==0 {""}else{"else "},b.xml_name);
                     }
                     out.push_str("                else skip(reader);\n            }\n            return result;\n");
@@ -235,8 +234,8 @@ impl JavaCodegen {
                 let _ = writeln!(out, "        writer.writeCharacters({expr});");
             }
             TypeDef::Union(u) => {
-                for (i, b) in u.branches.iter().enumerate() {
-                    let variant = union_variant_name(b);
+                let variant_names = super::union_variant_names(u);
+                for (i, (b, variant)) in u.branches.iter().zip(&variant_names).enumerate() {
                     let _ = writeln!(
                         out,
                         "        {}if (value instanceof {name}.{variant} branch) {{",
@@ -313,12 +312,14 @@ impl JavaCodegen {
                     .map(|union| (field, id, union))
             }) {
                 let union_name = type_ident(&union.qname);
-                let text_branch = union
+                let variant_names = super::union_variant_names(union);
+                let text_variant = union
                     .branches
                     .iter()
-                    .find(|branch| branch.xml_name == "#text");
-                if let Some(text_branch) = text_branch {
-                    let variant = union_variant_name(text_branch);
+                    .zip(&variant_names)
+                    .find(|(branch, _)| branch.xml_name == "#text")
+                    .map(|(_, v)| v.as_str());
+                if let Some(variant) = text_variant {
                     let val = format!("new {union_name}.{variant}(reader.getText())");
                     out.push_str("                if (event == XMLStreamConstants.CHARACTERS || event == XMLStreamConstants.CDATA || event == XMLStreamConstants.SPACE) {\n");
                     self.assign_value(out, field, id, &val, "                    ");
@@ -335,7 +336,8 @@ impl JavaCodegen {
             if f.xml_name.is_empty() {
                 if let Some(u) = self.resolve_union_def(&f.type_ref, ir) {
                     let union_name = type_ident(&u.qname);
-                    for branch in &u.branches {
+                    let variant_names = super::union_variant_names(u);
+                    for (branch, variant) in u.branches.iter().zip(&variant_names) {
                         if branch.xml_name == "#text" {
                             continue;
                         }
@@ -347,7 +349,6 @@ impl JavaCodegen {
                         );
                         first = false;
                         let expr = self.read_value(&branch.type_ref, ir);
-                        let variant = union_variant_name(branch);
                         let union_val = format!("new {union_name}.{variant}({expr})");
                         self.assign_value(out, f, id, &union_val, "                    ");
                         out.push_str("                }\n");

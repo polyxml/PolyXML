@@ -199,6 +199,14 @@ pub fn to_java_field_identifier(name: &str) -> String {
     } else {
         raw
     };
+    let sanitized = match sanitized.as_str() {
+        "String" | "Object" | "Class" | "Enum" | "Record" | "System" | "Math" | "Number"
+        | "Integer" | "Long" | "Double" | "Float" | "Boolean" | "Byte" | "Short" | "Character"
+        | "Void" | "Exception" | "RuntimeException" => {
+            format!("{sanitized}Type")
+        }
+        _ => sanitized,
+    };
     sanitize_keyword(&sanitized, "java")
 }
 
@@ -211,6 +219,14 @@ pub fn to_java_type_name(name: &str) -> String {
         format!("Type{}", raw)
     } else {
         raw
+    };
+    let sanitized = match sanitized.as_str() {
+        "String" | "Object" | "Class" | "Enum" | "Record" | "System" | "Math" | "Number"
+        | "Integer" | "Long" | "Double" | "Float" | "Boolean" | "Byte" | "Short" | "Character"
+        | "Void" | "Exception" | "RuntimeException" => {
+            format!("{sanitized}Type")
+        }
+        _ => sanitized,
     };
     sanitize_keyword(&sanitized, "java")
 }
@@ -230,6 +246,23 @@ fn union_variant_name(branch: &UnionBranch) -> String {
     }
 }
 
+pub(super) fn union_variant_names(u: &UnionDef) -> Vec<String> {
+    let mut seen = HashSet::new();
+    u.branches
+        .iter()
+        .map(|b| {
+            let base = union_variant_name(b);
+            let mut candidate = base.clone();
+            let mut idx = 2;
+            while !seen.insert(candidate.clone()) {
+                candidate = format!("{base}{idx}");
+                idx += 1;
+            }
+            candidate
+        })
+        .collect()
+}
+
 /// Convert an XML enumeration variant name to SCREAMING_SNAKE_CASE for Java enum constants.
 pub fn to_java_enum_constant(name: &str) -> String {
     let normalized = normalize_symbol_name(name);
@@ -240,6 +273,14 @@ pub fn to_java_enum_constant(name: &str) -> String {
         format!("VALUE_{}", raw)
     } else {
         raw
+    };
+    let sanitized = match sanitized.as_str() {
+        "String" | "Object" | "Class" | "Enum" | "Record" | "System" | "Math" | "Number"
+        | "Integer" | "Long" | "Double" | "Float" | "Boolean" | "Byte" | "Short" | "Character"
+        | "Void" | "Exception" | "RuntimeException" => {
+            format!("{sanitized}Type")
+        }
+        _ => sanitized,
     };
     sanitize_keyword(&sanitized, "java")
 }
@@ -656,7 +697,7 @@ impl JavaCodegen {
             "public static "
         };
 
-        let variant_names: Vec<String> = u.branches.iter().map(union_variant_name).collect();
+        let variant_names = union_variant_names(u);
 
         let permits_clause = variant_names
             .iter()
@@ -675,8 +716,8 @@ impl JavaCodegen {
             let subtypes: Vec<String> = u
                 .branches
                 .iter()
-                .map(|b| {
-                    let vn = union_variant_name(b);
+                .zip(&variant_names)
+                .map(|(b, vn)| {
                     format!(
                         "@JsonSubTypes.Type(value = {}.{}.class, name = {:?})",
                         java_name, vn, b.xml_name
@@ -693,8 +734,7 @@ impl JavaCodegen {
             indent, modifier, java_name, permits_clause
         );
 
-        for branch in &u.branches {
-            let variant_name = union_variant_name(branch);
+        for (branch, variant_name) in u.branches.iter().zip(&variant_names) {
             let branch_type = self.context.map_type_ref(&branch.type_ref);
 
             if let Some(ref doc) = branch.documentation {
@@ -708,7 +748,7 @@ impl JavaCodegen {
             if !self.options.use_records {
                 self.emit_value_class(
                     out,
-                    &variant_name,
+                    variant_name,
                     &branch.type_ref,
                     None,
                     Some(java_name),

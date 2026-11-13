@@ -1654,7 +1654,10 @@ impl CSharpCodegen {
                 }
                 let ty = self.map_field_type(f, ir);
                 if let TypeRef::Named(q) = &f.type_ref {
-                    if matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical()) {
+                    if !f.cardinality.is_list()
+                        && !f.type_ref.is_list()
+                        && matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical())
+                    {
                         let _ = writeln!(out, "{}    [XmlIgnore]", indent);
                         if self.options.emit_json_attributes {
                             let _ =
@@ -1723,6 +1726,8 @@ impl CSharpCodegen {
                 let ty = self.map_field_type(f, ir);
                 if let TypeRef::Named(q) = &f.type_ref {
                     if self.options.emit_xml_attributes
+                        && !f.cardinality.is_list()
+                        && !f.type_ref.is_list()
                         && matches!(ir.types.get(q), Some(TypeDef::Union(u)) if u.is_lexical())
                     {
                         let _ = writeln!(out, "{}    [XmlIgnore]", indent);

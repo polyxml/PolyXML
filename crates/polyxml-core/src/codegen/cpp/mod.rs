@@ -623,7 +623,9 @@ endif()
     fn emit_utilities(&self, out: &mut String) {
         writeln!(
             out,
-            "// Canonical C++20 pattern matching visitor for std::variant
+            "#ifndef POLYXML_UTILITIES_DEFINED
+#define POLYXML_UTILITIES_DEFINED
+// Canonical C++20 pattern matching visitor for std::variant
 template <class... Ts>
 struct overloaded : Ts... {{
     using Ts::operator()...;
@@ -635,7 +637,8 @@ overloaded(Ts...) -> overloaded<Ts...>;
 template <typename T>
 concept XmlModel = requires(T a) {{
     {{ a == a }} -> std::convertible_to<bool>;
-}};\n"
+}};
+#endif\n"
         )
         .unwrap();
     }
@@ -700,18 +703,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
 }
 "#);
         }
-        let sorted_qnames = self.topological_sort_types(ir);
-
-        // Aliases must follow their base aliases, which may sort later by name.
-        for qname in &sorted_qnames {
-            if let Some(TypeDef::Simple(simple)) =
-                ir.types.get(qname).filter(|_| !ir.is_external_type(qname))
-            {
-                self.emit_simple_type(out, simple, ir);
-            }
-        }
-
-        // Emit enums next
+        // Emit enums first so simple types and unions can reference them
         for type_def in ir.emitted_types() {
             if let TypeDef::Enum(enum_def) = type_def {
                 self.emit_enum(out, enum_def);
@@ -719,7 +711,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
         }
 
         // Cut cyclic value dependencies through struct fields or union branches,
-        // then emit types in dependency order.
+        // then emit simple types, unions, and structs in dependency order.
         let mut prepared = ir.clone();
         let sorted_qnames = self.order_with_forward_cuts(&mut prepared);
 
@@ -729,9 +721,10 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             }
             if let Some(type_def) = prepared.types.get(&qname) {
                 match type_def {
+                    TypeDef::Simple(simple) => self.emit_simple_type(out, simple, &prepared),
                     TypeDef::Union(u) => self.emit_union(out, u),
                     TypeDef::Struct(s) => self.emit_struct(out, s, &prepared),
-                    TypeDef::Simple(_) | TypeDef::Enum(_) => {}
+                    TypeDef::Enum(_) => {}
                 }
             }
         }
@@ -866,9 +859,16 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
 
         if needs_wrappers {
             // Emit wrapper structs for each branch to avoid duplicate variant types and give named semantics
+            let mut seen_wrappers = HashSet::new();
             for (branch, mapped_type) in &branch_types {
-                let wrapper_name =
+                let base_wrapper =
                     format!("{}{}", union_name, to_cpp_type_name(&branch.variant_name));
+                let mut wrapper_name = base_wrapper.clone();
+                let mut idx = 2;
+                while !seen_wrappers.insert(wrapper_name.clone()) {
+                    wrapper_name = format!("{base_wrapper}_{idx}");
+                    idx += 1;
+                }
                 if let Some(ref doc) = branch.documentation {
                     writeln!(out, "/// {}", doc).unwrap();
                 }
@@ -963,7 +963,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             if let Some(ref doc) = f.documentation {
                 writeln!(out, "    /// {}", doc).unwrap();
             }
-            let (field_type, init_val) = self.resolve_field_type_and_init(f);
+            let (field_type, init_val) = self.resolve_field_type_and_init(f, ir);
             writeln!(out, "    {} {}{};", field_type, field_name, init_val).unwrap();
         }
 
@@ -983,7 +983,11 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
         writeln!(out, "}};\n").unwrap();
     }
 
-    fn resolve_field_type_and_init(&self, f: &crate::ir::FieldDef) -> (String, String) {
+    fn resolve_field_type_and_init(
+        &self,
+        f: &crate::ir::FieldDef,
+        ir: &SchemaIR,
+    ) -> (String, String) {
         let base_type = self.context.map_type_ref(&f.type_ref);
 
         if f.cardinality.is_list() {
@@ -1024,7 +1028,36 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                         format!(" = {}", super::cpp_string_literal(v))
                     }
                     TypeRef::Primitive(_) => format!(" = {}", v),
-                    TypeRef::Named(_) => format!(" = {}", v),
+                    TypeRef::Named(ref q) => {
+                        if let Some(TypeDef::Enum(enum_def)) = ir.types.get(q) {
+                            let mut seen = HashSet::new();
+                            let found = enum_def.variants.iter().find_map(|variant| {
+                                let var_name = self.unique_enum_variant(&variant.name, &mut seen);
+                                if variant.name == *v || variant.value == *v {
+                                    Some(var_name)
+                                } else {
+                                    None
+                                }
+                            });
+                            if let Some(var_name) = found {
+                                format!(" = {}::{}", base_type, var_name)
+                            } else {
+                                " = {}".to_string()
+                            }
+                        } else {
+                            match super::primitive_base(&f.type_ref, ir) {
+                                TypeRef::Primitive(PrimitiveType::Boolean) => {
+                                    format!(" = {}", v.to_lowercase())
+                                }
+                                TypeRef::Primitive(
+                                    PrimitiveType::String
+                                    | PrimitiveType::Token
+                                    | PrimitiveType::NormalizedString,
+                                ) => format!(" = {}", super::cpp_string_literal(v)),
+                                _ => " = {}".to_string(),
+                            }
+                        }
+                    }
                     _ => " = {}".to_string(),
                 },
                 None => match f.type_ref {
@@ -1216,11 +1249,13 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             return;
         }
 
+        let mut declared: HashSet<String> =
+            ir.emitted_types().map(|t| type_ident(t.qname())).collect();
         writeln!(out, "\n// Root XML Element Type Aliases").unwrap();
         for elem in ir.elements.values() {
             let elem_alias = to_cpp_type_name(&elem.qname.local);
             let target_type = self.context.map_type_ref(&elem.type_ref);
-            if elem_alias != target_type {
+            if elem_alias != target_type && declared.insert(elem_alias.clone()) {
                 if let Some(ref doc) = elem.documentation {
                     for line in doc.lines() {
                         let trimmed = line.trim();
@@ -1244,7 +1279,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                     continue;
                 };
                 for (index, field) in structure.fields.iter().enumerate() {
-                    if field.is_cycle_cut || field.cardinality.is_list() {
+                    if field.is_cycle_cut {
                         continue;
                     }
                     let TypeRef::Named(target) = &field.type_ref else {
@@ -1255,7 +1290,9 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                     {
                         continue;
                     }
-                    let optional = field.cardinality.is_optional() || field.nillable;
+                    let optional = field.cardinality.is_optional()
+                        || field.nillable
+                        || field.cardinality.is_list();
                     if candidate
                         .as_ref()
                         .is_none_or(|(was_optional, _, _)| optional && !was_optional)
@@ -1322,10 +1359,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                     deps.push(base.clone());
                 }
                 for field in &structure.fields {
-                    if !field.is_cycle_cut
-                        && !(field.cardinality.is_list()
-                            && matches!(&field.type_ref, TypeRef::Named(target) if matches!(ir.types.get(target), Some(TypeDef::Struct(_)))))
-                    {
+                    if !field.is_cycle_cut {
                         self.collect_type_dependencies(&field.type_ref, ir, current, &mut deps);
                     }
                 }
@@ -1368,10 +1402,7 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                     }
                     for f in &s.fields {
                         // Skip cycle cuts because they use std::unique_ptr (only need forward declarations)
-                        if !f.is_cycle_cut
-                            && !(f.cardinality.is_list()
-                                && matches!(&f.type_ref, TypeRef::Named(target) if matches!(ir.types.get(target), Some(TypeDef::Struct(_)))))
-                        {
+                        if !f.is_cycle_cut {
                             self.collect_type_dependencies(&f.type_ref, ir, qname, &mut deps);
                         }
                     }

@@ -2886,7 +2886,7 @@ package = "enterprise::models"
     let billing_cs = fs::read_to_string(out_dir.join("cs/billing/Billing.cs")).unwrap();
     assert!(billing_cs.contains("public record BillingMessage"));
     assert!(!billing_cs.contains("public record Person("));
-    assert!(billing_cs.contains("using Generated.Common;"));
+    assert!(billing_cs.contains("using Person = Generated.Common.Person;"));
 
     // 6. Java: common has Person.java, billing has BillingMessage.java importing common.Person
     assert!(out_dir.join("java/common/Person.java").exists());

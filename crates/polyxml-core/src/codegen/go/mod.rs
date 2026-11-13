@@ -488,9 +488,16 @@ impl GoCodegen {
         }
 
         // Emit enums
+        let mut reserved_consts: HashSet<String> =
+            ir.emitted_types().map(|t| type_ident(t.qname())).collect();
+        if self.options.emit_root_aliases {
+            for elem in ir.elements.values() {
+                reserved_consts.insert(to_go_type_name(&elem.qname.local));
+            }
+        }
         for type_def in ir.emitted_types() {
             if let TypeDef::Enum(enum_def) = type_def {
-                self.emit_enum(out, enum_def);
+                self.emit_enum(out, enum_def, &mut reserved_consts);
             }
         }
 
@@ -646,7 +653,7 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
         name
     }
 
-    fn emit_enum(&self, out: &mut String, enum_def: &EnumDef) {
+    fn emit_enum(&self, out: &mut String, enum_def: &EnumDef, seen: &mut HashSet<String>) {
         let enum_name = type_ident(&enum_def.qname);
         if let Some(ref doc) = enum_def.documentation {
             for line in doc.lines() {
@@ -656,11 +663,10 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
 
         writeln!(out, "type {} string\n", enum_name).unwrap();
 
-        let mut seen = HashSet::new();
         let const_names: Vec<String> = enum_def
             .variants
             .iter()
-            .map(|v| self.unique_constant_name(&enum_name, &v.name, &mut seen))
+            .map(|v| self.unique_constant_name(&enum_name, &v.name, seen))
             .collect();
 
         writeln!(out, "const (").unwrap();
@@ -779,7 +785,11 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
             )
             .unwrap();
             writeln!(out, "    switch start.Name.Local {{").unwrap();
+            let mut seen_start_cases = HashSet::new();
             for (branch, field_name) in u.branches.iter().zip(&branch_field_names) {
+                if !seen_start_cases.insert(branch.xml_name.as_str()) {
+                    continue;
+                }
                 let mapped_type = self.context.map_type_ref(&branch.type_ref);
                 writeln!(out, "    case \"{}\":", branch.xml_name).unwrap();
                 writeln!(out, "        var v {}", mapped_type).unwrap();
@@ -806,7 +816,11 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
             writeln!(out, "        case xml.StartElement:").unwrap();
             writeln!(out, "            switch t.Name.Local {{").unwrap();
 
+            let mut seen_inner_cases = HashSet::new();
             for (branch, field_name) in u.branches.iter().zip(&branch_field_names) {
+                if !seen_inner_cases.insert(branch.xml_name.as_str()) {
+                    continue;
+                }
                 let mapped_type = self.context.map_type_ref(&branch.type_ref);
                 writeln!(out, "            case \"{}\":", branch.xml_name).unwrap();
                 writeln!(out, "                var v {}", mapped_type).unwrap();
@@ -1113,7 +1127,7 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
             if let Some(TypeDef::Struct(base_s)) = ir.types.get(base_qname) {
                 let base_name = type_ident(base_qname);
                 if base_s.is_abstract {
-                    writeln!(out, "    {}Base", base_name).unwrap();
+                    writeln!(out, "    {}", abstract_base_name(base_s, ir)).unwrap();
                 } else {
                     writeln!(out, "    {}", base_name).unwrap();
                 }
@@ -1307,8 +1321,9 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
         out.push_str("    for {\n        token, err := d.Token()\n        if err != nil { if err == io.EOF { return io.ErrUnexpectedEOF }; return err }\n        switch element := token.(type) {\n        case xml.CharData:\n            if len(element) > 0 {\n                value := string(element)\n");
         let _ = writeln!(out, "                v.{item_field} = append(v.{item_field}, {union_name}{{{text_field}: &value}})", text_field=branch_fields[0]);
         out.push_str("            }\n        case xml.StartElement:\n            switch element.Name.Local {\n");
+        let mut seen_cases = HashSet::new();
         for (branch, branch_field) in union.branches.iter().zip(&branch_fields) {
-            if branch.xml_name == "#text" {
+            if branch.xml_name == "#text" || !seen_cases.insert(branch.xml_name.as_str()) {
                 continue;
             }
             let mapped = self.context.map_type_ref(&branch.type_ref);
@@ -1550,7 +1565,7 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
 
     fn emit_abstract_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
         let struct_name = type_ident(&s.qname);
-        let base_struct_name = format!("{}Base", struct_name);
+        let base_struct_name = abstract_base_name(s, ir);
 
         if let Some(ref doc) = s.documentation {
             for line in doc.lines() {
@@ -1564,7 +1579,7 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
             if let Some(TypeDef::Struct(base_s)) = ir.types.get(base_qname) {
                 let base_name = type_ident(base_qname);
                 if base_s.is_abstract {
-                    writeln!(out, "    {}Base", base_name).unwrap();
+                    writeln!(out, "    {}", abstract_base_name(base_s, ir)).unwrap();
                 } else {
                     writeln!(out, "    {}", base_name).unwrap();
                 }
@@ -1906,7 +1921,10 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
                         }
                     }
                 }
-                if self.options.emit_xml_tags {
+                if self.options.emit_xml_tags
+                    && target_type != "any"
+                    && target_type != "interface{}"
+                {
                     let namespace = elem.qname.namespace.as_deref().unwrap_or("");
                     writeln!(out, "type {} {}\n", elem_alias, target_type).unwrap();
                     if matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(s)) if s.is_abstract))
@@ -1945,6 +1963,18 @@ fn derives_from(ir: &SchemaIR, d: &StructDef, base: &QName) -> bool {
         };
     }
     false
+}
+
+fn abstract_base_name(s: &StructDef, ir: &SchemaIR) -> String {
+    let struct_name = type_ident(&s.qname);
+    let mut candidate = format!("{struct_name}Base");
+    let existing: HashSet<String> = ir.emitted_types().map(|t| type_ident(t.qname())).collect();
+    let mut idx = 2;
+    while existing.contains(&candidate) {
+        candidate = format!("{struct_name}Base_{idx}");
+        idx += 1;
+    }
+    candidate
 }
 
 fn concrete_derivations<'a>(s: &'a StructDef, ir: &'a SchemaIR) -> Vec<&'a StructDef> {
