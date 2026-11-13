@@ -1,3 +1,10 @@
+# [0.39.0](https://github.com/polyxml/PolyXML/compare/v0.38.0...v0.39.0) (2026-11-13)
+
+
+### Features
+
+* **cpp:** batch large-union constructors (<=80 per TU) and split eq ([189d049](https://github.com/polyxml/PolyXML/commit/189d049d2098d87a5cbf1613554cb58c65a863df))
+
 # [0.38.0](https://github.com/polyxml/PolyXML/compare/v0.37.0...v0.38.0) (2026-11-13)
 
 
