@@ -1,3 +1,10 @@
+## [0.39.2](https://github.com/polyxml/PolyXML/compare/v0.39.1...v0.39.2) (2026-11-14)
+
+
+### Performance Improvements
+
+* **cpp:** avoid std::make_shared template bloat in tagged unions ([d0929b5](https://github.com/polyxml/PolyXML/commit/d0929b5fd73b066e6e56dae5d9ebb1e1f5b3d23f))
+
 ## [0.39.1](https://github.com/polyxml/PolyXML/compare/v0.39.0...v0.39.1) (2026-11-13)
 
 
