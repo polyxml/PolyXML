@@ -275,8 +275,6 @@ impl XsdParser {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
                                         let pend_before = self.pending_group_refs.len();
-                                        let groups_before: HashSet<QName> =
-                                            self.groups.keys().cloned().collect();
                                         let mut sub_ir = self.parse_file(&inc_path)?;
                                         // Chameleon include (no targetNamespace in the
                                         // included file): attribute its components to
@@ -284,11 +282,7 @@ impl XsdParser {
                                         if sub_ir.target_namespace.is_none() {
                                             if let Some(ns) = target_namespace.as_deref() {
                                                 rekey_to_namespace(&mut sub_ir, ns);
-                                                self.rekey_new_state(
-                                                    &groups_before,
-                                                    pend_before,
-                                                    ns,
-                                                );
+                                                self.rekey_new_state(pend_before, ns);
                                             }
                                         }
                                         merge_ir(&mut ir, sub_ir);
@@ -389,8 +383,6 @@ impl XsdParser {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
                                         let pend_before = self.pending_group_refs.len();
-                                        let groups_before: HashSet<QName> =
-                                            self.groups.keys().cloned().collect();
                                         let mut sub_ir = self.parse_file(&inc_path)?;
                                         // Chameleon include (no targetNamespace in the
                                         // included file): attribute its components to
@@ -398,11 +390,7 @@ impl XsdParser {
                                         if sub_ir.target_namespace.is_none() {
                                             if let Some(ns) = target_namespace.as_deref() {
                                                 rekey_to_namespace(&mut sub_ir, ns);
-                                                self.rekey_new_state(
-                                                    &groups_before,
-                                                    pend_before,
-                                                    ns,
-                                                );
+                                                self.rekey_new_state(pend_before, ns);
                                             }
                                         }
                                         merge_ir(&mut ir, sub_ir);
@@ -1721,11 +1709,11 @@ impl XsdParser {
     /// Re-namespace parser state created during a chameleon include: newly
     /// registered groups and carried group refs that still carry no namespace
     /// adopt the includer's namespace.
-    fn rekey_new_state(&mut self, groups_before: &HashSet<QName>, pend_before: usize, ns: &str) {
+    fn rekey_new_state(&mut self, pend_before: usize, ns: &str) {
         let stale: Vec<QName> = self
             .groups
             .keys()
-            .filter(|q| q.namespace.is_none() && !groups_before.contains(*q))
+            .filter(|q| q.namespace.is_none())
             .cloned()
             .collect();
         for old in stale {

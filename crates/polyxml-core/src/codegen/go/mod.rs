@@ -473,33 +473,33 @@ impl GoCodegen {
                 imports.push(format!("polyxmlutils \"{utils_import}\""));
             }
         }
-        if body.contains("big.") {
+        if go_code_uses_pkg(&body, "big.") {
             imports.push("\"math/big\"".to_string());
         }
-        if body.contains("xml.") {
+        if go_code_uses_pkg(&body, "xml.") {
             imports.push("\"encoding/xml\"".to_string());
         }
-        if body.contains("bytes.") {
+        if go_code_uses_pkg(&body, "bytes.") {
             imports.push("\"bytes\"".to_string());
         }
-        if has_fmt || body.contains("fmt.") {
+        if has_fmt || go_code_uses_pkg(&body, "fmt.") {
             imports.push("\"fmt\"".to_string());
         }
-        if has_io || body.contains("io.") {
+        if has_io || go_code_uses_pkg(&body, "io.") {
             imports.push("\"io\"".to_string());
         }
-        if has_patterns || body.contains("regexp.") {
+        if has_patterns || go_code_uses_pkg(&body, "regexp.") {
             imports.push("\"regexp\"".to_string());
         }
         if ir
             .types
             .values()
             .any(|def| matches!(def, TypeDef::Union(u) if u.is_lexical()))
-            && body.contains("strconv.")
+            && go_code_uses_pkg(&body, "strconv.")
         {
             imports.push("\"strconv\"".to_string());
         }
-        if body.contains("strings.") {
+        if go_code_uses_pkg(&body, "strings.") {
             imports.push("\"strings\"".to_string());
         }
         if has_time && self.shared_utils_import.is_none() {
@@ -2010,6 +2010,49 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
             }
         }
     }
+}
+
+fn go_code_uses_pkg(body: &str, pkg_dot: &str) -> bool {
+    let bytes = body.as_bytes();
+    let needle = pkg_dot.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'/' && bytes.get(i + 1) == Some(&b'/') {
+            while i < bytes.len() && bytes[i] != b'\n' {
+                i += 1;
+            }
+            continue;
+        }
+        if bytes[i] == b'"' {
+            i += 1;
+            while i < bytes.len() {
+                if bytes[i] == b'\\' {
+                    i += 2;
+                    continue;
+                }
+                if bytes[i] == b'"' {
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+        if bytes[i] == b'`' {
+            i += 1;
+            while i < bytes.len() && bytes[i] != b'`' {
+                i += 1;
+            }
+            i += 1;
+            continue;
+        }
+        let prev_is_ident = i > 0 && (bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_');
+        if !prev_is_ident && bytes[i..].starts_with(needle) {
+            return true;
+        }
+        i += 1;
+    }
+    false
 }
 
 fn derives_from(ir: &SchemaIR, d: &StructDef, base: &QName) -> bool {

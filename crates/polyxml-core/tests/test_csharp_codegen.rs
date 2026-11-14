@@ -1399,3 +1399,51 @@ var invalid=new Root{Value="1.0"};try{serializer.Serialize(new StringWriter(),in
         );
     }
 }
+
+#[test]
+fn csharp_record_struct_flattens_inheritance_and_wraps_roots() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:test"
+           xmlns:tns="urn:test"
+           elementFormDefault="qualified">
+  <xs:complexType name="Base">
+    <xs:sequence><xs:element name="id" type="xs:string"/></xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Derived">
+    <xs:complexContent>
+      <xs:extension base="tns:Base">
+        <xs:sequence><xs:element name="label" type="xs:string"/></xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="RootItem" type="tns:Derived"/>
+</xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(xsd)
+        .unwrap();
+    let code = CSharpCodegen::new(CSharpOptions {
+        use_records: true,
+        record_kind: CSharpRecordKind::Struct,
+        emit_validation: false,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+
+    assert!(
+        code.contains("public readonly record struct Derived("),
+        "{code}"
+    );
+    assert!(
+        !code.contains("readonly record struct Derived : Base"),
+        "{code}"
+    );
+    assert!(
+        !code.contains("public sealed record RootItem : Derived"),
+        "{code}"
+    );
+    assert!(
+        code.contains("public sealed record RootItem(Derived Value)"),
+        "{code}"
+    );
+}

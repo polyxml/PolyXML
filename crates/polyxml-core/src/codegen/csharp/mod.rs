@@ -1524,6 +1524,18 @@ impl CSharpCodegen {
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR, indent: &str) {
+        if self.options.use_records
+            && self.options.record_kind == CSharpRecordKind::Struct
+            && s.base_type
+                .as_ref()
+                .is_some_and(|b| matches!(ir.types.get(b), Some(TypeDef::Struct(_))))
+        {
+            let mut flat = s.clone();
+            flat.fields = super::flatten_fields(s, ir).into_iter().cloned().collect();
+            flat.base_type = None;
+            self.emit_struct(out, &flat, ir, indent);
+            return;
+        }
         if ir.has_ordered_content(s) && s.base_type.is_some() {
             let fields = super::flatten_fields(s, ir);
             if fields.iter().any(|f| {
@@ -2297,10 +2309,14 @@ impl CSharpCodegen {
                         continue;
                     }
                 }
+                let target_is_struct_record = self.options.use_records
+                    && self.options.record_kind == CSharpRecordKind::Struct
+                    && matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_))));
                 if self.options.use_records
-                    && !matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_) | TypeDef::Simple(_) | TypeDef::Union(_))))
+                    && (target_is_struct_record
+                        || !matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_) | TypeDef::Simple(_) | TypeDef::Union(_)))))
                 {
-                    let xml_attr = if self.options.emit_xml_attributes {
+                    let xml_attr = if self.options.emit_xml_attributes && !target_is_struct_record {
                         "[property: XmlText] "
                     } else {
                         ""

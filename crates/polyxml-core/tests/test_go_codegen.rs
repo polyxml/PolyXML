@@ -1478,3 +1478,46 @@ fn imported_ordered_types_do_not_add_unused_bytes_import() {
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn go_doc_comments_do_not_trigger_unused_stdlib_imports() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:test"
+           xmlns:tns="urn:test"
+           elementFormDefault="qualified">
+  <xs:complexType name="Note">
+    <xs:annotation>
+      <xs:documentation>Uses strings.TrimSpace and big.Int in prose, plus fmt.Sprint.</xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="text" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>"#;
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let code = GoCodegen::new(GoOptions {
+        emit_xml_tags: false,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+
+    assert!(!code.contains("\"strings\""), "{code}");
+    assert!(!code.contains("\"math/big\""), "{code}");
+    assert!(!code.contains("\"fmt\""), "{code}");
+
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module doccheck\n\ngo 1.22\n").unwrap();
+    fs::write(dir.path().join("models.go"), &code).unwrap();
+    let result = Command::new("go")
+        .args(["build", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
