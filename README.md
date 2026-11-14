@@ -71,6 +71,10 @@ Instead of relying on single-language generators with divergent capabilities, Po
 
 ---
 
+<p align="center">
+  <img src="docs/assets/brand/polyxml-launch.gif" alt="PolyXML CLI Demo" width="900">
+</p>
+
 ## ⚡ Quick Start: From XSD to Code in Seconds
 
 Install the PolyXML CLI in seconds on Linux and macOS:
