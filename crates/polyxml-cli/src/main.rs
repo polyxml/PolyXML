@@ -78,15 +78,15 @@ pub struct GenerateArgs {
     #[arg(short = 'l', long = "lang", value_name = "LANG")]
     pub lang: Vec<String>,
 
-    /// Target backend (e.g. dataclass/pydantic for Python; standard/jackson/jackson3 for Java)
+    /// Target backend (e.g. dataclass/pydantic/aot for Python; standard/jackson/jackson3 for Java; glaze for C++; easyjson/sonic for Go; zod/valibot/typebox for TS; source-gen for C#)
     #[arg(short = 'b', long = "backend", value_name = "BACKEND")]
     pub backend: Option<String>,
 
-    /// Opt-in target enhancement (repeatable; see compiler guide for supported values)
+    /// Opt-in target enhancement (repeatable: zero-copy, rkyv, phf, builder, direct-codec, slots, kw-only, validation, split-units, split-crates)
     #[arg(long = "feature", value_name = "NAME", value_delimiter = ',')]
     pub features: Vec<String>,
 
-    /// Package or namespace for generated code (e.g. 'com.example.models' for Java, 'polyxml::models' for C++)
+    /// Package or namespace for generated code (e.g. 'com.example.models' for Java/C#, 'polyxml::models' for C++, 'models' for Go/Python AOT)
     #[arg(short = 'p', long = "package", alias = "namespace", value_name = "PKG")]
     pub package: Option<String>,
 
@@ -102,7 +102,7 @@ pub struct GenerateArgs {
     #[arg(long = "codecs", default_missing_value = "true", num_args = 0..=1)]
     pub codecs: Option<bool>,
 
-    /// Target model style (e.g. record, pojo, class, record-class, record-struct)
+    /// Target model style (e.g. dataclass, record, pojo, class, record-class, record-struct)
     #[arg(long, value_name = "STYLE")]
     pub style: Option<String>,
 
@@ -130,11 +130,11 @@ pub struct GenerateArgs {
     #[arg(long = "custom-header", value_name = "TEXT")]
     pub custom_header: Option<String>,
 
-    /// Split oversized modules into bounded topological chunks (optional setting, default: false)
+    /// Split oversized Rust/C++ modules into bounded topological chunks (default: false)
     #[arg(long = "split-units", default_missing_value = "true", num_args = 0..=1)]
     pub split_units: Option<bool>,
 
-    /// Emit a multi-crate Cargo workspace for Rust modules/chunks (optional setting, default: false)
+    /// Emit split Cargo crates (Rust) or DAG sub-packages (Go) in workspace builds, or split C++ TUs (default: false)
     #[arg(long = "split-crates", default_missing_value = "true", num_args = 0..=1)]
     pub split_crates: Option<bool>,
 

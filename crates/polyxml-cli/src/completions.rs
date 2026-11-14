@@ -113,6 +113,9 @@ pub fn candidates(kind: &str, words: &[String]) -> Vec<String> {
             "direct-codec",
             "slots",
             "kw-only",
+            "validation",
+            "split-units",
+            "split-crates",
         ],
         "command" => {
             return Cli::command()

@@ -15,7 +15,7 @@ Add `polyxml` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-polyxml = "0.1"
+polyxml = "0.39.2"
 ```
 
 ---
@@ -383,7 +383,7 @@ XML codecs. Add these dependencies to your application's `Cargo.toml`:
 
 ```toml
 [dependencies]
-polyxml = "0.34"
+polyxml = "0.39.2"
 quick-xml = "0.42"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

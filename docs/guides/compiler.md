@@ -1,11 +1,11 @@
 ---
 title: XSD-to-Code Generator & CLI Toolchain
-description: Generate type-safe data models and codecs across 8 programming languages from W3C XML Schemas using polyxml.
+description: Generate type-safe data models and codecs across 7 programming languages from W3C XML Schemas using polyxml.
 ---
 
 # XSD-to-Code Generator & CLI Toolchain (`polyxml`)
 
-PolyXML includes a high-performance, polyglot XSD-to-code generator and CLI toolchain (`polyxml`) that parses W3C XSD 1.0 and 1.1 schemas, builds a language-agnostic Intermediate Representation (PolyXML-IR), resolves complex type cycles via Tarjan's Strongly Connected Components (SCC) algorithm, and emits idiomatic, production-ready data contracts and codecs across **8 modern programming languages**.
+PolyXML includes a high-performance, polyglot XSD-to-code generator and CLI toolchain (`polyxml`) that parses W3C XSD 1.0 and 1.1 schemas, builds a language-agnostic Intermediate Representation (PolyXML-IR), resolves complex type cycles via Tarjan's Strongly Connected Components (SCC) algorithm, and emits idiomatic, production-ready data contracts and codecs across **7 modern programming languages**.
 
 ---
 
@@ -95,18 +95,21 @@ polyxml generate \
 |---|---|---|---|
 | **Target Language** | `-l`, `--lang` | Target language (`python`, `rust`, `cpp`, `java`, `typescript`, `go`, `csharp`). Can be specified multiple times. | `python` |
 | **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `generated` |
+| **Config Manifest** | `-c`, `--config` | Path to workspace manifest (defaults to `./polyxml.toml` if present). | `None` |
 | **Root Elements** | `--root-element ELEMENT` | Repeatable global element selection; use `{namespace-URI}local-name` if the local name is ambiguous. | All roots and types |
 | **Model Style** | `--style` | Target-specific type representation; see the table below. | Existing target default |
 | **Enhancements** | `--feature NAME` | Repeatable; also accepts comma-separated names. | None added |
-| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic`/`aot` for Python; `standard`/`jackson`/`jackson3` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
+| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic`/`aot` for Python; `standard`/`jackson`/`jackson3` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go; `standard`/`source-gen` for C#). | Target default |
 | **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
-| **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
-| **Split Units** | `--split-units` | Partition large schemas into topologically-sorted compilation units (`chunk_XX.rs`) for Rust to prevent deep macro recursion and memory exhaustion. | `false` |
-| **Chunk Size** | `--chunk-size SIZE` | Maximum number of type definitions or SCC cycle clusters per compilation unit file (used with `--split-units`). | `32` |
-| **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
+| **Zero-Copy (Rust)** | `--zero-copy [BOOL]` | Borrow `Cow<'a, str>` in Rust models; pass `false` for owned `String` fields. | `true` |
+| **Streaming Codecs**| `--codecs [BOOL]` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
+| **Split Units** | `--split-units [BOOL]` | Partition large schemas into topologically-sorted compilation units (`chunk_XX.rs` for Rust, `<stem>_chunk_XX.cpp` for C++ in `header` mode) to reduce compiler memory and recursion depth. | `false` |
+| **Split Crates** | `--split-crates [BOOL]` | In `[modules]` manifest builds, emit a multi-crate Cargo workspace (Rust) or DAG-chunked sub-packages + `utils` (Go); for C++, enables `split_units`. | `false` |
+| **Chunk Size** | `--chunk-size SIZE` | Target maximum types per compilation unit chunk (used with `--split-units` / `--split-crates`). | `250` |
+| **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, C++, or Python AOT. | Target default |
 | **Custom Header** | `--custom-header` | Custom comment, license, or linter directive text to prepend to generated files. | `None` |
 | **Dry Run** | `--dry-run` | Validate options and parse schemas without writing to disk. | `false` |
-| **Format** | `--format` | Automatically format generated code using host toolchains (`ruff`, `cargo fmt`, `clang-format`, `gofmt`). | `false` |
+| **Format** | `--format` | Automatically format generated code using host toolchains (`ruff`, `cargo fmt`, `clang-format`, `gofmt`, `npx prettier`, `google-java-format`, `csharpier`/`dotnet format`). | `false` |
 
 Root selection parses the full schema, then emits the requested element(s),
 their referenced types, substitution group members, and possible derived
@@ -128,14 +131,13 @@ including with `--dry-run`.
 
 | Target | Backends (first is default) | Styles | Features |
 | --- | --- | --- | --- |
-| Python | `dataclass`, `pydantic` | `dataclass` (dataclass backend only) | `slots`, `kw-only` (dataclass backend only) |
-| Rust | `standard` | — | `zero-copy`, `phf`; `rkyv` is accepted but [currently incompatible with rkyv 0.8](../languages/rust.md) |
+| Python | `dataclass`, `pydantic`, `aot` | `dataclass` (dataclass backend only) | `slots`, `kw-only` (dataclass backend only) |
+| Rust | `standard` | — | `zero-copy`, `phf`, `split-units`, `split-crates`; `rkyv` is accepted but [currently incompatible with rkyv 0.8](../languages/rust.md) |
 | TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | — |
 | Java | `standard`, `jackson`, `jackson3` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec`, `validation` |
-
-| C# | `standard`, `source-gen` | `record-class` (default), `record-struct`, `class` (mutable) | — |
-| C++ | `standard`, `glaze` | — | — |
-| Go | `standard`, `easyjson`, `sonic` ([Sonic tag limitation](../languages/go.md)) | — | — |
+| C# | `standard`, `source-gen` | `record-class` (default, alias `record`), `record-struct`, `class` (mutable, alias `pojo`) | — |
+| C++ | `standard`, `glaze` | — | `split-units`, `split-crates` |
+| Go | `standard`, `easyjson`, `sonic` ([Sonic tag limitation](../languages/go.md)) | — | `split-crates` |
 
 Java `jackson3` targets Spring Boot 4; `jackson` and its existing `spring` /
 `spring-boot` aliases select Jackson 2. See [Spring Boot setup](../languages/java.md#spring-boot-4-and-jackson-3)
@@ -154,8 +156,8 @@ offsets beyond `14:00`; the schema-backed Rust parser checks the same values
 when reading XML.
 
 Defaults are unchanged: Rust zero-copy and Python slots/keyword-only fields are
-already enabled. Future features such as `aot`, Python plain `class`,
-and C# mutable `struct` are rejected until their generators support them.
+already enabled. Future styles such as Python plain `class` and C# mutable
+`struct` are rejected until their generators support them.
 
 ```bash
 polyxml generate schema.xsd --lang rust --feature phf
@@ -195,8 +197,8 @@ polyxml build --config polyxml.toml
 [workspace]
 name = "enterprise-iso20022"
 schemas = ["schemas/iso20022/*.xsd"]
-include_dirs = ["schemas/common/"]
 output_base_dir = "./generated"
+go_module = "example.com/enterprise/iso20022"
 custom_header = "// Copyright (c) 2026 Enterprise Corp. All rights reserved."
 
 [[generate]]
@@ -210,9 +212,10 @@ target = "rust"
 output = "src/generated/rust"
 features = ["phf"]
 codecs = true
-# Optional: partition massive schemas into compilation units
+# Optional: partition massive schemas into compilation units or split crates
 # split_units = true
-# chunk_size = 32
+# split_crates = true
+# chunk_size = 250
 
 [[generate]]
 target = "java"
@@ -246,6 +249,49 @@ namespace = "Enterprise.Banking.Iso20022"
 backend = "source-gen"
 style = "record-struct"
 ```
+
+#### Multi-Module Workspaces & Large-Schema Splitting (`[modules.<name>]`)
+
+For large multi-schema standards (e.g. NeTEx, FpML, HL7 CDA, UBL), declare `[modules.<name>]` sections with `depends_on` so PolyXML deduplicates shared types and emits cross-module imports in topological order:
+
+```toml
+[workspace]
+name = "transit-corpus"
+output_base_dir = "generated"
+go_module = "example.com/transit"
+
+[modules.geospatial_gml]
+schemas = ["schemas/gml/gml.xsd"]
+depends_on = []
+
+[modules.transit_netex]
+schemas = ["schemas/netex/NeTEx_publication.xsd"]
+depends_on = ["geospatial_gml"]
+# root_elements = ["PublicationDelivery"]
+
+[[generate]]
+target = "rust"
+output = "rust"
+split_units = true
+split_crates = true
+chunk_size = 250
+
+[[generate]]
+target = "go"
+output = "go"
+split_crates = true
+chunk_size = 250
+
+[[generate]]
+target = "cpp"
+output = "cpp"
+split_units = true
+chunk_size = 300
+```
+
+- **Rust (`split_units = true`, `split_crates = true`)**: Emits a Cargo workspace per build with one crate per module and one sub-crate per topological chunk.
+- **Go (`split_crates = true`)**: Emits `go.mod` (`go_module`), a shared `utils` package, DAG-chunked sub-packages (`chunk_XX`), and root package type aliases/constructors.
+- **C++ (`split_units = true`)**: Emits pure-declaration `.hpp` headers alongside chunked `<stem>_chunk_XX.cpp` translation units, and lowers `> 16`-branch `xs:choice` / `xs:union` types to template-free tagged structs to avoid `std::variant` compile-time memory blowups.
 
 ---
 

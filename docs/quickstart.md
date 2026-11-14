@@ -57,7 +57,7 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ### Cargo Dependency
     ```toml
     [dependencies]
-    polyxml = "0.33.0"
+    polyxml = "0.39.2"
     ```
 
     ### Example

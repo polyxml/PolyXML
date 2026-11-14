@@ -34,7 +34,7 @@ target_link_libraries(my_app PRIVATE polyxml_cpp)
 
 ### Option C: Conan & vcpkg
 
-- **Conan**: Add `polyxml/0.23.2` to your `conanfile.txt`.
+- **Conan**: Add `polyxml/0.39.2` to your `conanfile.txt`.
 - **vcpkg**: Run `vcpkg install polyxml`.
 
 ---

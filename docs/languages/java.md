@@ -215,7 +215,7 @@ PolyXML provides native C/Rust XML data-binding for the modern Java Virtual Mach
     <dependency>
         <groupId>io.github.polyxml</groupId>
         <artifactId>polyxml</artifactId>
-        <version>0.23.2</version>
+        <version>0.39.2</version>
     </dependency>
 </dependencies>
 
