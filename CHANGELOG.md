@@ -1,3 +1,11 @@
+## [0.39.3](https://github.com/polyxml/PolyXML/compare/v0.39.2...v0.39.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* address bugs found in broad parser, FFI, CLI, and codegen sweep ([128607d](https://github.com/polyxml/PolyXML/commit/128607d64fc669e3a3248654e2c8ec9e6081ce7e))
+* handle C# record struct inheritance, Go comment imports, and chameleon includes ([2bef6f4](https://github.com/polyxml/PolyXML/commit/2bef6f41ca2b3cb0cd64f9c1fa0f6769260688d7))
+
 ## [0.39.2](https://github.com/polyxml/PolyXML/compare/v0.39.1...v0.39.2) (2026-11-14)
 
 
