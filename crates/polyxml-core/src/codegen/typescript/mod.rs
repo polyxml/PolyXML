@@ -9,8 +9,8 @@ use crate::codegen::{
     set_type_name_map, LanguageContext,
 };
 use crate::ir::{
-    EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
-    TypeRef, UnionDef,
+    EnumDef, FieldDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef,
+    TypeDef, TypeRef, UnionDef,
 };
 
 /// Target validation schema backend for TypeScript codegen.
@@ -711,12 +711,51 @@ impl TypeScriptCodegen {
         }
     }
 
+    fn collect_struct_fields_with_bases<'a>(
+        &self,
+        s: &'a StructDef,
+        ir: &'a SchemaIR,
+    ) -> Vec<&'a FieldDef> {
+        let mut chain = vec![s];
+        let mut current = s.base_type.as_ref();
+        let mut visited = HashSet::new();
+        visited.insert(s.qname.clone());
+        while let Some(base_qname) = current {
+            if !visited.insert(base_qname.clone()) {
+                break;
+            }
+            let Some(TypeDef::Struct(base)) = ir.types.get(base_qname) else {
+                break;
+            };
+            chain.push(base);
+            current = base.base_type.as_ref();
+        }
+        chain.reverse();
+
+        let mut fields: Vec<&'a FieldDef> = Vec::new();
+        let mut pos_by_name: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
+        for struct_def in chain {
+            let mut seen = HashSet::new();
+            for field in &struct_def.fields {
+                let name = self.unique_field_name(&field.name, &mut seen);
+                if let Some(&idx) = pos_by_name.get(&name) {
+                    fields[idx] = field;
+                } else {
+                    pos_by_name.insert(name, fields.len());
+                    fields.push(field);
+                }
+            }
+        }
+        fields
+    }
+
     fn emit_zod_struct(
         &self,
         out: &mut String,
         s: &StructDef,
         ts_name: &str,
-        _ir: &SchemaIR,
+        ir: &SchemaIR,
         recursive_types: &HashSet<QName>,
     ) {
         let schema_name = format!("{}Schema", ts_name);
@@ -733,10 +772,10 @@ impl TypeScriptCodegen {
         }
 
         let mut seen_fields = HashSet::new();
-        for field in &s.fields {
+        for field in self.collect_struct_fields_with_bases(s, ir) {
             let field_id = self.unique_field_name(&field.name, &mut seen_fields);
             let is_optional = field.cardinality.is_optional();
-            let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+            let is_list = field.cardinality.is_list() && !field.type_ref.is_list();
 
             let mut zod_expr = self.zod_expr_for_type(&field.type_ref);
 
@@ -1222,8 +1261,17 @@ impl TypeScriptCodegen {
                 let target_type = self.context.map_type_ref(&element.type_ref);
                 if el_name != target_type {
                     let _ = writeln!(out, "export type {} = {};", el_name, target_type);
-                    if self.options.effective_backend() != TypeScriptBackend::None {
-                        let target_schema = format!("{}Schema", target_type);
+                    let target_schema = match self.options.effective_backend() {
+                        TypeScriptBackend::None => None,
+                        TypeScriptBackend::Zod => Some(self.zod_expr_for_type(&element.type_ref)),
+                        TypeScriptBackend::Valibot => {
+                            Some(self.valibot_expr_for_type(&element.type_ref))
+                        }
+                        TypeScriptBackend::TypeBox => {
+                            Some(self.typebox_expr_for_type(&element.type_ref))
+                        }
+                    };
+                    if let Some(target_schema) = target_schema {
                         let _ =
                             writeln!(out, "export const {}Schema = {};", el_name, target_schema);
                     }
@@ -1238,7 +1286,7 @@ impl TypeScriptCodegen {
         out: &mut String,
         s: &StructDef,
         ts_name: &str,
-        _ir: &SchemaIR,
+        ir: &SchemaIR,
         recursive_types: &HashSet<QName>,
     ) {
         let schema_name = format!("{}Schema", ts_name);
@@ -1255,10 +1303,10 @@ impl TypeScriptCodegen {
         }
 
         let mut seen_fields = HashSet::new();
-        for field in &s.fields {
+        for field in self.collect_struct_fields_with_bases(s, ir) {
             let field_id = self.unique_field_name(&field.name, &mut seen_fields);
             let is_optional = field.cardinality.is_optional();
-            let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+            let is_list = field.cardinality.is_list() && !field.type_ref.is_list();
 
             let mut expr = self.valibot_expr_for_type(&field.type_ref);
 
@@ -1376,7 +1424,7 @@ impl TypeScriptCodegen {
         for field in &s.fields {
             let field_id = self.unique_field_name(&field.name, &mut seen_fields);
             let is_optional = field.cardinality.is_optional();
-            let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+            let is_list = field.cardinality.is_list() && !field.type_ref.is_list();
 
             let mut expr = if is_recursive
                 && (matches!(&field.type_ref, TypeRef::Named(q) if q == &s.qname)

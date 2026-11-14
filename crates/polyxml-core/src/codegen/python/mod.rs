@@ -162,6 +162,32 @@ impl LanguageContext for PythonLanguageContext {
     }
 }
 
+/// Converts an arbitrary XML local name into a safe, valid Python class name.
+pub(crate) fn to_python_type_name(local: &str) -> String {
+    let normalized = normalize_symbol_name(local);
+    let pascal = AsPascalCase(&normalized).to_string();
+    let candidate = if pascal.is_empty() {
+        "Type".to_string()
+    } else if pascal
+        .chars()
+        .next()
+        .is_some_and(|c| !c.is_ascii_alphabetic() && c != '_')
+    {
+        format!("Type{pascal}")
+    } else {
+        pascal
+    };
+    sanitize_keyword(&candidate, "python")
+}
+
+fn type_ref_uses_decimal(tr: &TypeRef) -> bool {
+    match tr {
+        TypeRef::Primitive(PrimitiveType::Decimal) => true,
+        TypeRef::List(inner) | TypeRef::Boxed(inner) => type_ref_uses_decimal(inner),
+        _ => false,
+    }
+}
+
 /// Converts an arbitrary string into a safe, valid Python enum identifier.
 pub fn to_enum_identifier(val: &str) -> String {
     let trimmed = val.trim();
@@ -247,9 +273,7 @@ impl PythonCodegen {
             return aot.generate_crate(ir).lib_rs;
         }
 
-        set_type_name_map(build_type_name_map(ir, |local| {
-            AsPascalCase(local).to_string()
-        }));
+        set_type_name_map(build_type_name_map(ir, to_python_type_name));
         let mut out = String::new();
 
         if let Some(ref header) = self.options.custom_header {
@@ -323,16 +347,23 @@ impl PythonCodegen {
                     {
                         has_annotated = true;
                     }
-                    if let TypeRef::Primitive(PrimitiveType::Decimal) = s.base_type {
+                    if type_ref_uses_decimal(&s.base_type) {
                         has_decimal = true;
                     }
                 }
-                TypeDef::Union(_) => {}
+                TypeDef::Union(u) => {
+                    if u.branches
+                        .iter()
+                        .any(|b| type_ref_uses_decimal(&b.type_ref))
+                    {
+                        has_decimal = true;
+                    }
+                }
             }
 
             if let TypeDef::Struct(s) = type_def {
                 for f in &s.fields {
-                    if let TypeRef::Primitive(PrimitiveType::Decimal) = &f.type_ref {
+                    if type_ref_uses_decimal(&f.type_ref) {
                         has_decimal = true;
                     }
                     if self.options.backend == PythonBackend::Pydantic
@@ -348,7 +379,7 @@ impl PythonCodegen {
         }
 
         for elem in ir.elements.values() {
-            if let TypeRef::Primitive(PrimitiveType::Decimal) = &elem.type_ref {
+            if type_ref_uses_decimal(&elem.type_ref) {
                 has_decimal = true;
             }
         }
@@ -1268,11 +1299,13 @@ impl PythonCodegen {
                             documentation: element.documentation.clone(),
                         };
                         self.emit_struct(out, &wrapper, ir);
-                        let _ = writeln!(
-                            out,
-                            "{}.Meta.strict_root = True\n{}.Meta.name = {:?}",
-                            el_name, el_name, element.qname.local
-                        );
+                        if self.options.emit_meta {
+                            let _ = writeln!(
+                                out,
+                                "{}.Meta.strict_root = True\n{}.Meta.name = {:?}",
+                                el_name, el_name, element.qname.local
+                            );
+                        }
                     }
                     declared_names.insert(el_name);
                 }

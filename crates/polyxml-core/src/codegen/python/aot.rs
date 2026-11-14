@@ -217,7 +217,7 @@ restored_json = {module_name}.<ModelName>.from_json(json_data)
         }
         let _ = writeln!(out, "class {}(enum.IntEnum):", enum_name);
         for v in &e.variants {
-            let var_name = AsPascalCase(&v.name).to_string();
+            let var_name = super::to_python_type_name(&v.name);
             let _ = writeln!(out, "    {}: int", var_name);
         }
         out.push('\n');

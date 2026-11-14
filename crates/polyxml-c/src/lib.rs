@@ -12,6 +12,7 @@ use polyxml::value::PolyValue;
 // Opaque types
 pub struct PolyXmlSchemaBuilder(ModelSchemaBuilder);
 pub struct PolyXmlSchema(Arc<ModelSchema>);
+#[repr(transparent)]
 pub struct PolyXmlValue(PolyValue);
 
 #[repr(C)]
@@ -360,16 +361,19 @@ pub unsafe extern "C" fn polyxml_serialize_with_options(
             let prefix_ptr = prefix_slice[i];
             let uri_ptr = uri_slice[i];
             if !uri_ptr.is_null() {
-                if let Ok(uri) = CStr::from_ptr(uri_ptr).to_str() {
-                    let prefix = if prefix_ptr.is_null() {
-                        String::new()
-                    } else if let Ok(p) = CStr::from_ptr(prefix_ptr).to_str() {
-                        p.to_string()
-                    } else {
-                        String::new()
-                    };
-                    map.insert(prefix, uri.to_string());
-                }
+                let uri = match CStr::from_ptr(uri_ptr).to_str() {
+                    Ok(u) => u,
+                    Err(_) => return PolyXmlErrorCode::ErrUtf8,
+                };
+                let prefix = if prefix_ptr.is_null() {
+                    String::new()
+                } else {
+                    match CStr::from_ptr(prefix_ptr).to_str() {
+                        Ok(p) => p.to_string(),
+                        Err(_) => return PolyXmlErrorCode::ErrUtf8,
+                    }
+                };
+                map.insert(prefix, uri.to_string());
             }
         }
         Some(map)
@@ -388,11 +392,11 @@ pub unsafe extern "C" fn polyxml_serialize_with_options(
         enable_ns_opt,
         ns_map.as_ref(),
     ) {
-        Ok(mut bytes) => {
-            bytes.shrink_to_fit();
-            *out_len = bytes.len();
-            *out_bytes = bytes.as_mut_ptr();
-            std::mem::forget(bytes);
+        Ok(bytes) => {
+            let mut boxed = bytes.into_boxed_slice();
+            *out_len = boxed.len();
+            *out_bytes = boxed.as_mut_ptr();
+            std::mem::forget(boxed);
             PolyXmlErrorCode::Ok
         }
         Err(_) => PolyXmlErrorCode::ErrSchema,
@@ -402,7 +406,9 @@ pub unsafe extern "C" fn polyxml_serialize_with_options(
 #[no_mangle]
 pub unsafe extern "C" fn polyxml_bytes_free(bytes: *mut u8, len: usize) {
     if !bytes.is_null() {
-        drop(Vec::from_raw_parts(bytes, len, len));
+        drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+            bytes, len,
+        )));
     }
 }
 
@@ -493,20 +499,18 @@ pub unsafe extern "C" fn polyxml_value_set_field(
         Ok(s) => s,
         Err(_) => return PolyXmlErrorCode::ErrUtf8,
     };
-    let child_boxed = Box::from_raw(child_val);
-    let child_inner = child_boxed.0;
-
     match &mut (*record).0 {
         PolyValue::Record { schema, values } => {
-            if let Some(idx) = schema.fields.iter().position(|f| f.name == key_str) {
-                values[idx] = Some(child_inner);
-                PolyXmlErrorCode::Ok
-            } else {
-                PolyXmlErrorCode::ErrSchema
-            }
+            let Some(idx) = schema.fields.iter().position(|f| f.name == key_str) else {
+                return PolyXmlErrorCode::ErrSchema;
+            };
+            let child_boxed = Box::from_raw(child_val);
+            values[idx] = Some(child_boxed.0);
+            PolyXmlErrorCode::Ok
         }
         PolyValue::Object(map) => {
-            map.insert(key_str.to_string(), child_inner);
+            let child_boxed = Box::from_raw(child_val);
+            map.insert(key_str.to_string(), child_boxed.0);
             PolyXmlErrorCode::Ok
         }
         _ => PolyXmlErrorCode::ErrSchema,
@@ -521,12 +525,11 @@ pub unsafe extern "C" fn polyxml_value_list_append(
     if list.is_null() || item.is_null() {
         return PolyXmlErrorCode::ErrNullPtr;
     }
-    let item_boxed = Box::from_raw(item);
-    let item_inner = item_boxed.0;
 
     match &mut (*list).0 {
         PolyValue::List(vec) => {
-            vec.push(item_inner);
+            let item_boxed = Box::from_raw(item);
+            vec.push(item_boxed.0);
             PolyXmlErrorCode::Ok
         }
         _ => PolyXmlErrorCode::ErrSchema,
@@ -879,6 +882,52 @@ mod tests {
             polyxml_value_free(manual_batch);
             polyxml_schema_free(sensor_schema);
             polyxml_schema_free(batch_schema);
+        }
+    }
+
+    #[test]
+    fn test_c_ffi_error_paths_do_not_double_free_and_reject_bad_utf8() {
+        unsafe {
+            let b = polyxml_schema_builder_create(CString::new("Item").unwrap().as_ptr());
+            let schema = polyxml_schema_builder_build(b);
+            let rec = polyxml_value_create_record(schema);
+            let child = polyxml_value_create_int(42);
+            let missing = CString::new("nonexistent").unwrap();
+
+            // Failed set_field must not consume/free `child`, so caller can free it safely.
+            let err = polyxml_value_set_field(rec, missing.as_ptr(), child);
+            assert_eq!(err as i32, PolyXmlErrorCode::ErrSchema as i32);
+            polyxml_value_free(child);
+
+            // Failed list_append on a non-list must not consume/free `item`.
+            let item = polyxml_value_create_int(7);
+            let append_err = polyxml_value_list_append(rec, item);
+            assert_eq!(append_err as i32, PolyXmlErrorCode::ErrSchema as i32);
+            polyxml_value_free(item);
+
+            // Invalid UTF-8 in namespace URI must return ErrUtf8.
+            let bad_utf8 = [0xffu8, 0x00u8];
+            let ns_prefixes = [std::ptr::null()];
+            let ns_uris = [bad_utf8.as_ptr() as *const c_char];
+            let mut out_bytes: *mut u8 = std::ptr::null_mut();
+            let mut out_len = 0;
+            let root = CString::new("Item").unwrap();
+            let serr = polyxml_serialize_with_options(
+                root.as_ptr(),
+                rec,
+                schema,
+                0,
+                1,
+                ns_prefixes.as_ptr(),
+                ns_uris.as_ptr(),
+                1,
+                &mut out_bytes,
+                &mut out_len,
+            );
+            assert_eq!(serr as i32, PolyXmlErrorCode::ErrUtf8 as i32);
+
+            polyxml_value_free(rec);
+            polyxml_schema_free(schema);
         }
     }
 }

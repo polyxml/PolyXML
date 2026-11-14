@@ -1554,3 +1554,41 @@ fn incremental_root_writer_is_schema_scoped() {
         }
     }
 }
+
+#[test]
+fn rust_split_units_with_pyo3_emits_single_error_type() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:test"
+           xmlns:tns="urn:test"
+           elementFormDefault="qualified">
+  <xs:complexType name="Alpha">
+    <xs:sequence><xs:element name="id" type="xs:string"/></xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Beta">
+    <xs:sequence><xs:element name="alpha" type="tns:Alpha"/></xs:sequence>
+  </xs:complexType>
+</xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(xsd)
+        .unwrap();
+    let codegen = RustCodegen::new(RustOptions {
+        pyo3: true,
+        emit_codecs: false,
+        split_units: Some(true),
+        chunk_size: Some(1),
+        ..Default::default()
+    });
+    let files = codegen.generate_files(&ir, "models");
+    let mod_rs = &files.iter().find(|(n, _)| n == "mod.rs").unwrap().1;
+    assert!(mod_rs.contains("pub enum PolyXmlError"));
+    for (name, content) in &files {
+        if name.starts_with("chunk_") {
+            assert!(
+                !content.contains("pub enum PolyXmlError"),
+                "{name} must not redefine PolyXmlError"
+            );
+            assert!(content.contains("use super::{PolyXmlError, Result};"));
+        }
+    }
+}

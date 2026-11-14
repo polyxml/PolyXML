@@ -1987,9 +1987,14 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
                 {
                     let namespace = elem.qname.namespace.as_deref().unwrap_or("");
                     writeln!(out, "type {} {}\n", elem_alias, target_type).unwrap();
+                    let conv_type = if target_type.starts_with('*') {
+                        format!("({target_type})")
+                    } else {
+                        target_type.clone()
+                    };
                     if matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(s)) if s.is_abstract))
                     {
-                        writeln!(out, "func (r {elem_alias}) Selected() string {{ return {target_type}(r).Selected() }}\n").unwrap();
+                        writeln!(out, "func (r {elem_alias}) Selected() string {{ return {conv_type}(r).Selected() }}\n").unwrap();
                     }
                     writeln!(out, "func (r *{elem_alias}) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {{\n    if start.Name.Local != {:?} || start.Name.Space != {:?} {{ return fmt.Errorf(\"unexpected root element: %v\", start.Name) }}\n    return d.DecodeElement((*{target_type})(r), &start)\n}}\n", elem.qname.local, namespace).unwrap();
                     let bind_name = if matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_))))
@@ -1998,7 +2003,7 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
                     } else {
                         ""
                     };
-                    writeln!(out, "func (r {elem_alias}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{\n    start.Name = xml.Name{{Local: {:?}, Space: {:?}}}\n    value := {target_type}(r)\n{bind_name}    return e.EncodeElement(value, start)\n}}\n", elem.qname.local, namespace).unwrap();
+                    writeln!(out, "func (r {elem_alias}) MarshalXML(e *xml.Encoder, start xml.StartElement) error {{\n    start.Name = xml.Name{{Local: {:?}, Space: {:?}}}\n    value := {conv_type}(r)\n{bind_name}    return e.EncodeElement(value, start)\n}}\n", elem.qname.local, namespace).unwrap();
                 } else {
                     writeln!(out, "type {} = {}\n", elem_alias, target_type).unwrap();
                 }

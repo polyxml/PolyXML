@@ -392,3 +392,39 @@ fn integer_mappings_keep_fixed_width_builtins() {
         assert_eq!(context.map_primitive(PrimitiveType::Long), bounded);
     }
 }
+
+#[test]
+fn non_self_closing_xsi_nil_scalar_does_not_corrupt_stack() {
+    let schema = ModelSchema::builder("Record")
+        .field(FieldSchema::new(
+            "nil_scalar",
+            b"nil_scalar",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .field(FieldSchema::new(
+            "nil_list",
+            b"nil_list",
+            FieldKind::Element,
+            ValueType::List(Box::new(ValueType::Scalar(ScalarType::Int))),
+        ))
+        .field(FieldSchema::new(
+            "after",
+            b"after",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .build();
+
+    let xml = br#"<Record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><nil_scalar xsi:nil="true"></nil_scalar><nil_list xsi:nil="true"></nil_list><after>ok</after></Record>"#;
+    let parsed = deserialize(xml, Arc::clone(&schema)).unwrap();
+    assert_eq!(parsed.get("nil_scalar"), Some(&PolyValue::Null));
+    assert_eq!(
+        parsed.get("nil_list"),
+        Some(&PolyValue::List(vec![PolyValue::Null]))
+    );
+    assert_eq!(
+        parsed.get("after"),
+        Some(&PolyValue::String("ok".to_string()))
+    );
+}

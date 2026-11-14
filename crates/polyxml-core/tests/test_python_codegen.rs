@@ -822,3 +822,31 @@ fn quoted_docstrings_preserve_text_and_remain_valid_python() {
         );
     }
 }
+
+#[test]
+fn python_decimal_in_list_and_no_meta_root_alias_are_valid() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:test"
+           xmlns:tns="urn:test"
+           elementFormDefault="qualified">
+  <xs:complexType name="Prices">
+    <xs:sequence>
+      <xs:element name="amount" type="xs:decimal" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="RootPrice" type="xs:decimal"/>
+</xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(xsd)
+        .unwrap();
+    let code = PythonCodegen::new(PythonOptions {
+        emit_meta: false,
+        emit_root_aliases: true,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+
+    assert!(code.contains("from decimal import Decimal"), "{code}");
+    assert!(!code.contains(".Meta.strict_root"), "{code}");
+}

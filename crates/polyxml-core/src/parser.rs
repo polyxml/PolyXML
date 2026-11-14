@@ -483,6 +483,8 @@ impl XmlDeserializer {
                                 if is_nil {
                                     stack.last_mut().unwrap().values[field_idx] =
                                         Some(PolyValue::Null);
+                                    unknown_depth = 1;
+                                    continue;
                                 } else {
                                     active_scalar = Some(ActiveScalar::Field {
                                         index: field_idx,
@@ -498,6 +500,8 @@ impl XmlDeserializer {
                                             .last_mut()
                                             .unwrap()
                                             .push_list_item(field_idx, PolyValue::Null);
+                                        unknown_depth = 1;
+                                        continue;
                                     } else {
                                         active_scalar = Some(ActiveScalar::Field {
                                             index: field_idx,

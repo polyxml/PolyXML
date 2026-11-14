@@ -1351,6 +1351,7 @@ fn retain_owned_type_closure(ir: &mut SchemaIR, owners: &BTreeMap<QName, String>
                 }
             }
             Some(TypeDef::Simple(s)) => collect(&s.base_type, &mut pending),
+            Some(TypeDef::Enum(e)) => collect(&e.base_type, &mut pending),
             _ => {}
         }
     }
@@ -1434,7 +1435,7 @@ fn referenced_external_types(ir: &SchemaIR, language: &str) -> BTreeSet<QName> {
                 }
             }
             TypeDef::Simple(simple) => collect(&simple.base_type, &mut names),
-            TypeDef::Enum(_) => {}
+            TypeDef::Enum(enum_def) => collect(&enum_def.base_type, &mut names),
         }
     }
     for element in ir.elements.values() {

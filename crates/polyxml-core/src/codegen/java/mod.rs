@@ -329,15 +329,16 @@ impl JavaCodegen {
         let _ = writeln!(out, "public final class {} {{", outer_class_name);
         let _ = writeln!(out, "    private {}() {{}}\n", outer_class_name);
 
+        let mut declared_names = HashSet::new();
         for type_def in ir.emitted_types() {
-            let (_, body) = self.generate_type_body(type_def, "    ", ir);
+            let (type_name, body) = self.generate_type_body(type_def, "    ", ir);
+            declared_names.insert(type_name);
             out.push_str(&body);
             out.push('\n');
         }
 
         if self.options.emit_root_aliases && !ir.elements.is_empty() {
             out.push_str("    // Root element aliases\n");
-            let mut declared_names = HashSet::new();
             for el in ir.elements.values() {
                 let el_name = to_java_type_name(&el.qname.local);
                 let target_type = self.context.map_type_ref(&el.type_ref);

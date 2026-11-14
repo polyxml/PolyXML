@@ -1088,3 +1088,34 @@ fn test_cpp_cmake_modules_file_set() {
     assert!(cmake.contains("FILE_SET CXX_MODULES FILES"));
     assert!(cmake.contains("telemetry.cppm"));
 }
+
+#[test]
+fn cpp_split_units_normalizes_namespace_and_quotes_string_defaults() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:test"
+           xmlns:tns="urn:test"
+           elementFormDefault="qualified">
+  <xs:complexType name="Event">
+    <xs:sequence>
+      <xs:element name="created" type="xs:date" default="2026-01-01"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(xsd)
+        .unwrap();
+    let codegen = CppCodegen::new(CppOptions {
+        namespace: "my.app".to_string(),
+        ..Default::default()
+    })
+    .with_split_units(10);
+    let files = codegen.generate_files(&ir, "event");
+    let hpp = &files.iter().find(|(n, _)| n == "event.hpp").unwrap().1;
+    let cpp = &files.iter().find(|(n, _)| n.ends_with(".cpp")).unwrap().1;
+
+    assert!(hpp.contains("namespace my::app {"));
+    assert!(hpp.contains("std::string created = \"2026-01-01\";"));
+    assert!(cpp.contains("namespace my::app {"));
+    assert!(!cpp.contains("namespace my.app {"));
+}

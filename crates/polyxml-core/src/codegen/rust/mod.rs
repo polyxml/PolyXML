@@ -436,7 +436,10 @@ impl RustCodegen {
                 "#![allow(dead_code, unused_imports, unused_mut, unused_variables, unused_assignments, non_camel_case_types, non_snake_case)]\n\n",
             );
 
-            self.emit_imports(&mut out, !types_with_lifetime.is_empty());
+            self.emit_imports_inner(&mut out, !types_with_lifetime.is_empty(), false);
+            if self.options.pyo3 {
+                out.push_str("use super::{PolyXmlError, Result};\n");
+            }
             out.push('\n');
             if self.options.emit_codecs {
                 out.push_str("use super::{read_element_text, skip_xml_element};\n");
@@ -590,6 +593,10 @@ impl RustCodegen {
     }
 
     fn emit_imports(&self, out: &mut String, has_borrowed_types: bool) {
+        self.emit_imports_inner(out, has_borrowed_types, true);
+    }
+
+    fn emit_imports_inner(&self, out: &mut String, has_borrowed_types: bool, emit_pyo3_err: bool) {
         if self.options.pyo3 {
             out.push_str("use pyo3::prelude::*;\n");
             out.push_str("use pyo3::types::PyModule;\n");
@@ -597,7 +604,9 @@ impl RustCodegen {
             out.push_str("use std::str::FromStr;\n");
             out.push_str("use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event as QuickXmlEvent};\n");
             out.push_str("use quick_xml::{Reader, Writer};\n\n");
-            self.emit_pyo3_error_type(out);
+            if emit_pyo3_err {
+                self.emit_pyo3_error_type(out);
+            }
             return;
         }
         if (self.options.zero_copy && has_borrowed_types) || self.options.emit_codecs {

@@ -645,3 +645,43 @@ fn test_ts_typebox_schema_generation() {
     assert!(code.contains("code: CodeSchema,"));
     assert!(code.contains("role: Type.Optional(RoleSchema),"));
 }
+
+#[test]
+fn typescript_zod_and_valibot_include_inherited_fields_and_avoid_double_arrays() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:test"
+           xmlns:tns="urn:test"
+           elementFormDefault="qualified">
+  <xs:simpleType name="TagList">
+    <xs:list itemType="xs:string"/>
+  </xs:simpleType>
+  <xs:complexType name="Base">
+    <xs:sequence><xs:element name="id" type="xs:string"/></xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Derived">
+    <xs:complexContent>
+      <xs:extension base="tns:Base">
+        <xs:sequence><xs:element name="tags" type="tns:TagList"/></xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="RootCode" type="xs:string"/>
+</xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(xsd)
+        .unwrap();
+
+    for backend in [TypeScriptBackend::Zod, TypeScriptBackend::Valibot] {
+        let code = TypeScriptCodegen::new(TypeScriptOptions {
+            backend,
+            emit_root_aliases: true,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        assert!(code.contains("id:"), "missing inherited field `id`: {code}");
+        assert!(!code.contains("z.array(z.array("), "{code}");
+        assert!(!code.contains("v.array(v.array("), "{code}");
+        assert!(!code.contains("stringSchema"), "{code}");
+    }
+}
