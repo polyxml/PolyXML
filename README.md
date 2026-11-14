@@ -39,6 +39,10 @@
 
 ---
 
+<p align="center">
+  <img src="docs/assets/brand/polyxml-launch.gif" alt="PolyXML CLI Demo" width="900">
+</p>
+
 ## Overview
 
 **PolyXML turns W3C XML Schemas (`.xsd`) into production-ready, type-safe data models with built-in streaming parsers and serializers.**
@@ -70,10 +74,6 @@ Instead of relying on single-language generators with divergent capabilities, Po
 > Read our in-depth **[Architectural Comparison & Migration Guide](docs/why-polyxml.md)** for a detailed, transparent breakdown and benchmarks across JAXB (`xjc`), `XmlSchemaClassGenerator`, `xsdata`, `xuri/xgen`, `cxsd`, and `CodeSynthesis XSD`.
 
 ---
-
-<p align="center">
-  <img src="docs/assets/brand/polyxml-launch.gif" alt="PolyXML CLI Demo" width="900">
-</p>
 
 ## ⚡ Quick Start: From XSD to Code in Seconds
 
