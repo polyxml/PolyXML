@@ -526,8 +526,8 @@ impl CppCodegen {
                         for (idx, param) in variant_params.iter().enumerate() {
                             writeln!(
                                 out,
-                                "{}::{}({} v) : kind({}), data(std::make_shared<{}>(std::move(v))) {{}}",
-                                union_name, union_name, param, idx, param
+                                "{}::{}({} v) : kind({}), data(std::shared_ptr<const void>(static_cast<const void*>(new {}(std::move(v))), +[](const void* p) {{ delete static_cast<const {}*>(p); }})) {{}}",
+                                union_name, union_name, param, idx, param, param
                             )
                             .unwrap();
                         }
@@ -1127,8 +1127,8 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
                 for (idx, param) in variant_params.iter().enumerate() {
                     writeln!(
                         out,
-                        "    {}({} v) : kind({}), data(std::make_shared<{}>(std::move(v))) {{}}",
-                        union_name, param, idx, param
+                        "    {}({} v) : kind({}), data(std::shared_ptr<const void>(static_cast<const void*>(new {}(std::move(v))), +[](const void* p) {{ delete static_cast<const {}*>(p); }})) {{}}",
+                        union_name, param, idx, param, param
                     )
                     .unwrap();
                 }
