@@ -670,7 +670,8 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
         if self.options.validate_facets && !simple.facets.patterns.is_empty() {
             writeln!(out, "func (s {}) Validate() error {{", type_name).unwrap();
             for pattern in &simple.facets.patterns {
-                let lit = crate::codegen::format_c_style_string_literal(&format!("^(?:{pattern})$"));
+                let lit =
+                    crate::codegen::format_c_style_string_literal(&format!("^(?:{pattern})$"));
                 writeln!(out, "    if matched, err := regexp.MatchString({}, fmt.Sprint(s)); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", lit).unwrap();
             }
             writeln!(out, "    return nil\n}}\n").unwrap();
