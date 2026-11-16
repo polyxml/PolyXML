@@ -1,3 +1,15 @@
+# [0.41.0](https://github.com/polyxml/PolyXML/compare/v0.40.0...v0.41.0) (2026-11-16)
+
+
+### Bug Fixes
+
+* **codegen,docs:** handle multi-level/unextended xsi:type hierarchies and sync docs ([7d8ee3d](https://github.com/polyxml/PolyXML/commit/7d8ee3d0aeee56bbc5f61b9cfb9c07c12c0cf7b5))
+
+
+### Features
+
+* **codegen:** add standalone XML codecs for C++20 and TypeScript ([#158](https://github.com/polyxml/PolyXML/issues/158)) ([994f399](https://github.com/polyxml/PolyXML/commit/994f39969fb947b4f1a3f7c40c4df23e5940abf5))
+
 # [0.40.0](https://github.com/polyxml/PolyXML/compare/v0.39.3...v0.40.0) (2026-11-16)
 
 
