@@ -89,4 +89,73 @@ test('PolyXML JavaScript bindings', (t) => {
     assert.ok(atomOutStr.includes('xmlns="http://www.w3.org/2005/Atom"'));
     assert.ok(atomOutStr.includes('<title>PolyXML Engineering Updates</title>'));
   }
+
+  // Test nested schemas, lists, required fields, and polymorphic xsi:type variants
+  const addressSchema = {
+    name: 'Address',
+    fields: [
+      { name: 'city', xmlName: 'city', kind: 'element', scalarType: 'string', required: true },
+      { name: 'zip', xmlName: 'zip', kind: 'element', scalarType: 'int' },
+    ],
+  };
+  const carSchema = {
+    name: 'Car',
+    xmlName: 'Car',
+    fields: [
+      { name: 'id', xmlName: 'id', kind: 'element', scalarType: 'string', required: true },
+      { name: 'doors', xmlName: 'doors', kind: 'element', scalarType: 'int' },
+    ],
+  };
+  const truckSchema = {
+    name: 'Truck',
+    xmlName: 'Truck',
+    fields: [
+      { name: 'id', xmlName: 'id', kind: 'element', scalarType: 'string', required: true },
+      { name: 'payload', xmlName: 'payload', kind: 'element', scalarType: 'string' },
+    ],
+  };
+  const vehicleSchema = {
+    name: 'Vehicle',
+    xmlName: 'Vehicle',
+    isAbstract: true,
+    variants: [carSchema, truckSchema],
+    fields: [
+      { name: 'id', xmlName: 'id', kind: 'element', scalarType: 'string', required: true },
+    ],
+  };
+  const shipmentSchema = {
+    name: 'Shipment',
+    fields: [
+      { name: 'destination', xmlName: 'destination', kind: 'element', nestedSchema: addressSchema, required: true },
+      { name: 'tags', xmlName: 'tag', kind: 'element', scalarType: 'string', isList: true },
+      { name: 'vehicles', xmlName: 'vehicle', kind: 'element', nestedSchema: vehicleSchema, isList: true },
+    ],
+  };
+
+  const shipmentXml = '<Shipment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    + '<destination><city>Austin</city><zip>78701</zip></destination>'
+    + '<tag>express</tag><tag>insured</tag>'
+    + '<vehicle xsi:type="Car"><id>c1</id><doors>4</doors></vehicle>'
+    + '<vehicle xsi:type="Truck"><id>t1</id><payload>ore</payload></vehicle>'
+    + '</Shipment>';
+  const shipment = polyxml.deserialize(shipmentXml, shipmentSchema);
+  assert.deepStrictEqual(shipment, {
+    destination: { city: 'Austin', zip: 78701 },
+    tags: ['express', 'insured'],
+    vehicles: [
+      { '@xsi:type': 'Car', id: 'c1', doors: 4 },
+      { '@xsi:type': 'Truck', id: 't1', payload: 'ore' },
+    ],
+  });
+
+  const shipmentOut = Buffer.from(polyxml.serialize('Shipment', shipment, shipmentSchema)).toString('utf-8');
+  assert.ok(shipmentOut.includes('<destination><city>Austin</city><zip>78701</zip></destination>'));
+  assert.ok(shipmentOut.includes('<tag>express</tag><tag>insured</tag>'));
+  assert.ok(shipmentOut.includes('xsi:type="Car"'));
+  assert.ok(shipmentOut.includes('<doors>4</doors>'));
+  assert.ok(shipmentOut.includes('xsi:type="Truck"'));
+  assert.ok(shipmentOut.includes('<payload>ore</payload>'));
+
+  const shipmentCopy = polyxml.deserialize(shipmentOut, shipmentSchema);
+  assert.deepStrictEqual(shipmentCopy, shipment);
 });

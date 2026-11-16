@@ -18,14 +18,20 @@ export interface FieldDefinition {
   name: string;
   xmlName: string;
   kind: FieldKind;
-  scalarType: ScalarType;
+  scalarType?: ScalarType | null;
   namespace?: string | null;
+  nestedSchema?: ModelSchema | null;
+  isList?: boolean | null;
+  required?: boolean | null;
 }
 
 export interface ModelSchema {
   name: string;
+  xmlName?: string | null;
   namespace?: string | null;
   fields: FieldDefinition[];
+  isAbstract?: boolean | null;
+  variants?: ModelSchema[] | null;
 }
 
 export type PolyValue =
