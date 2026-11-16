@@ -4,8 +4,8 @@ use std::sync::Arc;
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 
-use crate::error::Result;
-use crate::schema::{ModelSchema, ScalarType, ValueType};
+use crate::error::{PolyXmlError, Result};
+use crate::schema::{FieldSchema, ModelSchema, ScalarType, ValueType};
 use crate::value::PolyValue;
 
 /// Convert a `PolyValue` into a `serde_json::Value` dynamically without a schema.
@@ -78,10 +78,15 @@ pub fn poly_value_to_json_value(
 ) -> JsonValue {
     // xsi:type dispatch: a Record parsed as a concrete
     // derivation iterates its own schema so variant-only fields survive
-    // transcoding (JSON carries no xsi:type marker).
-    let schema = match val {
-        PolyValue::Record { schema: rec, .. } if rec.name != schema.name => rec.as_ref(),
-        _ => schema,
+    // transcoding, and records "@xsi:type" when it is a registered variant.
+    let (schema, xsi_type) = match val {
+        PolyValue::Record { schema: rec, .. } if rec.name != schema.name => {
+            let xsi = schema
+                .matches_variant(rec)
+                .then(|| String::from_utf8_lossy(&rec.xml_name).into_owned());
+            (rec.as_ref(), xsi)
+        }
+        _ => (schema, None),
     };
 
     let get_field = |idx: usize, name: &str| -> Option<&PolyValue> {
@@ -94,7 +99,12 @@ pub fn poly_value_to_json_value(
 
     match val {
         PolyValue::Record { .. } | PolyValue::Object(_) => {
-            let mut json_map = serde_json::Map::with_capacity(schema.fields.len());
+            let mut json_map = serde_json::Map::with_capacity(
+                schema.fields.len() + usize::from(xsi_type.is_some()),
+            );
+            if let Some(xsi) = xsi_type {
+                json_map.insert("@xsi:type".to_string(), JsonValue::String(xsi));
+            }
             for (idx, field) in schema.fields.iter().enumerate() {
                 let key = if by_alias {
                     std::str::from_utf8(&field.xml_name).unwrap_or(field.name.as_str())
@@ -200,61 +210,103 @@ fn coerce_scalar(val: &JsonValue, st: &ScalarType) -> PolyValue {
     }
 }
 
+fn convert_list_item(item: &JsonValue, inner: &ValueType) -> Result<PolyValue> {
+    match inner {
+        ValueType::Nested(nested_schema) => json_value_to_poly_value(item, nested_schema),
+        ValueType::Scalar(st) => Ok(coerce_scalar(item, st)),
+        ValueType::List(_) => Ok(PolyValue::from(item.clone())),
+    }
+}
+
+fn convert_json_field_from_map(
+    map: &serde_json::Map<String, JsonValue>,
+    field: &FieldSchema,
+) -> Result<Option<PolyValue>> {
+    let xml_name_str = std::str::from_utf8(&field.xml_name).ok();
+    // Priority: match schema alias (xml_name) first, fallback to python field.name
+    let found_val = xml_name_str
+        .and_then(|alias| map.get(alias))
+        .or_else(|| map.get(&field.name));
+    let Some(json_field_val) = found_val else {
+        return Ok(None);
+    };
+    if json_field_val.is_null() {
+        return Ok(Some(PolyValue::Null));
+    }
+    let converted = match &field.val_type {
+        ValueType::Scalar(st) => coerce_scalar(json_field_val, st),
+        ValueType::List(inner) => {
+            if let JsonValue::Array(items) = json_field_val {
+                let mut poly_list = Vec::with_capacity(items.len());
+                for item in items {
+                    poly_list.push(convert_list_item(item, inner)?);
+                }
+                PolyValue::List(poly_list)
+            } else {
+                // Single item into list
+                PolyValue::List(vec![convert_list_item(json_field_val, inner)?])
+            }
+        }
+        ValueType::Nested(nested_schema) => {
+            json_value_to_poly_value(json_field_val, nested_schema)?
+        }
+    };
+    Ok(Some(converted))
+}
+
 /// Convert a `serde_json::Value` into a `PolyValue` matching a `ModelSchema`.
 pub fn json_value_to_poly_value(val: &JsonValue, schema: &ModelSchema) -> Result<PolyValue> {
     match val {
         JsonValue::Object(map) => {
+            let resolved_variant = if schema.has_variants() || schema.is_abstract {
+                let raw = map
+                    .get("@xsi:type")
+                    .or_else(|| map.get("$type"))
+                    .and_then(|v| v.as_str());
+                match raw {
+                    Some(raw_type) => {
+                        let local = raw_type.rsplit(':').next().unwrap_or(raw_type);
+                        match schema
+                            .find_variant(local.as_bytes())
+                            .filter(|v| !v.is_abstract)
+                        {
+                            Some(variant) => Some(variant),
+                            None if schema.is_abstract => {
+                                return Err(PolyXmlError::SchemaError(format!(
+                                    "Cannot instantiate abstract schema '{}' with unknown @xsi:type '{}'",
+                                    schema.name, raw_type
+                                )));
+                            }
+                            None => None,
+                        }
+                    }
+                    None if schema.is_abstract => {
+                        return Err(PolyXmlError::SchemaError(format!(
+                            "Cannot instantiate abstract schema '{}' without a valid @xsi:type variant",
+                            schema.name
+                        )));
+                    }
+                    None => None,
+                }
+            } else {
+                None
+            };
+
+            if let Some(variant_schema) = resolved_variant {
+                let mut values = Vec::with_capacity(variant_schema.fields.len());
+                for field in &variant_schema.fields {
+                    values.push(convert_json_field_from_map(map, field)?);
+                }
+                return Ok(PolyValue::Record {
+                    schema: variant_schema,
+                    values: values.into_boxed_slice(),
+                });
+            }
+
             let mut obj = HashMap::with_capacity(schema.fields.len());
             for field in &schema.fields {
-                let xml_name_str = std::str::from_utf8(&field.xml_name).ok();
-                // Priority: match schema alias (xml_name) first, fallback to python field.name
-                let found_val = xml_name_str
-                    .and_then(|alias| map.get(alias))
-                    .or_else(|| map.get(&field.name));
-
-                if let Some(json_field_val) = found_val {
-                    if json_field_val.is_null() {
-                        obj.insert(field.name.clone(), PolyValue::Null);
-                        continue;
-                    }
-
-                    match &field.val_type {
-                        ValueType::Scalar(st) => {
-                            obj.insert(field.name.clone(), coerce_scalar(json_field_val, st));
-                        }
-                        ValueType::List(inner) => {
-                            if let JsonValue::Array(items) = json_field_val {
-                                let mut poly_list = Vec::with_capacity(items.len());
-                                for item in items {
-                                    if let ValueType::Nested(nested_schema) = inner.as_ref() {
-                                        poly_list
-                                            .push(json_value_to_poly_value(item, nested_schema)?);
-                                    } else if let ValueType::Scalar(st) = inner.as_ref() {
-                                        poly_list.push(coerce_scalar(item, st));
-                                    } else {
-                                        poly_list.push(PolyValue::from(item.clone()));
-                                    }
-                                }
-                                obj.insert(field.name.clone(), PolyValue::List(poly_list));
-                            } else {
-                                // Single item into list
-                                let single = match inner.as_ref() {
-                                    ValueType::Nested(nested_schema) => {
-                                        json_value_to_poly_value(json_field_val, nested_schema)?
-                                    }
-                                    ValueType::Scalar(st) => coerce_scalar(json_field_val, st),
-                                    _ => PolyValue::from(json_field_val.clone()),
-                                };
-                                obj.insert(field.name.clone(), PolyValue::List(vec![single]));
-                            }
-                        }
-                        ValueType::Nested(nested_schema) => {
-                            obj.insert(
-                                field.name.clone(),
-                                json_value_to_poly_value(json_field_val, nested_schema)?,
-                            );
-                        }
-                    }
+                if let Some(converted) = convert_json_field_from_map(map, field)? {
+                    obj.insert(field.name.clone(), converted);
                 }
             }
             Ok(PolyValue::Object(obj))

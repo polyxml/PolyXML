@@ -181,3 +181,120 @@ fn test_schemaless_preserves_refs_cdata_and_attr_entities() {
         assert!(rt.contains(expected), "roundtrip lost {expected} in:\n{rt}");
     }
 }
+
+#[test]
+fn test_polymorphic_xsi_type_xml_json_xml_roundtrip() {
+    use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
+    use polyxml::PolyValue;
+
+    let vehicle = ModelSchema::builder("Vehicle")
+        .is_abstract(true)
+        .field(FieldSchema::new(
+            "id",
+            b"id",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .build();
+    let car = ModelSchema::builder("Car")
+        .field(FieldSchema::new(
+            "id",
+            b"id",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .field(FieldSchema::new(
+            "doors",
+            b"doors",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::Int),
+        ))
+        .build();
+    let truck = ModelSchema::builder("Truck")
+        .field(FieldSchema::new(
+            "id",
+            b"id",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .field(FieldSchema::new(
+            "payload",
+            b"payload",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .build();
+    vehicle.set_variants(vec![car, truck]);
+
+    let fleet = ModelSchema::builder("Fleet")
+        .field(FieldSchema::new(
+            "vehicle",
+            b"vehicle",
+            FieldKind::Element,
+            ValueType::List(Box::new(ValueType::Nested(vehicle.clone()))),
+        ))
+        .build();
+
+    let xml = br#"<Fleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:type="Car"><id>c1</id><doors>4</doors></vehicle><vehicle xsi:type="Truck"><id>t1</id><payload>gravel</payload></vehicle></Fleet>"#;
+    let json_bytes = xml_to_json(xml, Some(fleet.clone()), None, true).expect("xml_to_json");
+    let json_str = String::from_utf8(json_bytes.clone()).unwrap();
+    for expected in [
+        "\"@xsi:type\":\"Car\"",
+        "\"doors\":4",
+        "\"@xsi:type\":\"Truck\"",
+        "\"payload\":\"gravel\"",
+    ] {
+        assert!(
+            json_str.contains(expected),
+            "missing {expected} in:\n{json_str}"
+        );
+    }
+
+    let rt_xml = json_to_xml(
+        &json_bytes,
+        Some(fleet.clone()),
+        Some("Fleet"),
+        None,
+        None,
+        None,
+    )
+    .expect("json_to_xml");
+    let rt_str = String::from_utf8(rt_xml.clone()).unwrap();
+    for expected in [
+        "xsi:type=\"Car\"",
+        "<doors>4</doors>",
+        "xsi:type=\"Truck\"",
+        "<payload>gravel</payload>",
+    ] {
+        assert!(
+            rt_str.contains(expected),
+            "roundtrip XML missing {expected} in:\n{rt_str}"
+        );
+    }
+
+    let parsed = polyxml::deserialize(&rt_xml, fleet).expect("deserialize roundtrip XML");
+    let vehicles = match parsed.get("vehicle") {
+        Some(PolyValue::List(items)) => items,
+        other => panic!("expected List, got {other:?}"),
+    };
+    assert_eq!(vehicles.len(), 2);
+    assert_eq!(vehicles[0].get("doors"), Some(&PolyValue::Int(4)));
+    assert_eq!(
+        vehicles[1].get("payload"),
+        Some(&PolyValue::String("gravel".to_string()))
+    );
+
+    let err = json_to_xml(
+        br#"{"id":"x"}"#,
+        Some(vehicle),
+        Some("vehicle"),
+        None,
+        None,
+        None,
+    )
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("abstract schema"),
+        "unexpected error: {err}"
+    );
+}
