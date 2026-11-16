@@ -1,3 +1,18 @@
+# [0.40.0](https://github.com/polyxml/PolyXML/compare/v0.39.3...v0.40.0) (2026-11-16)
+
+
+### Bug Fixes
+
+* **codegen:** avoid Rust-style \u{...} escapes in Python, Go, Java, and C# pattern literals ([1a1ae83](https://github.com/polyxml/PolyXML/commit/1a1ae83640e8d2b292c3ade4b073c6a0cf14511f))
+* **csharp:** escape CR/LF/tab control chars in regex pattern literals ([29e65be](https://github.com/polyxml/PolyXML/commit/29e65bef3bdac9900873bfa5974bfb8aae376089))
+
+
+### Features
+
+* **codegen:** add opt-in --feature xsi-type static dispatch for Rust and Java ([#159](https://github.com/polyxml/PolyXML/issues/159)) ([bd73d33](https://github.com/polyxml/PolyXML/commit/bd73d3345fabbf25a1d615fc3874068916909b36))
+* **json:** preserve xsi:type across xml_to_json and json_to_xml round-trips ([#161](https://github.com/polyxml/PolyXML/issues/161)) ([b49b94b](https://github.com/polyxml/PolyXML/commit/b49b94ba76b6a2be36f7cddb0743c3a8d7d2cc4f))
+* **polyxml-js:** expose nested, list, required, and xsi:type schemas ([#160](https://github.com/polyxml/PolyXML/issues/160)) ([51ca89e](https://github.com/polyxml/PolyXML/commit/51ca89efd3487e3750c4b2598c8d54e95991f022))
+
 ## [0.39.3](https://github.com/polyxml/PolyXML/compare/v0.39.2...v0.39.3) (2026-11-14)
 
 
