@@ -275,6 +275,23 @@ export type Account = Static<typeof AccountSchema>;
 
 ## Generated TypeScript models and serialization
 
+To emit self-contained, zero-dependency XML serializers and deserializers
+(`{Model}Codec`, `serialize{Model}`, `deserialize{Model}`), pass
+`--feature direct-codec` (or `--codecs`):
+
+```bash
+polyxml generate batch.xsd --lang ts --feature direct-codec --out src/generated
+```
+
+```typescript
+import { BatchCodec } from './generated/batch';
+
+const batch = BatchCodec.fromXml(xmlText);
+const roundTripXml = BatchCodec.toXml(batch);
+```
+
+This can be combined with validation schema backends (`--backend zod | valibot | typebox`):
+
 ```bash
 polyxml generate batch.xsd --lang ts --backend zod --out src/generated
 ```
@@ -288,11 +305,8 @@ const model = BatchSchema.parse(JSON.parse(jsonText));
 const outputJson = JSON.stringify(model);
 ```
 
-Install `zod` for this backend. Default interfaces supply compile-time types
-only; a TypeScript cast does not validate incoming JSON. Generated TypeScript
-models do not emit XML codecs or the native binding's `ModelSchema`. For XML,
-construct a `ModelSchema` explicitly and call the Node `deserialize`/`serialize`
-APIs shown above, mapping the returned fields to the generated model as needed.
-Zod field identifiers and XML wire names can differ, so do not pass an unchecked
-XML result straight into the JSON schema. These are JavaScript runtime APIs,
-not Rust Serde traits on TypeScript interfaces.
+Install `zod` for the Zod backend. Default interfaces without `--feature direct-codec`
+supply compile-time types only; a TypeScript cast does not validate incoming JSON
+or emit standalone XML codecs. For dynamic schema-driven native parsing, you can
+also construct a `ModelSchema` explicitly and call the `@polyxml/node`
+`deserialize`/`serialize` APIs shown above.

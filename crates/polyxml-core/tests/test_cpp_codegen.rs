@@ -241,6 +241,7 @@ fn test_cpp_struct_and_enum_codegen_compilation() {
         emit_enum_converters: true,
         validate_facets: true,
         emit_root_aliases: true,
+        emit_codecs: false,
         emit_cmake: false,
         emit_meson: false,
         custom_header: None,
@@ -1118,4 +1119,198 @@ fn cpp_split_units_normalizes_namespace_and_quotes_string_defaults() {
     assert!(hpp.contains("std::string created = \"2026-01-01\";"));
     assert!(cpp.contains("namespace my::app {"));
     assert!(!cpp.contains("namespace my.app {"));
+}
+
+#[test]
+fn test_cpp_standalone_xml_codec_roundtrip() {
+    use polyxml::schema_parser::XsdParser;
+
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:orders"
+           xmlns:tns="urn:orders"
+           elementFormDefault="qualified">
+  <xs:simpleType name="Status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="pending"/>
+      <xs:enumeration value="shipped"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Amount">
+    <xs:simpleContent>
+      <xs:extension base="xs:decimal">
+        <xs:attribute name="Ccy" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="Address">
+    <xs:sequence>
+      <xs:element name="city" type="xs:string"/>
+      <xs:element name="zip" type="xs:int" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Entity">
+    <xs:attribute name="id" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="Order">
+    <xs:complexContent>
+      <xs:extension base="tns:Entity">
+        <xs:sequence>
+          <xs:element name="status" type="tns:Status"/>
+          <xs:element name="total" type="tns:Amount"/>
+          <xs:element name="shipTo" type="tns:Address"/>
+          <xs:element name="note" type="xs:string" nillable="true"/>
+          <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="sku" type="xs:string"/>
+            <xs:element name="qty" type="xs:int"/>
+          </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="priority" type="xs:boolean" use="optional"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="Order" type="tns:Order"/>
+</xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+
+    // Default options stay free of codec runtime.
+    let default_header = CppCodegen::new(CppOptions::default()).generate_header(&ir);
+    assert!(!default_header.contains("POLYXML_XML_CODEC_DEFINED"));
+    assert!(!default_header.contains("from_xml("));
+
+    let driver = r#"
+#include "orders.hpp"
+#include <cassert>
+#include <cmath>
+#include <iostream>
+
+int main() {
+    using namespace orders;
+    const char* xml = R"(<?xml version="1.0"?>
+        <ns0:Order xmlns:ns0="urn:orders" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="O&amp;1" priority="true">
+            <ns0:status>shipped</ns0:status>
+            <ns0:total Ccy="USD">42.5</ns0:total>
+            <ns0:shipTo><ns0:city>Austin &lt;TX&gt;</ns0:city><ns0:zip>78701</ns0:zip></ns0:shipTo>
+            <ns0:note xsi:nil="true"/>
+            <ns0:tag>fast</ns0:tag>
+            <ns0:tag>insured</ns0:tag>
+            <ns0:sku>ITEM-1</ns0:sku>
+            <ns0:qty>3</ns0:qty>
+        </ns0:Order>
+    )";
+    auto parsed = Order::from_xml(xml);
+    assert(parsed.id == "O&1");
+    assert(parsed.priority.has_value() && *parsed.priority == true);
+    assert(parsed.status == Status::Shipped);
+    assert(parsed.total.ccy == "USD");
+    assert(std::abs(parsed.total.value - 42.5) < 1e-9);
+    assert(parsed.ship_to.city == "Austin <TX>");
+    assert(parsed.ship_to.zip.has_value() && *parsed.ship_to.zip == 78701);
+    assert(!parsed.note.has_value());
+    assert(parsed.tag.size() == 2 && parsed.tag[0] == "fast" && parsed.tag[1] == "insured");
+    assert(parsed.items.size() == 2);
+
+    std::string out_xml = parsed.to_xml();
+    assert(out_xml.find("id=\"O&amp;1\"") != std::string::npos);
+    assert(out_xml.find("xsi:nil=\"true\"") != std::string::npos);
+    auto reparsed = Order::from_xml(out_xml);
+    assert(reparsed == parsed);
+    std::cout << "C++ standalone XML codec roundtrip passed.\n";
+    return 0;
+}
+"#;
+
+    // 1. Header-only mode
+    {
+        let temp = tempdir().unwrap();
+        let header = CppCodegen::new(CppOptions {
+            namespace: "orders".to_string(),
+            emit_codecs: true,
+            ..Default::default()
+        })
+        .generate_header(&ir);
+        fs::write(temp.path().join("orders.hpp"), &header).unwrap();
+        let main_cpp = temp.path().join("main.cpp");
+        fs::write(&main_cpp, driver).unwrap();
+        let out_bin = temp.path().join("orders_header_app");
+        let compile = Command::new("g++")
+            .args([
+                "-std=c++20",
+                "-Wall",
+                "-Wextra",
+                "-Wpedantic",
+                "-Werror",
+                "-I",
+                temp.path().to_str().unwrap(),
+                main_cpp.to_str().unwrap(),
+                "-o",
+                out_bin.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            compile.status.success(),
+            "g++ header-only failed:\n{}",
+            String::from_utf8_lossy(&compile.stderr)
+        );
+        let run = Command::new(&out_bin).output().unwrap();
+        assert!(
+            run.status.success(),
+            "header-only binary failed:\n{}",
+            String::from_utf8_lossy(&run.stderr)
+        );
+    }
+
+    // 2. Split-units mode
+    {
+        let temp = tempdir().unwrap();
+        let files = CppCodegen::new(CppOptions {
+            namespace: "orders".to_string(),
+            emit_codecs: true,
+            ..Default::default()
+        })
+        .with_split_units(2)
+        .generate_files(&ir, "orders");
+        let mut cpp_inputs = Vec::new();
+        for (name, content) in files {
+            let path = temp.path().join(&name);
+            fs::write(&path, content).unwrap();
+            if name.ends_with(".cpp") {
+                cpp_inputs.push(path);
+            }
+        }
+        let main_cpp = temp.path().join("main.cpp");
+        fs::write(&main_cpp, driver).unwrap();
+        cpp_inputs.push(main_cpp);
+
+        let out_bin = temp.path().join("orders_split_app");
+        let mut cmd = Command::new("g++");
+        cmd.args([
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Wpedantic",
+            "-Werror",
+            "-I",
+            temp.path().to_str().unwrap(),
+        ]);
+        for src in &cpp_inputs {
+            cmd.arg(src);
+        }
+        cmd.args(["-o", out_bin.to_str().unwrap()]);
+        let compile = cmd.output().unwrap();
+        assert!(
+            compile.status.success(),
+            "g++ split-units failed:\n{}",
+            String::from_utf8_lossy(&compile.stderr)
+        );
+        let run = Command::new(&out_bin).output().unwrap();
+        assert!(
+            run.status.success(),
+            "split-units binary failed:\n{}",
+            String::from_utf8_lossy(&run.stderr)
+        );
+    }
 }

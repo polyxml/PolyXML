@@ -1605,6 +1605,16 @@ fn inject_module_imports(
                                     ));
                                 }
                             }
+                            if code.contains(&format!("{}Codec", t.local_name)) {
+                                if t.orig_name == t.local_name {
+                                    names.push(format!("{}Codec", t.orig_name));
+                                } else {
+                                    names.push(format!(
+                                        "{}Codec as {}Codec",
+                                        t.orig_name, t.local_name
+                                    ));
+                                }
+                            }
                         }
                         format!(
                             "import {{ {} }} from \"../{owner}/{owner}\";\n",
@@ -1976,6 +1986,7 @@ fn emit_target_code(
                 use_interface: true,
                 readonly_fields: false,
                 emit_root_aliases: true,
+                emit_codecs: direct_codec || opts.codecs == Some(true),
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
 
@@ -2056,6 +2067,7 @@ fn emit_target_code(
                 emit_enum_converters: true,
                 validate_facets: true,
                 emit_root_aliases: true,
+                emit_codecs: direct_codec || opts.codecs == Some(true),
                 emit_cmake: false,
                 emit_meson: false,
                 custom_header: opts.custom_header.map(|s| s.to_string()),

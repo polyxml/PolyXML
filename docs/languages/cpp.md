@@ -425,14 +425,27 @@ int main() {
 
 ## Generated models and serialization
 
+Default generated C++ headers omit XML codecs to keep compilation lean on large
+schemas. To emit zero-dependency C++20 `from_xml` / `to_xml` codecs directly
+on generated structs, pass `--feature direct-codec` (or `--codecs`):
+
 ```bash
-polyxml generate customer.xsd --lang cpp --out generated
+polyxml generate customer.xsd --lang cpp --feature direct-codec --out generated
 ```
 
-Default generated C++ headers contain model types, not standalone XML codecs.
-Use the native `polyxml::Schema`/`polyxml::Value` API shown above and explicitly
-map its values to your generated types when XML is required. Generating a header
-does not automatically create that mapping or connect it to the native binding.
+```cpp
+#include "customer.hpp"
+
+int main() {
+    auto model = polyxml::generated::Customer::from_xml("<Customer><name>Alice</name></Customer>");
+    std::string xml = model.to_xml();
+    return xml.empty() ? 1 : 0;
+}
+```
+
+Without `--feature direct-codec`, use the native `polyxml::Schema`/`polyxml::Value` API
+shown above and explicitly map its values to your generated types when XML is
+required.
 
 For JSON metadata, select `--backend glaze` and follow the Glaze example above
 with your generated header and the matching Glaze dependency. This is a C++

@@ -118,7 +118,8 @@ impl<'a> TargetEmitOptions<'a> {
                 "split-crates",
             ],
             "go" => &["split-crates"],
-            "cpp" => &["split-units", "split-crates"],
+            "cpp" => &["direct-codec", "split-units", "split-crates"],
+            "typescript" => &["direct-codec"],
             "java" => &["builder", "direct-codec", "xsi-type", "validation"],
             "python" => &["slots", "kw-only"],
             _ => &[],
@@ -139,6 +140,11 @@ impl<'a> TargetEmitOptions<'a> {
                 "slots" => &mut self.slots,
                 "kw-only" => &mut self.kw_only,
                 "direct-codec" => {
+                    if self.codecs == Some(false) {
+                        return Err(invalid(
+                            "feature 'direct-codec' conflicts with an explicitly disabled option.",
+                        ));
+                    }
                     self.codec = Some("direct");
                     continue;
                 }

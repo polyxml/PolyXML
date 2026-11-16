@@ -26,9 +26,9 @@ All seven targets can generate models from XSD with `polyxml generate`. The defa
 | --- | --- | --- |
 | [Rust](rust.md) | Native Rust types with streaming XML codecs | `phf` dispatch; owned strings with `--zero-copy=false`; topological chunking with `--split-units` |
 | [Python](python.md) | Dataclasses with slots and keyword-only fields | Pydantic v2 backend; `slots` and `kw-only` for dataclasses |
-| [C++20](cpp.md) | Header-based types | C++ modules (`--mode modules`); Glaze metadata |
+| [C++20](cpp.md) | Header-based types | C++ modules (`--mode modules`); standalone XML codecs (`--feature direct-codec`); Glaze metadata |
 | [Go](go.md) | Go structs with XML and JSON tags | EasyJSON annotations; Sonic tags (see the [current limitation](go.md)) |
-| [TypeScript / Node.js](node.md) | TypeScript interfaces | Zod, Valibot, or TypeBox schemas |
+| [TypeScript / Node.js](node.md) | TypeScript interfaces | Zod, Valibot, or TypeBox schemas; standalone XML codecs (`--feature direct-codec`) |
 | [WebAssembly](wasm.md) | Browser, Edge & Node runtime (`@polyxml/wasm`) | Streaming `parseStream`, schema validation, zero-dependency Wasm |
 | [Java](java.md) | Java records | POJOs, builders, direct XML codecs, Jackson 2/3, Spring Boot 4 |
 | [C#](csharp.md) | Record classes | Mutable classes, record structs, source generation |
@@ -47,10 +47,12 @@ specific to Rust; other languages use their own runtimes and model metadata.
 | [Go](go.md#generated-models-xml-and-json-round-trips) | `encoding/xml`, emitted tags/methods | `encoding/json`, emitted tags |
 | [C#](csharp.md#generate-once-for-xml-and-json) | `XmlSerializer`, emitted attributes/proxies | `System.Text.Json` |
 | [Java](java.md#generate-once-for-xml-and-json) | Jackson XML or opt-in direct StAX codecs | Jackson |
-| [C++](cpp.md#generated-models-and-serialization) | Native binding plus explicit model mapping | Optional Glaze metadata |
-| [TypeScript](node.md#generated-typescript-models-and-serialization) | Native binding with explicit `ModelSchema` and mapping | `JSON` APIs; optional generated validation |
+| [C++](cpp.md#generated-models-and-serialization) | Standalone codecs (`--feature direct-codec`) or native binding | Optional Glaze metadata |
+| [TypeScript](node.md#generated-typescript-models-and-serialization) | Standalone codecs (`--feature direct-codec`) or native binding | `JSON` APIs; optional generated validation |
 
-The C++ and TypeScript default generators emit model types without standalone
-XML codecs. Their runtime bindings require an explicit connection to those
-models. Round-trip support also depends on the schema features a backend supports;
-these examples do not establish full XSD conformance.
+By default, C++ and TypeScript generate model types without XML codecs to keep
+compilation fast on huge schemas; pass `--feature direct-codec` (or `--codecs`)
+to emit self-contained XML serializers and deserializers directly on the
+generated models, or wire them through the native runtime bindings. Round-trip
+support depends on the schema features a backend supports; these examples do not
+establish full XSD conformance.

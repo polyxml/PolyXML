@@ -4,6 +4,8 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
+mod codec;
+
 use crate::codegen::{
     build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
     set_type_name_map, LanguageContext,
@@ -76,6 +78,9 @@ pub struct CppOptions {
     pub validate_facets: bool,
     /// Emit top-level type aliases for root elements (default: true)
     pub emit_root_aliases: bool,
+    /// Emit standalone XML serialization/deserialization codecs on generated structs (default: false)
+    #[serde(default)]
+    pub emit_codecs: bool,
     /// Emit CMake integration files (CMakeLists.txt and PolyXMLConfig.cmake) (default: false)
     pub emit_cmake: bool,
     /// Emit Meson build definition (meson.build) (default: false)
@@ -95,6 +100,7 @@ impl Default for CppOptions {
             emit_enum_converters: true,
             validate_facets: true,
             emit_root_aliases: true,
+            emit_codecs: false,
             emit_cmake: false,
             emit_meson: false,
             custom_header: None,
@@ -590,6 +596,9 @@ impl CppCodegen {
                         let sig = format!("bool {}::validate() const noexcept {{", struct_name);
                         self.emit_struct_validator_with_sig(&mut out, s, ir, &field_names, &sig);
                     }
+                    if self.options.emit_codecs {
+                        self.emit_struct_codec_impl(&mut out, s, ir, false);
+                    }
                 }
                 _ => {}
             }
@@ -692,6 +701,18 @@ endif()
         writeln!(out, "#include <string_view>").unwrap();
         writeln!(out, "#include <variant>").unwrap();
         writeln!(out, "#include <vector>").unwrap();
+
+        if self.options.emit_codecs {
+            writeln!(out, "#include <cerrno>").unwrap();
+            writeln!(out, "#include <charconv>").unwrap();
+            writeln!(out, "#include <cmath>").unwrap();
+            writeln!(out, "#include <cstdlib>").unwrap();
+            writeln!(out, "#include <iomanip>").unwrap();
+            writeln!(out, "#include <limits>").unwrap();
+            writeln!(out, "#include <sstream>").unwrap();
+            writeln!(out, "#include <stdexcept>").unwrap();
+            writeln!(out, "#include <utility>").unwrap();
+        }
 
         if self.options.backend.is_glaze() {
             writeln!(out, "#include <glaze/glaze.hpp>").unwrap();
@@ -817,6 +838,9 @@ concept XmlModel = requires(T a) {{
 #endif\n"
         )
         .unwrap();
+        if self.options.emit_codecs {
+            self.emit_xml_runtime(out);
+        }
     }
 
     fn emit_forward_declarations(&self, out: &mut String, ir: &SchemaIR) {
@@ -891,16 +915,26 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
         let mut prepared = ir.clone();
         let sorted_qnames = self.order_with_forward_cuts(&mut prepared);
 
-        for qname in sorted_qnames {
-            if prepared.is_external_type(&qname) {
+        for qname in &sorted_qnames {
+            if prepared.is_external_type(qname) {
                 continue;
             }
-            if let Some(type_def) = prepared.types.get(&qname) {
+            if let Some(type_def) = prepared.types.get(qname) {
                 match type_def {
                     TypeDef::Simple(simple) => self.emit_simple_type(out, simple, &prepared),
                     TypeDef::Union(u) => self.emit_union(out, u),
                     TypeDef::Struct(s) => self.emit_struct(out, s, &prepared),
                     TypeDef::Enum(_) => {}
+                }
+            }
+        }
+        if self.options.emit_codecs && self.split_units.is_none() {
+            for qname in &sorted_qnames {
+                if prepared.is_external_type(qname) {
+                    continue;
+                }
+                if let Some(TypeDef::Struct(s)) = prepared.types.get(qname) {
+                    self.emit_struct_codec_impl(out, s, &prepared, true);
                 }
             }
         }
@@ -1249,6 +1283,10 @@ inline int polyxml_integer_compare(std::string_view a,std::string_view b) noexce
             } else {
                 self.emit_struct_validator(out, s, ir, &field_names);
             }
+        }
+
+        if self.options.emit_codecs {
+            self.emit_struct_codec_decls(out, s);
         }
 
         writeln!(out, "}};\n").unwrap();

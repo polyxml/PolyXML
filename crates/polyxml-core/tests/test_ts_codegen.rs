@@ -174,6 +174,7 @@ fn test_ts_interface_and_enum_codegen() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        emit_codecs: false,
         custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
@@ -230,6 +231,7 @@ fn test_ts_discriminated_union_choice() {
         use_interface: true,
         readonly_fields: true,
         emit_root_aliases: true,
+        emit_codecs: false,
         custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
@@ -318,6 +320,7 @@ fn test_ts_zod_schema_generation() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        emit_codecs: false,
         custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
@@ -387,6 +390,7 @@ fn test_ts_recursive_cycle_zod_lazy() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        emit_codecs: false,
         custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
@@ -525,6 +529,7 @@ fn test_ts_valibot_schema_generation() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        emit_codecs: false,
         custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
@@ -624,6 +629,7 @@ fn test_ts_typebox_schema_generation() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        emit_codecs: false,
         custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
@@ -683,5 +689,164 @@ fn typescript_zod_and_valibot_include_inherited_fields_and_avoid_double_arrays()
         assert!(!code.contains("z.array(z.array("), "{code}");
         assert!(!code.contains("v.array(v.array("), "{code}");
         assert!(!code.contains("stringSchema"), "{code}");
+    }
+}
+
+#[test]
+fn test_ts_standalone_xml_codec_roundtrip() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:orders"
+           xmlns:tns="urn:orders"
+           elementFormDefault="qualified">
+  <xs:simpleType name="Status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="pending"/>
+      <xs:enumeration value="shipped"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="KeywordList">
+    <xs:list itemType="xs:string"/>
+  </xs:simpleType>
+  <xs:complexType name="Amount">
+    <xs:simpleContent>
+      <xs:extension base="xs:decimal">
+        <xs:attribute name="Ccy" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="Address">
+    <xs:sequence>
+      <xs:element name="city" type="xs:string"/>
+      <xs:element name="zip" type="xs:int" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Entity">
+    <xs:attribute name="id" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="Order">
+    <xs:complexContent>
+      <xs:extension base="tns:Entity">
+        <xs:sequence>
+          <xs:element name="status" type="tns:Status"/>
+          <xs:element name="total" type="tns:Amount"/>
+          <xs:element name="shipTo" type="tns:Address"/>
+          <xs:element name="note" type="xs:string" nillable="true"/>
+          <xs:element name="keywords" type="tns:KeywordList" minOccurs="0"/>
+          <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="sku" type="xs:string"/>
+            <xs:element name="qty" type="xs:int"/>
+          </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="priority" type="xs:boolean" use="optional"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="Order" type="tns:Order"/>
+</xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+
+    // Default options stay clean without codec runtime.
+    let default_ts = TypeScriptCodegen::new(TypeScriptOptions::default()).generate_module(&ir);
+    assert!(!default_ts.contains("_XmlNode"));
+    assert!(!default_ts.contains("OrderCodec"));
+
+    for readonly in [false, true] {
+        let ts_code = TypeScriptCodegen::new(TypeScriptOptions {
+            emit_codecs: true,
+            readonly_fields: readonly,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+
+        assert!(ts_code.contains("export const OrderCodec"));
+        assert!(ts_code.contains("export function serializeOrder("));
+        assert!(ts_code.contains("export function deserializeOrder("));
+
+        if Command::new("tsc").arg("--version").output().is_err() {
+            continue;
+        }
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("models.ts"), &ts_code).unwrap();
+        fs::write(
+            dir.path().join("driver.ts"),
+            r#"import { OrderCodec, Status } from "./models";
+
+function check(cond: boolean, msg: string): void {
+  if (!cond) throw new Error(msg);
+}
+
+const xml = `<?xml version="1.0"?>
+<ns0:Order xmlns:ns0="urn:orders" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="O&amp;1" priority="true">
+  <ns0:status>shipped</ns0:status>
+  <ns0:total Ccy="USD">42.5</ns0:total>
+  <ns0:shipTo><ns0:city>Austin &lt;TX&gt;</ns0:city><ns0:zip>78701</ns0:zip></ns0:shipTo>
+  <ns0:note xsi:nil="true"/>
+  <ns0:keywords>alpha beta</ns0:keywords>
+  <ns0:tag>fast</ns0:tag>
+  <ns0:tag>insured</ns0:tag>
+  <ns0:sku>ITEM-1</ns0:sku>
+  <ns0:qty>3</ns0:qty>
+</ns0:Order>`;
+
+const parsed = OrderCodec.fromXml(xml);
+check(parsed.id === "O&1", `id: ${parsed.id}`);
+check(parsed.priority === true, `priority: ${parsed.priority}`);
+check(parsed.status === Status.Shipped, `status: ${parsed.status}`);
+check(parsed.total.ccy === "USD", `ccy: ${parsed.total.ccy}`);
+check(parsed.total.value === 42.5, `value: ${parsed.total.value}`);
+check(parsed.shipTo.city === "Austin <TX>", `city: ${parsed.shipTo.city}`);
+check(parsed.shipTo.zip === 78701, `zip: ${parsed.shipTo.zip}`);
+check(parsed.note === null, `note: ${parsed.note}`);
+check(JSON.stringify(parsed.keywords) === JSON.stringify(["alpha", "beta"]), `keywords`);
+check(JSON.stringify(parsed.tag) === JSON.stringify(["fast", "insured"]), `tag`);
+check(
+  JSON.stringify(parsed.items) === JSON.stringify([{ kind: "Sku", value: "ITEM-1" }, { kind: "Qty", value: 3 }]),
+  `items: ${JSON.stringify(parsed.items)}`,
+);
+
+const encoded = OrderCodec.toXml(parsed);
+check(encoded.includes('id="O&amp;1"'), `encoded attr: ${encoded}`);
+check(encoded.includes('xsi:nil="true"'), `encoded nil: ${encoded}`);
+const reparsed = OrderCodec.fromXml(encoded);
+check(JSON.stringify(reparsed) === JSON.stringify(parsed), `roundtrip mismatch`);
+"#,
+        )
+        .unwrap();
+
+        let tsc = Command::new("tsc")
+            .current_dir(dir.path())
+            .args([
+                "--strict",
+                "--noUnusedLocals",
+                "--noUnusedParameters",
+                "--target",
+                "ES2020",
+                "--module",
+                "commonjs",
+                "models.ts",
+                "driver.ts",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            tsc.status.success(),
+            "tsc (readonly={readonly}) failed:\n{}\n{}",
+            String::from_utf8_lossy(&tsc.stdout),
+            String::from_utf8_lossy(&tsc.stderr)
+        );
+
+        let node = Command::new("node")
+            .current_dir(dir.path())
+            .arg("driver.js")
+            .output()
+            .unwrap();
+        assert!(
+            node.status.success(),
+            "node driver failed (readonly={readonly}):\n{}",
+            String::from_utf8_lossy(&node.stderr)
+        );
     }
 }

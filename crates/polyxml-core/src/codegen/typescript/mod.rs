@@ -4,6 +4,8 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsLowerCamelCase, AsPascalCase};
 use serde::{Deserialize, Serialize};
 
+mod codec;
+
 use crate::codegen::{
     build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
     set_type_name_map, LanguageContext,
@@ -52,6 +54,9 @@ pub struct TypeScriptOptions {
     pub readonly_fields: bool,
     /// Emit type aliases for top-level root XML elements (default: true)
     pub emit_root_aliases: bool,
+    /// Emit standalone XML serialization/deserialization codecs alongside models (default: false)
+    #[serde(default)]
+    pub emit_codecs: bool,
     /// Custom header text to prepend to generated files (default: None)
     pub custom_header: Option<String>,
 }
@@ -76,6 +81,7 @@ impl Default for TypeScriptOptions {
             use_interface: true,
             readonly_fields: false,
             emit_root_aliases: true,
+            emit_codecs: false,
             custom_header: None,
         }
     }
@@ -218,6 +224,14 @@ impl TypeScriptCodegen {
         let recursive_types = self.find_recursive_types(ir);
 
         self.emit_header(&mut out, ir);
+        if self.options.emit_codecs
+            && ir
+                .types
+                .values()
+                .any(|t| !ir.is_external_type(t.qname()) && matches!(t, TypeDef::Struct(_)))
+        {
+            self.emit_xml_codec_runtime(&mut out);
+        }
 
         let ordered = self.order_types(ir);
         for type_def in ordered {
@@ -708,6 +722,9 @@ impl TypeScriptCodegen {
             TypeScriptBackend::TypeBox => {
                 self.emit_typebox_struct(out, s, ts_name.as_str(), ir, recursive_types);
             }
+        }
+        if self.options.emit_codecs {
+            self.emit_struct_codec(out, s, ts_name.as_str(), ir);
         }
     }
 
