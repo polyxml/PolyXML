@@ -832,3 +832,72 @@ pub(crate) fn format_c_style_string_literal(s: &str) -> String {
     out.push('"');
     out
 }
+
+/// A polymorphic type family for `--feature xsi-type`: a complex type that
+/// other complex types derive from (or an abstract base), plus every concrete
+/// transitive derivation.
+#[derive(Debug, Clone)]
+pub(crate) struct PolyFamily {
+    pub(crate) base: crate::ir::QName,
+    pub(crate) base_abstract: bool,
+    /// Concrete dispatchable members in deterministic order (includes `base` first when `!base_abstract`).
+    pub(crate) members: Vec<crate::ir::QName>,
+}
+
+pub(crate) fn compute_poly_families(
+    ir: &crate::ir::SchemaIR,
+) -> HashMap<crate::ir::QName, PolyFamily> {
+    use crate::ir::{QName, TypeDef};
+    let mut derived_of: HashMap<QName, Vec<QName>> = HashMap::new();
+    for (qname, td) in &ir.types {
+        let TypeDef::Struct(s) = td else { continue };
+        if ir.is_external_type(qname) || s.is_abstract {
+            continue;
+        }
+        let mut seen = HashSet::new();
+        let mut current = s.base_type.clone();
+        while let Some(base) = current {
+            if base == s.qname || !seen.insert(base.clone()) {
+                break;
+            }
+            match ir.find_type(&base) {
+                Some(TypeDef::Struct(parent)) => {
+                    derived_of
+                        .entry(base.clone())
+                        .or_default()
+                        .push(s.qname.clone());
+                    current = parent.base_type.clone();
+                }
+                _ => break,
+            }
+        }
+    }
+    let mut families = HashMap::new();
+    for (qname, td) in &ir.types {
+        let TypeDef::Struct(b) = td else { continue };
+        if ir.is_external_type(qname) {
+            continue;
+        }
+        let derived_opt = derived_of.remove(qname);
+        if !b.is_abstract && derived_opt.is_none() {
+            continue;
+        }
+        let mut derived = derived_opt.unwrap_or_default();
+        derived.sort();
+        derived.dedup();
+        let mut members = Vec::new();
+        if !b.is_abstract {
+            members.push(qname.clone());
+        }
+        members.extend(derived);
+        families.insert(
+            qname.clone(),
+            PolyFamily {
+                base: qname.clone(),
+                base_abstract: b.is_abstract,
+                members,
+            },
+        );
+    }
+    families
+}

@@ -109,6 +109,7 @@ pub fn candidates(kind: &str, words: &[String]) -> Vec<String> {
             "zero-copy",
             "rkyv",
             "phf",
+            "xsi-type",
             "builder",
             "direct-codec",
             "slots",

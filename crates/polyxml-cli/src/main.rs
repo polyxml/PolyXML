@@ -82,7 +82,7 @@ pub struct GenerateArgs {
     #[arg(short = 'b', long = "backend", value_name = "BACKEND")]
     pub backend: Option<String>,
 
-    /// Opt-in target enhancement (repeatable: zero-copy, rkyv, phf, builder, direct-codec, slots, kw-only, validation, split-units, split-crates)
+    /// Opt-in target enhancement (repeatable: zero-copy, rkyv, phf, xsi-type, builder, direct-codec, slots, kw-only, validation, split-units, split-crates)
     #[arg(long = "feature", value_name = "NAME", value_delimiter = ',')]
     pub features: Vec<String>,
 
@@ -290,6 +290,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         codec: None,
         rkyv: None,
         phf: None,
+        xsi_type: None,
         validation: None,
         custom_header: args.custom_header.as_deref(),
         split_units: args.split_units,
@@ -1836,6 +1837,7 @@ pub struct TargetEmitOptions<'a> {
     pub codec: Option<&'a str>,
     pub rkyv: Option<bool>,
     pub phf: Option<bool>,
+    pub xsi_type: Option<bool>,
     pub validation: Option<bool>,
     pub custom_header: Option<&'a str>,
     pub split_units: Option<bool>,
@@ -1932,6 +1934,7 @@ fn emit_target_code(
                 emit_codecs: opts.codecs.unwrap_or(true),
                 emit_rkyv: opts.rkyv.unwrap_or(false),
                 phf: opts.phf.unwrap_or(false),
+                xsi_type: opts.xsi_type.unwrap_or(false),
                 pyo3: false,
                 pyo3_module_name: None,
                 custom_header: opts.custom_header.map(|s| s.to_string()),
@@ -2009,6 +2012,7 @@ fn emit_target_code(
                 validate_facets: true,
                 bean_validation: opts.validation.unwrap_or(false),
                 emit_root_aliases: true,
+                xsi_type: opts.xsi_type.unwrap_or(false),
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
 

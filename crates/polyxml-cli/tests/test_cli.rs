@@ -2733,7 +2733,14 @@ fn completion_candidates_follow_target_validation() {
         (
             "feature",
             vec!["generate", "--lang", "rust"],
-            vec!["zero-copy", "rkyv", "phf", "split-units", "split-crates"],
+            vec![
+                "zero-copy",
+                "rkyv",
+                "phf",
+                "xsi-type",
+                "split-units",
+                "split-crates",
+            ],
         ),
         ("feature", vec!["generate", "--backend=pydantic"], vec![]),
         (

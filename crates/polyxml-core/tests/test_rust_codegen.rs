@@ -1592,3 +1592,118 @@ fn rust_split_units_with_pyo3_emits_single_error_type() {
         }
     }
 }
+
+#[test]
+fn xsi_type_static_dispatch_compiles_and_round_trips_in_rust() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:veh" xmlns:t="urn:veh" elementFormDefault="qualified">
+        <xs:complexType name="Vehicle" abstract="true">
+            <xs:sequence>
+                <xs:element name="id" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:complexType name="Car">
+            <xs:complexContent>
+                <xs:extension base="t:Vehicle">
+                    <xs:sequence>
+                        <xs:element name="doors" type="xs:int"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+        <xs:complexType name="Truck">
+            <xs:complexContent>
+                <xs:extension base="t:Vehicle">
+                    <xs:sequence>
+                        <xs:element name="payload" type="xs:string"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+        <xs:complexType name="Root">
+            <xs:sequence>
+                <xs:element name="vehicle" type="t:Vehicle"/>
+                <xs:element name="spare" type="t:Vehicle" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:element name="Root" type="t:Root"/>
+    </xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(schema)
+        .unwrap();
+    let core = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    // Opt-in flag defaults to off: Root keeps plain `Vehicle<'a>`, no VehicleAny.
+    let default_code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+    assert!(!default_code.contains("enum VehicleAny"));
+
+    for zero_copy in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(
+            dir.path().join("Cargo.toml"),
+            format!(
+                "[package]\nname=\"xsi-type-test\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[dependencies]\npolyxml={{path={core:?}}}\nquick-xml={{version=\"0.42\",features=[\"serialize\"]}}\nserde={{version=\"1\",features=[\"derive\"]}}\nserde_json=\"1\"\nregex=\"1\"\n"
+            ),
+        )
+        .unwrap();
+        let code = RustCodegen::new(RustOptions {
+            zero_copy,
+            xsi_type: true,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        assert!(code.contains("pub enum VehicleAny"));
+        std::fs::write(dir.path().join("src/models.rs"), code).unwrap();
+        std::fs::write(
+            dir.path().join("src/main.rs"),
+            r##"mod models;
+use models::*;
+fn main() {
+    let xml = r#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh"><vehicle xsi:type="t:Car"><id>V1</id><doors>4</doors></vehicle><spare xsi:type="t:Truck"><id>S1</id><payload>ore</payload></spare></Root>"#;
+    let root = Root::from_xml(xml).expect("parse Root with xsi:type");
+    match &root.vehicle {
+        VehicleAny::Car(car) => {
+            assert_eq!(&*car.id, "V1");
+            assert_eq!(car.doors, 4);
+        }
+        other => panic!("expected Car, got {other:?}"),
+    }
+    assert_eq!(root.spare.len(), 1);
+    match &root.spare[0] {
+        VehicleAny::Truck(truck) => {
+            assert_eq!(&*truck.id, "S1");
+            assert_eq!(&*truck.payload, "ore");
+        }
+        other => panic!("expected Truck, got {other:?}"),
+    }
+    let out = root.to_xml_string().expect("serialize Root with xsi:type");
+    assert!(out.contains("xsi:type=\"Car\""), "got: {out}");
+    assert!(out.contains("xsi:type=\"Truck\""), "got: {out}");
+    let reparsed = Root::from_xml(&out).expect("re-parse");
+    assert_eq!(reparsed, root);
+
+    // Unknown derivation on abstract Vehicle fails loudly.
+    let bad = r#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh"><vehicle xsi:type="t:Plane"><id>X</id></vehicle></Root>"#;
+    assert!(Root::from_xml(bad).is_err());
+}
+"##,
+        )
+        .unwrap();
+        let output = std::process::Command::new("cargo")
+            .args(["run", "--quiet", "--offline"])
+            .env(
+                "CARGO_TARGET_DIR",
+                core.join("../../target/binary-lexical-tests"),
+            )
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "zero_copy={zero_copy}: {}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

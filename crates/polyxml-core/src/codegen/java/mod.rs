@@ -1,20 +1,37 @@
 mod codec;
 mod models;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as FmtWrite;
 
 use heck::{AsLowerCamelCase, AsPascalCase, AsShoutySnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, lookup_type_name, normalize_symbol_name, sanitize_keyword,
-    set_type_name_map, LanguageContext,
+    build_type_name_map, compute_poly_families, lookup_type_name, normalize_symbol_name,
+    sanitize_keyword, set_type_name_map, LanguageContext, PolyFamily,
 };
 use crate::ir::{
     EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
     TypeRef, UnionBranch, UnionDef,
 };
+
+thread_local! {
+    static JAVA_POLY_FAMILIES: std::cell::RefCell<HashMap<QName, PolyFamily>> =
+        std::cell::RefCell::new(HashMap::new());
+}
+
+pub(super) fn set_java_poly_families(families: HashMap<QName, PolyFamily>) {
+    JAVA_POLY_FAMILIES.with(|m| *m.borrow_mut() = families);
+}
+
+pub(super) fn java_poly_family(q: &QName) -> Option<PolyFamily> {
+    JAVA_POLY_FAMILIES.with(|m| m.borrow().get(q).cloned())
+}
+
+pub(super) fn is_java_abstract_poly_base(q: &QName) -> bool {
+    JAVA_POLY_FAMILIES.with(|m| m.borrow().get(q).is_some_and(|f| f.base_abstract))
+}
 
 /// Target backend for Java code emission.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -65,6 +82,9 @@ pub struct JavaOptions {
     pub bean_validation: bool,
     /// Emit top-level aliases for root elements (default: true)
     pub emit_root_aliases: bool,
+    /// Emit `xsi:type` polymorphic dispatch on direct StAX codecs (default: false)
+    #[serde(default)]
+    pub xsi_type: bool,
     /// Custom header text to prepend to generated files (default: None)
     pub custom_header: Option<String>,
 }
@@ -80,6 +100,7 @@ impl Default for JavaOptions {
             validate_facets: true,
             bean_validation: false,
             emit_root_aliases: true,
+            xsi_type: false,
             custom_header: None,
         }
     }
@@ -302,6 +323,11 @@ impl JavaCodegen {
     /// Generate individual compilation units (`{TypeName}.java`), one for each schema type.
     pub fn generate_files(&self, ir: &SchemaIR) -> Vec<(String, String)> {
         set_type_name_map(build_type_name_map(ir, to_java_type_name));
+        set_java_poly_families(if self.options.xsi_type {
+            compute_poly_families(ir)
+        } else {
+            HashMap::new()
+        });
         let mut files = Vec::new();
 
         for type_def in ir.emitted_types() {
@@ -322,6 +348,11 @@ impl JavaCodegen {
     /// Generate a single outer class (`{outer_class_name}.java`) enclosing all types as static members.
     pub fn generate_module(&self, ir: &SchemaIR, outer_class_name: &str) -> String {
         set_type_name_map(build_type_name_map(ir, to_java_type_name));
+        set_java_poly_families(if self.options.xsi_type {
+            compute_poly_families(ir)
+        } else {
+            HashMap::new()
+        });
         let mut out = String::new();
 
         self.emit_file_header(&mut out);
@@ -487,6 +518,27 @@ impl JavaCodegen {
             self.emit_pojo(out, s, java_name, indent, ir);
             return;
         }
+        if self.options.xsi_type && s.is_abstract && is_java_abstract_poly_base(&s.qname) {
+            if let Some(ref doc) = s.documentation {
+                self.emit_docstring(out, doc, indent);
+            }
+            let static_kw = if indent.is_empty() { "" } else { "static " };
+            let extends = s
+                .base_type
+                .as_ref()
+                .filter(|q| is_java_abstract_poly_base(q))
+                .map(|q| format!(" extends {}", type_ident(q)))
+                .unwrap_or_default();
+            let _ = writeln!(
+                out,
+                "{indent}public {static_kw}interface {java_name}{extends} {{"
+            );
+            for (field, field_id) in self.model_fields(s, ir) {
+                let _ = writeln!(out, "{indent}    {} {field_id}();", self.field_type(field));
+            }
+            let _ = writeln!(out, "{indent}}}");
+            return;
+        }
         if let Some(ref doc) = s.documentation {
             self.emit_docstring(out, doc, indent);
         }
@@ -585,9 +637,22 @@ impl JavaCodegen {
         } else {
             "public static "
         };
+        let impl_clause = if self.options.xsi_type {
+            s.base_type
+                .as_ref()
+                .filter(|q| is_java_abstract_poly_base(q))
+                .map(|q| format!(" implements {}", type_ident(q)))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
 
         if components.is_empty() && !self.options.emit_builder {
-            let _ = writeln!(out, "{}{}record {}() {{}}", indent, modifier, java_name);
+            let _ = writeln!(
+                out,
+                "{}{}record {}(){impl_clause} {{}}",
+                indent, modifier, java_name
+            );
             return;
         }
 
@@ -596,7 +661,7 @@ impl JavaCodegen {
             let comma = if i + 1 < components.len() { "," } else { "" };
             let _ = writeln!(out, "{}    {}{}", indent, comp, comma);
         }
-        let _ = writeln!(out, "{}) {{", indent);
+        let _ = writeln!(out, "{}){impl_clause} {{", indent);
 
         if !validation_checks.is_empty() {
             let _ = writeln!(out, "{}    public {} {{", indent, java_name);

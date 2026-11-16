@@ -144,6 +144,7 @@ restored_json = {module_name}.<ModelName>.from_json(json_data)
             emit_codecs: true,
             emit_rkyv: false,
             phf: false,
+            xsi_type: false,
             pyo3: true,
             pyo3_module_name: Some(module_name.clone()),
             custom_header: self.options.custom_header.clone(),

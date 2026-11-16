@@ -162,6 +162,7 @@ fn test_java_records_and_enums_generation() {
         validate_facets: true,
         bean_validation: false,
         emit_root_aliases: true,
+        xsi_type: false,
         custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
@@ -253,6 +254,7 @@ fn test_java_sealed_interface_choice() {
         validate_facets: true,
         bean_validation: false,
         emit_root_aliases: true,
+        xsi_type: false,
         custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
@@ -310,6 +312,7 @@ fn test_java_module_container_class() {
         validate_facets: true,
         bean_validation: false,
         emit_root_aliases: true,
+        xsi_type: false,
         custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
@@ -424,6 +427,7 @@ fn test_java_jackson_backend_struct_annotations() {
         validate_facets: true,
         bean_validation: false,
         emit_root_aliases: true,
+        xsi_type: false,
         custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
@@ -488,6 +492,7 @@ fn test_java_jackson_backend_enum_annotations() {
         validate_facets: true,
         bean_validation: false,
         emit_root_aliases: true,
+        xsi_type: false,
         custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
@@ -539,6 +544,7 @@ fn test_java_jackson_backend_union_annotations() {
         validate_facets: true,
         bean_validation: false,
         emit_root_aliases: true,
+        xsi_type: false,
         custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
@@ -584,6 +590,7 @@ fn test_java_jackson_backend_simple_type_annotations() {
         validate_facets: true,
         bean_validation: false,
         emit_root_aliases: true,
+        xsi_type: false,
         custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
@@ -1148,4 +1155,112 @@ fn jackson3_preserves_core_annotations_and_maps_record_text() {
         JavaBackend::from_str_loose("spring-boot"),
         Some(JavaBackend::Jackson)
     );
+}
+
+#[test]
+fn xsi_type_static_dispatch_compiles_and_round_trips_in_java() {
+    use polyxml::schema_parser::XsdParser;
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:veh" xmlns:t="urn:veh" elementFormDefault="qualified">
+        <xs:complexType name="Vehicle" abstract="true">
+            <xs:sequence>
+                <xs:element name="id" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:complexType name="Car">
+            <xs:complexContent>
+                <xs:extension base="t:Vehicle">
+                    <xs:sequence>
+                        <xs:element name="doors" type="xs:int"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+        <xs:complexType name="Truck">
+            <xs:complexContent>
+                <xs:extension base="t:Vehicle">
+                    <xs:sequence>
+                        <xs:element name="payload" type="xs:string"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+        <xs:complexType name="Root">
+            <xs:sequence>
+                <xs:element name="vehicle" type="t:Vehicle"/>
+                <xs:element name="spare" type="t:Vehicle" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:element name="Root" type="t:Root"/>
+    </xs:schema>"#;
+    let ir = XsdParser::new().parse_str(schema).unwrap();
+
+    for records in [true, false] {
+        let dir = tempdir().unwrap();
+        let models = JavaCodegen::new(JavaOptions {
+            package_name: String::new(),
+            use_records: records,
+            emit_direct_codec: true,
+            xsi_type: true,
+            ..Default::default()
+        })
+        .generate_module(&ir, "Models");
+        fs::write(dir.path().join("Models.java"), &models).unwrap();
+        let id_call = if records { "id()" } else { "getId()" };
+        let doors_call = if records { "doors()" } else { "getDoors()" };
+        let payload_call = if records { "payload()" } else { "getPayload()" };
+        let spare_call = if records { "spare()" } else { "getSpare()" };
+        let veh_call = if records { "vehicle()" } else { "getVehicle()" };
+        fs::write(
+            dir.path().join("Main.java"),
+            format!(
+                r#"import java.io.*;
+public class Main {{
+    public static void main(String[] args) throws Exception {{
+        String xml = "<Root xmlns=\"urn:veh\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:t=\"urn:veh\">"
+            + "<vehicle xsi:type=\"t:Car\"><id>V1</id><doors>4</doors></vehicle>"
+            + "<spare xsi:type=\"t:Truck\"><id>S1</id><payload>ore</payload></spare>"
+            + "</Root>";
+        var root = Models.RootCodec.readXml(new ByteArrayInputStream(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        if (!(root.{veh_call} instanceof Models.Car car)) throw new AssertionError("expected Car: " + root.{veh_call});
+        if (!"V1".equals(car.{id_call}) || car.{doors_call} != 4) throw new AssertionError(car.toString());
+        if (!(root.{spare_call}.get(0) instanceof Models.Truck truck)) throw new AssertionError("expected Truck");
+        if (!"ore".equals(truck.{payload_call})) throw new AssertionError(truck.toString());
+
+        var out = new ByteArrayOutputStream();
+        Models.RootCodec.writeXml(root, out);
+        String outXml = out.toString(java.nio.charset.StandardCharsets.UTF_8);
+        if (!outXml.contains("xsi:type=\"Car\"") || !outXml.contains("xsi:type=\"Truck\""))
+            throw new AssertionError("missing xsi:type in output: " + outXml);
+        var copy = Models.RootCodec.readXml(new ByteArrayInputStream(out.toByteArray()));
+        if (!root.equals(copy)) throw new AssertionError(outXml + " -> " + copy);
+    }}
+}}"#
+            ),
+        )
+        .unwrap();
+        if Command::new("javac").arg("-version").output().is_err() {
+            continue;
+        }
+        let compile = Command::new("javac")
+            .current_dir(dir.path())
+            .args(["Models.java", "Main.java"])
+            .output()
+            .unwrap();
+        assert!(
+            compile.status.success(),
+            "records={records}:\n{}",
+            String::from_utf8_lossy(&compile.stderr)
+        );
+        let run = Command::new("java")
+            .current_dir(dir.path())
+            .args(["-cp", ".", "Main"])
+            .output()
+            .unwrap();
+        assert!(
+            run.status.success(),
+            "records={records}:\n{}",
+            String::from_utf8_lossy(&run.stderr)
+        );
+    }
 }

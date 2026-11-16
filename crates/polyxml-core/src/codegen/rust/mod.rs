@@ -5,13 +5,36 @@ use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
 use crate::codegen::{
-    build_type_name_map, flatten_fields, lookup_type_name, primitive_base, sanitize_keyword,
-    set_type_name_map, write_documentation_lines, LanguageContext,
+    build_type_name_map, compute_poly_families, flatten_fields, lookup_type_name, primitive_base,
+    sanitize_keyword, set_type_name_map, write_documentation_lines, LanguageContext, PolyFamily,
 };
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR, SimpleTypeDef, StructDef,
     TypeDef, TypeRef, UnionDef,
 };
+
+thread_local! {
+    /// Families for the IR currently being generated (mirrors the type-name map).
+    static POLY_FAMILIES: std::cell::RefCell<HashMap<QName, PolyFamily>> =
+        std::cell::RefCell::new(HashMap::new());
+}
+
+fn set_poly_families(families: HashMap<QName, PolyFamily>) {
+    POLY_FAMILIES.with(|m| *m.borrow_mut() = families);
+}
+
+fn poly_family(q: &QName) -> Option<PolyFamily> {
+    POLY_FAMILIES.with(|m| m.borrow().get(q).cloned())
+}
+
+fn is_poly_base(q: &QName) -> bool {
+    POLY_FAMILIES.with(|m| m.borrow().contains_key(q))
+}
+
+/// Name of the generated dispatch enum for a polymorphic base type.
+fn any_ident(q: &QName) -> String {
+    format!("{}Any", type_ident(q))
+}
 
 /// Options configuring Rust 2021/2024 code generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +57,10 @@ pub struct RustOptions {
     /// string `match` (default: false). Generated crates must depend on `phf`.
     #[serde(default)]
     pub phf: bool,
+    /// Emit `xsi:type` polymorphic dispatch: a `{Type}Any` enum for every complex
+    /// type with derivations, used wherever that type is declared (default: false).
+    #[serde(default)]
+    pub xsi_type: bool,
     /// Emit PyO3 #[pyclass], #[pymethods], and #[pymodule] bindings for Python AOT extension modules.
     #[serde(default)]
     pub pyo3: bool,
@@ -61,6 +88,7 @@ impl Default for RustOptions {
             emit_codecs: true,
             emit_rkyv: false,
             phf: false,
+            xsi_type: false,
             pyo3: false,
             pyo3_module_name: None,
             custom_header: None,
@@ -291,6 +319,11 @@ impl RustCodegen {
 
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
         set_type_name_map(build_type_name_map(ir, to_rust_type_name));
+        set_poly_families(if self.options.xsi_type {
+            compute_poly_families(ir)
+        } else {
+            HashMap::new()
+        });
         let mut out = String::new();
 
         if let Some(ref header) = self.options.custom_header {
@@ -329,6 +362,10 @@ impl RustCodegen {
             self.emit_single_type(&mut out, type_def, &types_with_lifetime, ir);
         }
 
+        if self.options.xsi_type {
+            self.emit_all_poly_family_enums(&mut out, &sorted_types, &types_with_lifetime);
+        }
+
         if self.options.emit_root_aliases {
             self.emit_root_aliases(&mut out, ir, &types_with_lifetime);
         }
@@ -363,6 +400,12 @@ impl RustCodegen {
     /// (`chunk_00.rs`, `chunk_01.rs`, ...) and a parent `mod.rs` that re-exports all chunks.
     pub fn generate_files(&self, ir: &SchemaIR, base_name: &str) -> Vec<(String, String)> {
         set_type_name_map(build_type_name_map(ir, to_rust_type_name));
+        let families = if self.options.xsi_type {
+            compute_poly_families(ir)
+        } else {
+            HashMap::new()
+        };
+        set_poly_families(families.clone());
 
         let should_split = self.options.split_units.unwrap_or(false);
         let chunk_size = self.options.chunk_size.unwrap_or(250);
@@ -447,6 +490,13 @@ impl RustCodegen {
             for prev in &plan.chunks[..chunk_idx] {
                 let _ = writeln!(out, "use super::{}::*;", prev.name);
             }
+            if self.options.xsi_type {
+                let mut any_names: Vec<_> = families.keys().map(any_ident).collect();
+                any_names.sort();
+                for name in any_names {
+                    let _ = writeln!(out, "use super::{};", name);
+                }
+            }
 
             for qname in &chunk.types {
                 if let Some(type_def) = ir.types.get(qname) {
@@ -487,6 +537,11 @@ impl RustCodegen {
 
         if self.options.emit_codecs {
             self.emit_codec_helpers(&mut mod_out);
+        }
+
+        if self.options.xsi_type {
+            let sorted_types = self.order_types(ir);
+            self.emit_all_poly_family_enums(&mut mod_out, &sorted_types, &types_with_lifetime);
         }
 
         if self.options.emit_root_aliases {
@@ -547,17 +602,28 @@ impl RustCodegen {
             )
         }
 
-        fn typeref_has_lifetime(type_ref: &TypeRef, current_set: &HashSet<QName>) -> bool {
+        fn typeref_has_lifetime(
+            type_ref: &TypeRef,
+            current_set: &HashSet<QName>,
+            xsi_type: bool,
+        ) -> bool {
             match type_ref {
                 TypeRef::Primitive(prim) => primitive_has_lifetime(*prim),
-                TypeRef::Named(qname) => current_set.contains(qname),
+                TypeRef::Named(qname) => {
+                    current_set.contains(qname)
+                        || (xsi_type
+                            && poly_family(qname).is_some_and(|fam| {
+                                fam.members.iter().any(|m| current_set.contains(m))
+                            }))
+                }
                 TypeRef::Boxed(inner) | TypeRef::List(inner) => {
-                    typeref_has_lifetime(inner, current_set)
+                    typeref_has_lifetime(inner, current_set, xsi_type)
                 }
             }
         }
 
         // Fixed-point iteration
+        let xsi_type = self.options.xsi_type;
         loop {
             let mut changed = false;
 
@@ -567,15 +633,17 @@ impl RustCodegen {
                 }
 
                 let needs = match type_def {
-                    TypeDef::Simple(s) => typeref_has_lifetime(&s.base_type, &requires_lifetime),
+                    TypeDef::Simple(s) => {
+                        typeref_has_lifetime(&s.base_type, &requires_lifetime, xsi_type)
+                    }
                     TypeDef::Enum(_) => false, // unit variants do not borrow
                     TypeDef::Union(u) => u
                         .branches
                         .iter()
-                        .any(|b| typeref_has_lifetime(&b.type_ref, &requires_lifetime)),
+                        .any(|b| typeref_has_lifetime(&b.type_ref, &requires_lifetime, xsi_type)),
                     TypeDef::Struct(s) => flatten_fields(s, ir)
                         .into_iter()
-                        .any(|f| typeref_has_lifetime(&f.type_ref, &requires_lifetime)),
+                        .any(|f| typeref_has_lifetime(&f.type_ref, &requires_lifetime, xsi_type)),
                 };
 
                 if needs {
@@ -1080,11 +1148,24 @@ impl RustCodegen {
         match type_ref {
             TypeRef::Primitive(prim) => self.context.map_primitive(*prim).to_string(),
             TypeRef::Named(qname) => {
-                let name = type_ident(qname);
-                if self.options.zero_copy && types_with_lifetime.contains(qname) {
-                    format!("{}<'a>", name)
+                if self.options.xsi_type && is_poly_base(qname) {
+                    let any_name = any_ident(qname);
+                    let any_lt = self.options.zero_copy
+                        && poly_family(qname).is_some_and(|fam| {
+                            fam.members.iter().any(|m| types_with_lifetime.contains(m))
+                        });
+                    if any_lt {
+                        format!("{any_name}<'a>")
+                    } else {
+                        any_name
+                    }
                 } else {
-                    name
+                    let name = type_ident(qname);
+                    if self.options.zero_copy && types_with_lifetime.contains(qname) {
+                        format!("{}<'a>", name)
+                    } else {
+                        name
+                    }
                 }
             }
             TypeRef::Boxed(inner) => {
@@ -1935,7 +2016,14 @@ impl RustCodegen {
 
             out.push_str("        Ok(())\n    }\n");
         }
-        out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
+        if self.options.xsi_type {
+            out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
+            out.push_str("        self.encode_xml_with_xsi(writer, tag_name, None)\n");
+            out.push_str("    }\n\n");
+            out.push_str("    pub fn encode_xml_with_xsi<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>, xsi_type: Option<&str>) -> Result<()> {\n");
+        } else {
+            out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
+        }
         if has_patterns {
             out.push_str("        self.validate_patterns()?;\n");
         }
@@ -1945,6 +2033,12 @@ impl RustCodegen {
             s.qname.local
         );
         out.push_str("        let mut start = BytesStart::new(tag);\n");
+        if self.options.xsi_type {
+            out.push_str("        if let Some(xsi_t) = xsi_type {\n");
+            out.push_str("            start.push_attribute((\"xmlns:xsi\", \"http://www.w3.org/2001/XMLSchema-instance\"));\n");
+            out.push_str("            start.push_attribute((\"xsi:type\", xsi_t));\n");
+            out.push_str("        }\n");
+        }
 
         for meta in &attr_fields {
             self.emit_attr_serialize(out, &meta.field, &meta.rust_name, ir);
@@ -1971,6 +2065,205 @@ impl RustCodegen {
 
         out.push_str("}\n");
         self.emit_incremental_roots(out, s, ir, types_with_lifetime);
+    }
+
+    fn emit_all_poly_family_enums(
+        &self,
+        out: &mut String,
+        sorted_types: &[&TypeDef],
+        types_with_lifetime: &HashSet<QName>,
+    ) {
+        for type_def in sorted_types {
+            let TypeDef::Struct(s) = type_def else {
+                continue;
+            };
+            if let Some(fam) = poly_family(&s.qname) {
+                out.push('\n');
+                self.emit_poly_family_enum(out, &fam, types_with_lifetime);
+            }
+        }
+    }
+
+    fn emit_poly_family_enum(
+        &self,
+        out: &mut String,
+        fam: &PolyFamily,
+        types_with_lifetime: &HashSet<QName>,
+    ) {
+        let enum_name = any_ident(&fam.base);
+        let needs_lifetime =
+            self.options.zero_copy && fam.members.iter().any(|m| types_with_lifetime.contains(m));
+
+        let mut derives = vec!["Debug", "Clone", "PartialEq"];
+        if self.options.derive_serde {
+            derives.push("Serialize");
+            derives.push("Deserialize");
+        }
+        let _ = writeln!(out, "#[derive({})]", derives.join(", "));
+        if self.options.emit_rkyv {
+            out.push_str("#[cfg_attr(feature = \"rkyv\", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]\n");
+            out.push_str("#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]\n");
+        }
+        let sig = if needs_lifetime {
+            format!("{enum_name}<'a>")
+        } else {
+            enum_name.clone()
+        };
+        let _ = writeln!(out, "pub enum {sig} {{");
+        for m in &fam.members {
+            let var_name = type_ident(m);
+            let m_ty = if self.options.zero_copy && types_with_lifetime.contains(m) {
+                format!("{var_name}<'a>")
+            } else {
+                var_name.clone()
+            };
+            let _ = writeln!(out, "    {var_name}({m_ty}),");
+        }
+        out.push_str("}\n");
+
+        if self.options.derive_default {
+            if let Some(first) = fam.members.first() {
+                let first_var = type_ident(first);
+                let _ = writeln!(
+                    out,
+                    "impl{} Default for {sig} {{ fn default() -> Self {{ Self::{first_var}(Default::default()) }} }}",
+                    if needs_lifetime { "<'a>" } else { "" }
+                );
+            }
+        }
+
+        if !self.options.emit_codecs {
+            return;
+        }
+
+        let impl_hdr = if needs_lifetime {
+            format!("impl<'a> {sig}")
+        } else {
+            format!("impl {sig}")
+        };
+        let _ = writeln!(out, "\n{impl_hdr} {{");
+        let lt_param = if needs_lifetime { "'a" } else { "'_" };
+        let str_lt = if needs_lifetime { "&'a str" } else { "&str" };
+        let bytes_lt = if needs_lifetime { "&'a [u8]" } else { "&[u8]" };
+
+        let _ = writeln!(out, "    pub fn from_xml(xml: {str_lt}) -> Result<Self> {{");
+        out.push_str("        let mut reader = Reader::from_str(xml);\n");
+        out.push_str("        loop {\n");
+        out.push_str("            match reader.read_event()? {\n");
+        out.push_str("                QuickXmlEvent::Start(e) => return Self::decode_xml(&mut reader, &e),\n");
+        out.push_str(
+            "                QuickXmlEvent::Empty(e) => return Self::decode_xml_empty(&e),\n",
+        );
+        out.push_str("                QuickXmlEvent::Eof => break,\n");
+        out.push_str("                _ => {}\n");
+        out.push_str("            }\n");
+        out.push_str("        }\n");
+        let _ = writeln!(
+            out,
+            "        Err(PolyXmlError::SchemaError(\"Unexpected EOF while parsing {enum_name}\".into()))"
+        );
+        out.push_str("    }\n\n");
+
+        let _ = writeln!(
+            out,
+            "    pub fn from_xml_bytes(xml_bytes: {bytes_lt}) -> Result<Self> {{\n        Self::from_xml(std::str::from_utf8(xml_bytes)?)\n    }}\n"
+        );
+
+        // Extract xsi:type local name helper inline for decode_xml and decode_xml_empty
+        for (fn_sig, decode_fn, empty_arg) in [
+            (
+                format!("    pub fn decode_xml(reader: &mut Reader<&{lt_param} [u8]>, start: &BytesStart<'_>) -> Result<Self>"),
+                "decode_xml",
+                "reader, start",
+            ),
+            (
+                "    pub fn decode_xml_empty(start: &BytesStart<'_>) -> Result<Self>".to_string(),
+                "decode_xml_empty",
+                "start",
+            ),
+        ] {
+            let _ = writeln!(out, "{fn_sig} {{");
+            out.push_str("        let mut xsi_local: Option<String> = None;\n");
+            out.push_str("        for attr in start.attributes() {\n");
+            out.push_str("            let attr = attr?;\n");
+            out.push_str("            if attr.key.prefix().is_some() && attr.key.local_name().as_ref() == \"type\" {\n");
+            out.push_str("                let val = quick_xml::escape::unescape(attr.value.as_ref())?;\n");
+            out.push_str("                let local = val.rsplit_once(':').map(|(_, l)| l).unwrap_or(val.as_ref());\n");
+            out.push_str("                xsi_local = Some(local.to_string());\n");
+            out.push_str("                break;\n");
+            out.push_str("            }\n");
+            out.push_str("        }\n");
+            out.push_str("        match xsi_local.as_deref() {\n");
+            for m in &fam.members {
+                let var_name = type_ident(m);
+                let _ = writeln!(
+                    out,
+                    "            Some({:?}) => Ok(Self::{var_name}({var_name}::{decode_fn}({empty_arg})?)),",
+                    m.local
+                );
+            }
+            if fam.base_abstract {
+                let _ = writeln!(
+                    out,
+                    "            Some(other) => Err(PolyXmlError::SchemaError(format!(\"Unknown xsi:type '{{other}}' for {}\"))),",
+                    fam.base.local
+                );
+                let _ = writeln!(
+                    out,
+                    "            None => Err(PolyXmlError::SchemaError(\"Abstract type '{}' requires xsi:type\".into())),",
+                    fam.base.local
+                );
+            } else {
+                let base_var = type_ident(&fam.base);
+                let _ = writeln!(
+                    out,
+                    "            Some(_) | None => Ok(Self::{base_var}({base_var}::{decode_fn}({empty_arg})?)),"
+                );
+            }
+            out.push_str("        }\n");
+            out.push_str("    }\n\n");
+        }
+
+        out.push_str("    pub fn to_xml(&self) -> Result<Vec<u8>> {\n");
+        out.push_str("        let mut buf = Vec::new();\n");
+        out.push_str("        let mut writer = Writer::new(std::io::Cursor::new(&mut buf));\n");
+        out.push_str("        self.encode_xml(&mut writer, None)?;\n");
+        out.push_str("        Ok(buf)\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn to_xml_string(&self) -> Result<String> {\n");
+        out.push_str("        let bytes = self.to_xml()?;\n");
+        out.push_str("        String::from_utf8(bytes).map_err(|e| PolyXmlError::Utf8Error(e.utf8_error()))\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
+        if fam.members.is_empty() {
+            let _ = writeln!(
+                out,
+                "        Err(PolyXmlError::SchemaError(\"Abstract type '{}' has no concrete derivations\".into()))",
+                fam.base.local
+            );
+        } else {
+            out.push_str("        match self {\n");
+            for m in &fam.members {
+                let var_name = type_ident(m);
+                if m == &fam.base {
+                    let _ = writeln!(
+                        out,
+                        "            Self::{var_name}(val) => val.encode_xml(writer, tag_name),"
+                    );
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "            Self::{var_name}(val) => val.encode_xml_with_xsi(writer, Some(tag_name.unwrap_or({:?})), Some({:?})),",
+                        fam.base.local, m.local
+                    );
+                }
+            }
+            out.push_str("        }\n");
+        }
+        out.push_str("    }\n");
+        out.push_str("}\n");
     }
 
     /// Only expose the producer API where ordinary item codecs preserve the schema.

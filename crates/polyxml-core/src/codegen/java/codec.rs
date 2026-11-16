@@ -155,15 +155,42 @@ impl JavaCodegen {
         while (reader.getEventType() != XMLStreamConstants.START_ELEMENT && reader.hasNext()) reader.next();
         if (reader.getEventType() != XMLStreamConstants.START_ELEMENT) throw new XMLStreamException("Expected start element");
         if (nil(reader)) {{ skip(reader); return null; }}
-        if (reader.getAttributeValue("http://www.w3.org/2001/XMLSchema-instance", "type") != null)
-            throw new XMLStreamException("Runtime xsi:type dispatch is not supported; select a concrete codec", reader.getLocation());
+{xsi_check}
         try {{
 "#,
             local = root.local,
-            ns = root.namespace.as_deref().unwrap_or("")
+            ns = root.namespace.as_deref().unwrap_or(""),
+            xsi_check = if self.options.xsi_type {
+                "        String xsiType = reader.getAttributeValue(\"http://www.w3.org/2001/XMLSchema-instance\", \"type\");\n        String localType = xsiType == null ? null : (xsiType.indexOf(':') >= 0 ? xsiType.substring(xsiType.indexOf(':') + 1) : xsiType);"
+            } else {
+                "        if (reader.getAttributeValue(\"http://www.w3.org/2001/XMLSchema-instance\", \"type\") != null)\n            throw new XMLStreamException(\"Runtime xsi:type dispatch is not supported; select a concrete codec\", reader.getLocation());"
+            }
         );
         match def {
-            TypeDef::Struct(s) => self.emit_read_struct(&mut out, s, ir),
+            TypeDef::Struct(s) => {
+                if self.options.xsi_type {
+                    if let Some(fam) = super::java_poly_family(&s.qname) {
+                        for m in &fam.members {
+                            if m == &s.qname {
+                                continue;
+                            }
+                            let m_ident = type_ident(m);
+                            let _ = writeln!(
+                                out,
+                                "            if ({:?}.equals(localType)) return {m_ident}Codec.readXml(reader);",
+                                m.local
+                            );
+                        }
+                        if s.is_abstract {
+                            let _ = writeln!(
+                                out,
+                                "            if (localType != null) throw new XMLStreamException(\"Unknown xsi:type: \" + xsiType, reader.getLocation());"
+                            );
+                        }
+                    }
+                }
+                self.emit_read_struct(&mut out, s, ir);
+            }
             TypeDef::Simple(s) => {
                 let expr = self.parse_scalar(
                     if s.facets.patterns.is_empty() {
@@ -202,19 +229,84 @@ impl JavaCodegen {
             }
         }
         out.push_str("        } catch (IllegalArgumentException | java.time.DateTimeException ex) { throw new XMLStreamException(\"Invalid XML value\", reader.getLocation(), ex); }\n    }\n");
-        let concrete_check = if !self.options.use_records && matches!(def, TypeDef::Struct(_)) {
+        let concrete_check = if !self.options.use_records
+            && !self.options.xsi_type
+            && matches!(def, TypeDef::Struct(_))
+        {
             format!("        if (value != null && value.getClass() != {name}.class) throw new XMLStreamException(\"Use the concrete type's codec to preserve derived fields\");\n")
         } else {
             String::new()
         };
         let is_union = matches!(def, TypeDef::Union(_));
+        let xsi_struct = if self.options.xsi_type {
+            match def {
+                TypeDef::Struct(s) => Some(s),
+                _ => None,
+            }
+        } else {
+            None
+        };
         if is_union {
             let _ = writeln!(out, "    public static void writeXml({name} value, XMLStreamWriter writer, String local, String ns) throws XMLStreamException {{\n        boolean hasLocal = local != null && !local.isEmpty();\n        if (hasLocal) start(writer, local, ns);\n        if (value == null) {{\n            if (hasLocal) {{\n                writer.writeNamespace(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\");\n                writer.writeAttribute(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\", \"nil\", \"true\");\n                writer.writeEndElement();\n            }}\n            return;\n        }}");
+        } else if let Some(s) = xsi_struct {
+            let _ = writeln!(
+                out,
+                "    public static void writeXml({name} value, XMLStreamWriter writer, String local, String ns) throws XMLStreamException {{\n        writeXmlWithXsiType(value, writer, local, ns, null);\n    }}\n    public static void writeXmlWithXsiType({name} value, XMLStreamWriter writer, String local, String ns, String xsiType) throws XMLStreamException {{"
+            );
+            if let Some(fam) = super::java_poly_family(&s.qname) {
+                let mut derived: Vec<(&QName, usize)> = fam
+                    .members
+                    .iter()
+                    .filter(|m| *m != &s.qname)
+                    .filter_map(|m| {
+                        let depth =
+                            std::iter::successors(Some(m), |curr| match ir.find_type(curr) {
+                                Some(TypeDef::Struct(st)) => st.base_type.as_ref(),
+                                _ => None,
+                            })
+                            .take(32)
+                            .count();
+                        if !self.options.use_records || matches!(s.base_type, _) && s.is_abstract {
+                            Some((m, depth))
+                        } else {
+                            // In record mode, a concrete base record cannot have `instanceof` subtypes.
+                            None
+                        }
+                    })
+                    .collect();
+                derived.sort_by_key(|a| std::cmp::Reverse(a.1));
+                if !derived.is_empty() {
+                    out.push_str("        if (value != null) {\n");
+                    for (m, _) in derived {
+                        let m_ident = type_ident(m);
+                        let _ = writeln!(
+                            out,
+                            "            if (value instanceof {m_ident} derived) {{ {m_ident}Codec.writeXmlWithXsiType(derived, writer, local, ns, {:?}); return; }}",
+                            m.local
+                        );
+                    }
+                    out.push_str("        }\n");
+                }
+            }
+            let _ = writeln!(
+                out,
+                "        start(writer, local, ns);\n        if (value == null) {{\n            writeNil(writer);\n            writer.writeEndElement(); return;\n        }}\n        if (xsiType != null) {{\n            writer.writeNamespace(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\");\n            writer.writeAttribute(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\", \"type\", xsiType);\n        }}"
+            );
         } else {
             let _=writeln!(out,"    public static void writeXml({name} value, XMLStreamWriter writer, String local, String ns) throws XMLStreamException {{\n{concrete_check}        start(writer, local, ns);\n        if (value == null) {{\n            writer.writeNamespace(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\");\n            writer.writeAttribute(\"xsi\", \"http://www.w3.org/2001/XMLSchema-instance\", \"nil\", \"true\");\n            writer.writeEndElement(); return;\n        }}");
         }
         match def {
-            TypeDef::Struct(s) => self.emit_write_struct(&mut out, s, ir),
+            TypeDef::Struct(s) => {
+                if self.options.xsi_type && s.is_abstract {
+                    let _ = writeln!(
+                        out,
+                        "        throw new XMLStreamException(\"Cannot serialize abstract XML type without concrete subtype: \" + {:?});",
+                        name
+                    );
+                } else {
+                    self.emit_write_struct(&mut out, s, ir);
+                }
+            }
             TypeDef::Enum(_) => out.push_str("        writer.writeCharacters(value.getValue());\n"),
             TypeDef::Simple(s) => {
                 let access = if self.options.use_records {
@@ -268,6 +360,8 @@ impl JavaCodegen {
         }
         if is_union {
             out.push_str("        if (hasLocal) writer.writeEndElement();\n    }\n}\n");
+        } else if self.options.xsi_type && matches!(def, TypeDef::Struct(s) if s.is_abstract) {
+            out.push_str("    }\n}\n");
         } else {
             out.push_str("        writer.writeEndElement();\n    }\n}\n");
         }
@@ -276,7 +370,7 @@ impl JavaCodegen {
 
     fn emit_read_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
         let name = type_ident(&s.qname);
-        if s.is_abstract && !self.options.use_records {
+        if s.is_abstract && (!self.options.use_records || self.options.xsi_type) {
             out.push_str("            throw new XMLStreamException(\"Cannot instantiate abstract XML type without a concrete codec\");\n");
             return;
         }
