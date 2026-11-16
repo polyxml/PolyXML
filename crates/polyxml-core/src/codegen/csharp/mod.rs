@@ -2098,7 +2098,10 @@ impl CSharpCodegen {
         for pattern in &facets.patterns {
             let escaped = format!(r"\A(?:{pattern})\z")
                 .replace('\\', "\\\\")
-                .replace('"', "\\\"");
+                .replace('"', "\\\"")
+                .replace('\r', "\\r")
+                .replace('\n', "\\n")
+                .replace('\t', "\\t");
             writeln!(
                 out,
                 "{}if (!Regex.IsMatch({}.ToString() ?? \"\", \"{}\")) yield return new ValidationResult(\"{} does not match pattern {}\", [nameof({})]);",
@@ -2350,5 +2353,28 @@ impl CSharpCodegen {
             writeln!(out, "{}/// {}", indent, line.trim()).unwrap();
         }
         writeln!(out, "{}/// </summary>", indent).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CSharpCodegen, CSharpOptions};
+    use crate::schema_parser::XsdParser;
+
+    #[test]
+    fn pattern_facet_escapes_control_characters_in_csharp_strings() {
+        let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+          <xs:simpleType name="QueryStringType">
+            <xs:restriction base="xs:string">
+              <xs:pattern value="(.|&#xA;|&#xD;|&#x9;){0,4096}"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:schema>"#;
+        let ir = XsdParser::new().parse_str(xsd).unwrap();
+        let code = CSharpCodegen::new(CSharpOptions::default()).generate_module(&ir);
+        assert!(
+            code.contains(r#"\\A(?:(.|\n|\r|\t){0,4096})\\z"#),
+            "expected escaped \\n, \\r, \\t in C# pattern literal, got:\n{code}"
+        );
     }
 }
