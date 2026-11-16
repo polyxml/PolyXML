@@ -53,7 +53,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 
 1. **🛠️ Universal XSD-to-Code Generator (`polyxml`)**: Ingests W3C XSD 1.0 and 1.1 schemas, resolves cyclic types with Tarjan's SCC algorithm, and compiles production-ready, strongly-typed data contracts across **7 modern ecosystems** simultaneously (**Python**, **Rust**, **C++**, **Java**, **TypeScript**, **Go**, and **C#**).
 2. **⚡ Ultra-Fast Streaming Runtime**: The Rust core deserializes and serializes directly with `quick-xml` and `lexical-core`, without an intermediate DOM. See the [benchmark methods and per-language coverage](docs/benchmarks/index.md) for measured comparisons.
-3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests).
+3. **🏛️ Official W3C XSTS & Industry Corpus Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests), plus **22 real-world enterprise and government XSD suites** in [polyxml-schema-corpus](https://github.com/polyxml/polyxml-schema-corpus).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 5. **🛡️ Controlled XML Entity Handling**: The native streaming runtime resolves standard and numeric character references in memory and does not fetch external entities while parsing XML. Schema compilation separately reads local XSD includes and imports.
 6. **🧩 Scalable Enterprise Architecture**: Scales effortlessly to massive schemas (such as USAF UCI v2.5 with 5,558 types or HL7 FHIR) using Tarjan SCC cycle condensation, topological DAG chunking, and root-element graph selection—preventing downstream compiler OOMs, eliminating Python circular import deadlocks, and keeping toolchains responsive.
@@ -146,6 +146,22 @@ Every published metric is backed by committed raw execution logs, deterministic 
 
 ### ⚡ Multi-Language Streaming Core
 - Deserializing 1,000-sensor XML batches across native targets: **0.355 ms** in Rust, **0.511 ms** in Java (StAX direct codec), **0.556 ms** in C# (.NET 8), and **1.079 ms** in native C++20 ([7-target language results](docs/benchmarks/language-results-2026-09.md)).
+
+---
+
+## 🏛️ Industry Schema Corpus & 7-Language CI Verification
+
+Most XSD tools break when pointed at real multi-thousand-type enterprise schemas. Every release of PolyXML is continuously tested against **[polyxml-schema-corpus](https://github.com/polyxml/polyxml-schema-corpus)** — **22 public enterprise, defense, healthcare, aviation, finance, and transit XSD suites** validated and module-resolved on every push:
+
+| Domain | Verified Standards in [polyxml-schema-corpus](https://github.com/polyxml/polyxml-schema-corpus) |
+| :--- | :--- |
+| **Defense & Aerospace** | US DoD / NATO **UCI v2.5**, Open-Arsenal **UCI v2.6** (5,571 types), **A-GRA v6.0a** (5,932 types) |
+| **Finance & Regulatory** | **ISO 20022** (`camt.054`, `pacs.008`, `pain.001`), **ISDA FpML 5.12**, **XBRL 2.1** |
+| **Healthcare** | **HL7 CDA R2.1**, **HL7 FHIR R4** |
+| **Transit, Aviation & GIS** | **CEN NeTEx**, **CEN SIRI**, **railML 2.4**, **ICAO/FAA FIXM 4.0**, **OGC GML 3.2.1**, **OGC KML 2.2** |
+| **Supply Chain, Energy & Security** | **OASIS UBL 2.1**, **ebMS 3.0 / AS4**, **ISO 15118 (EV V2G)**, **OASIS SAML 2.0**, **OMG BPMN 2.0**, **W3C XMLSchema** |
+
+Seven heavyweight suites (`defense_uci`, `defense_uci_2_6`, `defense_agra`, `transit_netex`, `ubl_invoice`, `hl7_cda`, and `finance_fpml`) are additionally compiled end-to-end in [corpus CI](https://github.com/polyxml/polyxml-schema-corpus/actions) across **all 7 target toolchains** (`rustc`, `python3`, `go`, `g++ -std=c++20`, `javac`, `tsc`, and `dotnet build`) under strict cgroup memory caps.
 
 ---
 
