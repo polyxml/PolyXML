@@ -176,11 +176,12 @@ skipped as complete subtrees. Stream-based readers disable DTDs and external ent
 callers supplying a StAX reader configure their own parser. The codecs follow the
 normalized IR: choice wrappers retain their generated wrapper representation, and
 this is not a general XSD validator or a replacement for missing schema-parser features.
-Wildcard fields and `xs:anyType` are rejected by the CLI in direct mode. Runtime
-`xsi:type` dispatch is rejected; use the concrete type's codec and XML without
-runtime type overrides. Passing a derived POJO to a base codec is also rejected
-instead of silently dropping derived fields. Rust API callers
-should call `validate_direct_codecs(&ir)` before generation. Models containing cycles
+Wildcard fields and `xs:anyType` are rejected by the CLI in direct mode. By default,
+runtime `xsi:type` dispatch is rejected (use `--feature direct-codec,xsi-type` to
+emit static polymorphic `xsi:type` dispatch across abstract base interfaces in
+`record` mode or base classes in `pojo` mode). Passing a derived POJO to a base
+codec without `xsi-type` is also rejected instead of silently dropping derived
+fields. Rust API callers should call `validate_direct_codecs(&ir)` before generation. Models containing cycles
 are representable, but serializing an actual cyclic object graph is not supported.
 
 ```toml

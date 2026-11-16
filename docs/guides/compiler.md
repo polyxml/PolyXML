@@ -115,8 +115,8 @@ Root selection parses the full schema, then emits the requested element(s),
 their referenced types, substitution group members, and possible derived
 types. Multiple root elements can be specified by repeating `--root-element`
 on the CLI. It reduces generated output and downstream compile work; it does not
-reduce schema parsing work or add `xsi:type` support to codecs that currently
-reject it. For a manifest build, set `root_elements = ["Entity", "PositionReport"]`
+reduce schema parsing work or add `xsi:type` support unless `--feature xsi-type`
+is also enabled (for Rust and Java). For a manifest build, set `root_elements = ["Entity", "PositionReport"]`
 under `[workspace]` for ordinary builds or under `[modules.defense_uci]` for a
 module build. A missing or ambiguous root is an error even with `--dry-run`.
 
@@ -132,11 +132,11 @@ including with `--dry-run`.
 | Target | Backends (first is default) | Styles | Features |
 | --- | --- | --- | --- |
 | Python | `dataclass`, `pydantic`, `aot` | `dataclass` (dataclass backend only) | `slots`, `kw-only` (dataclass backend only) |
-| Rust | `standard` | — | `zero-copy`, `phf`, `split-units`, `split-crates`; `rkyv` is accepted but [currently incompatible with rkyv 0.8](../languages/rust.md) |
-| TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | — |
-| Java | `standard`, `jackson`, `jackson3` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec`, `validation` |
+| Rust | `standard` | — | `zero-copy`, `phf`, `xsi-type`, `split-units`, `split-crates`; `rkyv` is accepted but [currently incompatible with rkyv 0.8](../languages/rust.md) |
+| TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | `direct-codec` |
+| Java | `standard`, `jackson`, `jackson3` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec`, `xsi-type`, `validation` |
 | C# | `standard`, `source-gen` | `record-class` (default, alias `record`), `record-struct`, `class` (mutable, alias `pojo`) | — |
-| C++ | `standard`, `glaze` | — | `split-units`, `split-crates` |
+| C++ | `standard`, `glaze` | — | `direct-codec`, `split-units`, `split-crates` |
 | Go | `standard`, `easyjson`, `sonic` ([Sonic tag limitation](../languages/go.md)) | — | `split-crates` |
 
 Java `jackson3` targets Spring Boot 4; `jackson` and its existing `spring` /

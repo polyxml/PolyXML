@@ -878,11 +878,9 @@ pub(crate) fn compute_poly_families(
         if ir.is_external_type(qname) {
             continue;
         }
-        let derived_opt = derived_of.remove(qname);
-        if !b.is_abstract && derived_opt.is_none() {
+        let Some(mut derived) = derived_of.remove(qname) else {
             continue;
-        }
-        let mut derived = derived_opt.unwrap_or_default();
+        };
         derived.sort();
         derived.dedup();
         let mut members = Vec::new();

@@ -429,6 +429,11 @@ example's type annotation. JSON helpers such as `from_json_str` and
 `to_json_vec` are conveniences over the same Serde operations. Disabling XML
 codecs with `--codecs=false` retains the Serde derives.
 
+For XSD type hierarchies using `xsi:type`, pass `--feature xsi-type` to emit a
+`{Base}Any` enum for each extended complex type that dispatches `xsi:type`
+selectors statically during XML parsing and re-emits `xsi:type` on serialization
+(without altering default output when the flag is omitted).
+
 ## Incremental item production
 
 `model.encode_xml(&mut Writer<W>, tag_name)` writes an existing model to a

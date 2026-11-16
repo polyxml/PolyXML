@@ -1620,10 +1620,25 @@ fn xsi_type_static_dispatch_compiles_and_round_trips_in_rust() {
                 </xs:extension>
             </xs:complexContent>
         </xs:complexType>
+        <xs:complexType name="ElectricCar">
+            <xs:complexContent>
+                <xs:extension base="t:Car">
+                    <xs:sequence>
+                        <xs:element name="range" type="xs:int"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+        <xs:complexType name="UnextendedAbstract" abstract="true">
+            <xs:sequence>
+                <xs:element name="label" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
         <xs:complexType name="Root">
             <xs:sequence>
                 <xs:element name="vehicle" type="t:Vehicle"/>
                 <xs:element name="spare" type="t:Vehicle" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="unusedAbstract" type="t:UnextendedAbstract" minOccurs="0"/>
             </xs:sequence>
         </xs:complexType>
         <xs:element name="Root" type="t:Root"/>
@@ -1654,13 +1669,14 @@ fn xsi_type_static_dispatch_compiles_and_round_trips_in_rust() {
         })
         .generate_module(&ir);
         assert!(code.contains("pub enum VehicleAny"));
+        assert!(!code.contains("pub enum UnextendedAbstractAny"));
         std::fs::write(dir.path().join("src/models.rs"), code).unwrap();
         std::fs::write(
             dir.path().join("src/main.rs"),
             r##"mod models;
 use models::*;
 fn main() {
-    let xml = r#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh"><vehicle xsi:type="t:Car"><id>V1</id><doors>4</doors></vehicle><spare xsi:type="t:Truck"><id>S1</id><payload>ore</payload></spare></Root>"#;
+    let xml = r#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh"><vehicle xsi:type="t:Car"><id>V1</id><doors>4</doors></vehicle><spare xsi:type="t:Truck"><id>S1</id><payload>ore</payload></spare><spare xsi:type="t:ElectricCar"><id>E1</id><doors>2</doors><range>350</range></spare></Root>"#;
     let root = Root::from_xml(xml).expect("parse Root with xsi:type");
     match &root.vehicle {
         VehicleAny::Car(car) => {
@@ -1669,7 +1685,7 @@ fn main() {
         }
         other => panic!("expected Car, got {other:?}"),
     }
-    assert_eq!(root.spare.len(), 1);
+    assert_eq!(root.spare.len(), 2);
     match &root.spare[0] {
         VehicleAny::Truck(truck) => {
             assert_eq!(&*truck.id, "S1");
@@ -1677,9 +1693,18 @@ fn main() {
         }
         other => panic!("expected Truck, got {other:?}"),
     }
+    match &root.spare[1] {
+        VehicleAny::ElectricCar(ev) => {
+            assert_eq!(&*ev.id, "E1");
+            assert_eq!(ev.doors, 2);
+            assert_eq!(ev.range, 350);
+        }
+        other => panic!("expected ElectricCar, got {other:?}"),
+    }
     let out = root.to_xml_string().expect("serialize Root with xsi:type");
     assert!(out.contains("xsi:type=\"Car\""), "got: {out}");
     assert!(out.contains("xsi:type=\"Truck\""), "got: {out}");
+    assert!(out.contains("xsi:type=\"ElectricCar\""), "got: {out}");
     let reparsed = Root::from_xml(&out).expect("re-parse");
     assert_eq!(reparsed, root);
 

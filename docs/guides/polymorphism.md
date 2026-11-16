@@ -2,9 +2,10 @@
 
 XSD type hierarchies built from `<xs:complexContent><xs:extension>` (and
 `xsi:type` wire selectors) are dispatched by PolyXML's **dynamic runtime** —
-the shared Rust engine behind the native API, `polyxml-python`, and (as it
-gains nested schemas) `polyxml-js`. This page documents the strategy, its
-round-trip behavior, and the known limitations of the static codegen paths.
+the shared Rust engine behind the native API, `polyxml-python`, `polyxml-js`, and
+`xml_to_json` / `json_to_xml` — as well as opt-in **static codegen dispatch**
+(`--feature xsi-type`) for Rust and Java. This page documents the dispatch strategy,
+round-trip behavior, and current limitations.
 
 ---
 
@@ -117,30 +118,21 @@ let out = polyxml::serialize_with_options("Root", &value, &schema, None, Some(tr
 
 ---
 
+## 🛠️ Static Codegen, JSON Transcoding & Node.js
+
+- **Rust & Java static dispatch (`--feature xsi-type`)**: Pass `--feature xsi-type` when generating Rust models or Java direct StAX codecs (`--feature direct-codec,xsi-type`). Rust emits `{Base}Any` enums dispatching on `xsi:type`; Java emits abstract base interfaces (in `record` mode) or class hierarchies (in `pojo` mode) implementing `xsi:type` dispatch across `readXml` / `writeXmlWithXsiType`. Non-polymorphic types and default output without the flag remain byte-identical.
+- **XML ↔ JSON round-trips**: Dispatched `PolyValue::Record` variants emit `"@xsi:type"` in `xml_to_json`, and `json_to_xml` resolves `"@xsi:type"` / `"$type"` back into concrete `PolyValue::Record` instances so `xsi:type` survives full `XML → JSON → XML` round-trips. Non-polymorphic JSON output is unchanged.
+- **Node.js & TypeScript (`@polyxml/node`)**: `FieldDefinition` supports `nestedSchema`, `isList`, and `required`, and `ModelSchema` supports `xmlName`, `isAbstract`, and `variants` for full polymorphic dispatch in JavaScript/TypeScript.
+
+---
+
 ## ⚠️ Known limitations & escape hatches
 
-1. **Generated static codecs do not dispatch.** The compiled serde/quick-xml
-   codecs (Rust, Java, …) bind each element to one declared type; the Java
-   codec rejects `xsi:type` outright. *Escape hatch:* deserialize the
-   concrete type directly, or route polymorphic payloads through the
-   dynamic runtime (`polyxml::deserialize`, `polyxml.deserialize`).
-2. **`polyxml-js` is scalar-flat today.** Its schema binding exposes only
-   scalar fields, so complex-typed (and therefore polymorphic) fields are
-   unreachable from JS yet — the dispatch itself lives in the shared core,
-   so no new core dispatch algorithm is needed when the JS binding gains
-   nested schemas.
-3. **JSON transcoding drops the selector.** `xml_to_json` keeps every
-   concrete field (it iterates the record's own schema), but JSON carries
-   no `xsi:type` marker, so JSON → XML cannot recover the wire selector.
-4. **Discovery timing (Python).** Cached schemas refresh their variant
-   registries when used, including nested fields, so subclasses imported
-   after the first deserialize can be discovered on a later call.
-5. **Unknown derivations on abstract bases fail loudly.** An `xsi:type`
-   naming an unregistered type on an abstract base is an error. Import the
-   module defining the subclass or deserialize with the concrete type.
-   Non-abstract declarations without a matching registered variant parse as
-   their declared type.
+1. **Opt-in static dispatch scope.** `--feature xsi-type` currently covers Rust and Java (`--feature direct-codec`); C++, C#, Go, and TypeScript static codecs do not emit `xsi:type` dispatch yet. Without `--feature xsi-type`, Java direct codecs reject `xsi:type` outright; use concrete codecs directly or route polymorphic payloads through the dynamic runtime (`polyxml::deserialize`, `polyxml.deserialize`, or `@polyxml/node`).
+2. **Discovery timing (Python).** Cached schemas refresh their variant registries when used, including nested fields, so subclasses imported after the first deserialize can be discovered on a later call.
+3. **Unknown or missing derivations on abstract bases fail loudly.** An `xsi:type` naming an unregistered type (or missing `xsi:type`) on an abstract base is an error in the dynamic runtime, `json_to_xml`, and generated Rust/Java `--feature xsi-type` codecs. Non-abstract declarations without a matching registered variant parse as their declared type.
 
 Regression coverage lives in
-`crates/polyxml-core/tests/test_xsi_type.rs` (Rust, 7 cases) and
-`crates/polyxml-python/tests/test_xsi_type.py` (Python, 11 cases).
+`crates/polyxml-core/tests/test_xsi_type.rs`, `crates/polyxml-core/tests/test_transcoder.rs`,
+`crates/polyxml-core/tests/test_rust_codegen.rs`, `crates/polyxml-core/tests/test_java_codegen.rs`,
+`crates/polyxml-js/test/index.test.js`, and `crates/polyxml-python/tests/test_xsi_type.py`.

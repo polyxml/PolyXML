@@ -33,6 +33,24 @@ pub(super) fn is_java_abstract_poly_base(q: &QName) -> bool {
     JAVA_POLY_FAMILIES.with(|m| m.borrow().get(q).is_some_and(|f| f.base_abstract))
 }
 
+fn nearest_java_abstract_poly_base(s: &StructDef, ir: &SchemaIR) -> Option<QName> {
+    let mut seen = HashSet::new();
+    let mut current = s.base_type.as_ref();
+    while let Some(base_qname) = current {
+        if base_qname == &s.qname || !seen.insert(base_qname.clone()) {
+            break;
+        }
+        if is_java_abstract_poly_base(base_qname) {
+            return Some(base_qname.clone());
+        }
+        current = match ir.find_type(base_qname) {
+            Some(TypeDef::Struct(parent)) => parent.base_type.as_ref(),
+            _ => break,
+        };
+    }
+    None
+}
+
 /// Target backend for Java code emission.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum JavaBackend {
@@ -523,11 +541,8 @@ impl JavaCodegen {
                 self.emit_docstring(out, doc, indent);
             }
             let static_kw = if indent.is_empty() { "" } else { "static " };
-            let extends = s
-                .base_type
-                .as_ref()
-                .filter(|q| is_java_abstract_poly_base(q))
-                .map(|q| format!(" extends {}", type_ident(q)))
+            let extends = nearest_java_abstract_poly_base(s, ir)
+                .map(|q| format!(" extends {}", type_ident(&q)))
                 .unwrap_or_default();
             let _ = writeln!(
                 out,
@@ -638,10 +653,8 @@ impl JavaCodegen {
             "public static "
         };
         let impl_clause = if self.options.xsi_type {
-            s.base_type
-                .as_ref()
-                .filter(|q| is_java_abstract_poly_base(q))
-                .map(|q| format!(" implements {}", type_ident(q)))
+            nearest_java_abstract_poly_base(s, ir)
+                .map(|q| format!(" implements {}", type_ident(&q)))
                 .unwrap_or_default()
         } else {
             String::new()

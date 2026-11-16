@@ -1185,6 +1185,15 @@ fn xsi_type_static_dispatch_compiles_and_round_trips_in_java() {
                 </xs:extension>
             </xs:complexContent>
         </xs:complexType>
+        <xs:complexType name="ElectricCar">
+            <xs:complexContent>
+                <xs:extension base="t:Car">
+                    <xs:sequence>
+                        <xs:element name="range" type="xs:int"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
         <xs:complexType name="Root">
             <xs:sequence>
                 <xs:element name="vehicle" type="t:Vehicle"/>
@@ -1209,6 +1218,7 @@ fn xsi_type_static_dispatch_compiles_and_round_trips_in_java() {
         let id_call = if records { "id()" } else { "getId()" };
         let doors_call = if records { "doors()" } else { "getDoors()" };
         let payload_call = if records { "payload()" } else { "getPayload()" };
+        let range_call = if records { "range()" } else { "getRange()" };
         let spare_call = if records { "spare()" } else { "getSpare()" };
         let veh_call = if records { "vehicle()" } else { "getVehicle()" };
         fs::write(
@@ -1220,17 +1230,20 @@ public class Main {{
         String xml = "<Root xmlns=\"urn:veh\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:t=\"urn:veh\">"
             + "<vehicle xsi:type=\"t:Car\"><id>V1</id><doors>4</doors></vehicle>"
             + "<spare xsi:type=\"t:Truck\"><id>S1</id><payload>ore</payload></spare>"
+            + "<spare xsi:type=\"t:ElectricCar\"><id>E1</id><doors>2</doors><range>350</range></spare>"
             + "</Root>";
         var root = Models.RootCodec.readXml(new ByteArrayInputStream(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         if (!(root.{veh_call} instanceof Models.Car car)) throw new AssertionError("expected Car: " + root.{veh_call});
         if (!"V1".equals(car.{id_call}) || car.{doors_call} != 4) throw new AssertionError(car.toString());
         if (!(root.{spare_call}.get(0) instanceof Models.Truck truck)) throw new AssertionError("expected Truck");
         if (!"ore".equals(truck.{payload_call})) throw new AssertionError(truck.toString());
+        if (!(root.{spare_call}.get(1) instanceof Models.ElectricCar ev)) throw new AssertionError("expected ElectricCar");
+        if (!"E1".equals(ev.{id_call}) || ev.{doors_call} != 2 || ev.{range_call} != 350) throw new AssertionError(ev.toString());
 
         var out = new ByteArrayOutputStream();
         Models.RootCodec.writeXml(root, out);
         String outXml = out.toString(java.nio.charset.StandardCharsets.UTF_8);
-        if (!outXml.contains("xsi:type=\"Car\"") || !outXml.contains("xsi:type=\"Truck\""))
+        if (!outXml.contains("xsi:type=\"Car\"") || !outXml.contains("xsi:type=\"Truck\"") || !outXml.contains("xsi:type=\"ElectricCar\""))
             throw new AssertionError("missing xsi:type in output: " + outXml);
         var copy = Models.RootCodec.readXml(new ByteArrayInputStream(out.toByteArray()));
         if (!root.equals(copy)) throw new AssertionError(outXml + " -> " + copy);

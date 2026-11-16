@@ -50,6 +50,52 @@ console.log(book);
 // { id: 42, title: 'Rust in Action', price: 39.99 }
 ```
 
+### Nested Schemas, Lists & `xsi:type` Polymorphism
+
+`FieldDefinition` supports `nestedSchema`, `isList`, and `required`, while
+`ModelSchema` supports `xmlName`, `isAbstract`, and `variants` for full
+complex-type hierarchies and `xsi:type` round-trips:
+
+```javascript
+const shipmentSchema = {
+  name: 'Shipment',
+  fields: [
+    {
+      name: 'destination',
+      xmlName: 'destination',
+      kind: 'element',
+      required: true,
+      nestedSchema: {
+        name: 'Address',
+        fields: [
+          { name: 'city', xmlName: 'city', kind: 'element', scalarType: 'string', required: true },
+        ],
+      },
+    },
+    {
+      name: 'vehicles',
+      xmlName: 'vehicle',
+      kind: 'element',
+      isList: true,
+      nestedSchema: {
+        name: 'Vehicle',
+        isAbstract: true,
+        variants: [
+          {
+            name: 'Car',
+            fields: [
+              { name: 'id', xmlName: 'id', kind: 'element', scalarType: 'string' },
+              { name: 'doors', xmlName: 'doors', kind: 'element', scalarType: 'int' },
+            ],
+          },
+        ],
+        fields: [{ name: 'id', xmlName: 'id', kind: 'element', scalarType: 'string' }],
+      },
+    },
+  ],
+};
+```
+
 ## License
 
 MIT

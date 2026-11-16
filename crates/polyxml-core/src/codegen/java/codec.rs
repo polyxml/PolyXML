@@ -168,7 +168,7 @@ impl JavaCodegen {
         );
         match def {
             TypeDef::Struct(s) => {
-                if self.options.xsi_type {
+                if self.options.xsi_type && (!self.options.use_records || s.is_abstract) {
                     if let Some(fam) = super::java_poly_family(&s.qname) {
                         for m in &fam.members {
                             if m == &s.qname {
@@ -266,7 +266,7 @@ impl JavaCodegen {
                             })
                             .take(32)
                             .count();
-                        if !self.options.use_records || matches!(s.base_type, _) && s.is_abstract {
+                        if !self.options.use_records || s.is_abstract {
                             Some((m, depth))
                         } else {
                             // In record mode, a concrete base record cannot have `instanceof` subtypes.
