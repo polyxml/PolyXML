@@ -670,7 +670,8 @@ func (v {type_name}) MarshalText() ([]byte,error) {{ tokens:=make([]string,0,len
         if self.options.validate_facets && !simple.facets.patterns.is_empty() {
             writeln!(out, "func (s {}) Validate() error {{", type_name).unwrap();
             for pattern in &simple.facets.patterns {
-                writeln!(out, "    if matched, err := regexp.MatchString({:?}, fmt.Sprint(s)); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", format!("^(?:{pattern})$")).unwrap();
+                let lit = crate::codegen::format_c_style_string_literal(&format!("^(?:{pattern})$"));
+                writeln!(out, "    if matched, err := regexp.MatchString({}, fmt.Sprint(s)); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", lit).unwrap();
             }
             writeln!(out, "    return nil\n}}\n").unwrap();
             if self
@@ -1889,7 +1890,8 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
         indent: &str,
     ) {
         for pattern in &facets.patterns {
-            writeln!(out,"{indent}if matched,err:=regexp.MatchString({:?},{target});err!=nil||!matched{{return fmt.Errorf(\"integer pattern violated\")}}",format!("^(?:{pattern})$")).unwrap();
+            let lit = crate::codegen::format_c_style_string_literal(&format!("^(?:{pattern})$"));
+            writeln!(out,"{indent}if matched,err:=regexp.MatchString({lit},{target});err!=nil||!matched{{return fmt.Errorf(\"integer pattern violated\")}}").unwrap();
         }
         for (i, (bound, op)) in [
             (&facets.min_inclusive, "<"),
@@ -1914,7 +1916,8 @@ func (v {name}) MarshalXML(e *xml.Encoder,start xml.StartElement) error {{
         indent: &str,
     ) {
         for pattern in &facets.patterns {
-            writeln!(out, "{}if matched, err := regexp.MatchString({:?}, fmt.Sprint({})); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", indent, format!("^(?:{pattern})$"), target).unwrap();
+            let lit = crate::codegen::format_c_style_string_literal(&format!("^(?:{pattern})$"));
+            writeln!(out, "{}if matched, err := regexp.MatchString({}, fmt.Sprint({})); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", indent, lit, target).unwrap();
         }
         if let Some(min_len) = facets.min_length {
             writeln!(

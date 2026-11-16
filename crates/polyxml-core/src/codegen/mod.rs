@@ -809,3 +809,26 @@ pub(crate) fn unbounded_integer(
         },
     }
 }
+
+/// Format a double-quoted string literal using escapes valid across Python, Go, Java, and C#
+/// (avoiding Rust's `\u{...}` debug escape syntax).
+pub(crate) fn format_c_style_string_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for ch in s.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c.is_control() && (c as u32) <= 0xFFFF => {
+                use std::fmt::Write as _;
+                let _ = write!(out, "\\u{:04x}", c as u32);
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}

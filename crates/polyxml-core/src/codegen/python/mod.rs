@@ -513,7 +513,7 @@ impl PythonCodegen {
                 .facets
                 .patterns
                 .iter()
-                .map(|pattern| format!("{:?}", pattern))
+                .map(|pattern| crate::codegen::format_c_style_string_literal(pattern))
                 .collect::<Vec<_>>()
                 .join(", ");
             let _ = writeln!(

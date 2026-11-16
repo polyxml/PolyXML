@@ -997,7 +997,10 @@ impl CSharpCodegen {
                         .patterns
                         .iter()
                         .map(|pattern| {
-                            format!("Regex.IsMatch(value, {:?})", format!(r"\A(?:{pattern})\z"))
+                            let lit = crate::codegen::format_c_style_string_literal(&format!(
+                                r"\A(?:{pattern})\z"
+                            ));
+                            format!("Regex.IsMatch(value, {lit})")
                         })
                         .collect::<Vec<_>>()
                         .join(" && ");
@@ -2057,7 +2060,8 @@ impl CSharpCodegen {
         indent: &str,
     ) {
         for pattern in &facets.patterns {
-            writeln!(out,"{indent}if(!System.Text.RegularExpressions.Regex.IsMatch({target},{:?})) yield return new System.ComponentModel.DataAnnotations.ValidationResult(\"Integer pattern violated\");",format!(r"\A(?:{pattern})\z")).unwrap();
+            let lit = crate::codegen::format_c_style_string_literal(&format!(r"\A(?:{pattern})\z"));
+            writeln!(out,"{indent}if(!System.Text.RegularExpressions.Regex.IsMatch({target},{lit})) yield return new System.ComponentModel.DataAnnotations.ValidationResult(\"Integer pattern violated\");").unwrap();
         }
         for (bound, op) in [
             (&facets.min_inclusive, "<"),

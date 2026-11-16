@@ -934,8 +934,9 @@ impl JavaCodegen {
         }
         if is_string && !is_optional {
             for pattern in &facets.patterns {
+                let lit = crate::codegen::format_c_style_string_literal(pattern);
                 annotations.push(format!(
-                    "@jakarta.validation.constraints.Pattern(regexp = {pattern:?})"
+                    "@jakarta.validation.constraints.Pattern(regexp = {lit})"
                 ));
             }
         }
@@ -1076,9 +1077,10 @@ impl JavaCodegen {
                     ));
                 }
                 for pat in &facets.patterns {
+                    let lit = crate::codegen::format_c_style_string_literal(pat);
                     checks.push(format!(
-                        "{}.ifPresent(v -> {{ if (!Pattern.compile({:?}).matcher(v).matches()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?}); }});",
-                        var_name, pat, var_name, pat
+                        "{}.ifPresent(v -> {{ if (!Pattern.compile({}).matcher(v).matches()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {}); }});",
+                        var_name, lit, var_name, lit
                     ));
                 }
             } else {
@@ -1105,9 +1107,10 @@ impl JavaCodegen {
                     ));
                 }
                 for pat in &facets.patterns {
+                    let lit = crate::codegen::format_c_style_string_literal(pat);
                     checks.push(format!(
-                        "if (!Pattern.compile({:?}).matcher({}).matches()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?});",
-                        pat, var_name, var_name, pat
+                        "if (!Pattern.compile({}).matcher({}).matches()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {});",
+                        lit, var_name, var_name, lit
                     ));
                 }
             }
