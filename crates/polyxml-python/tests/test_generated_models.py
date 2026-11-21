@@ -121,7 +121,13 @@ def test_roots_with_the_same_local_name_in_distinct_namespaces(tmp_path):
     ],
 )
 def test_particle_codec_regressions(tmp_path, backend, fixture, root_name, documents):
-    schema = pathlib.Path(__file__).resolve().parents[3] / "research" / "fixtures" / fixture
+    schema = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "tests"
+        / "fixtures"
+        / "conformance"
+        / fixture
+    )
     subprocess.run(
         [
             str(_get_polyxml_bin()),
