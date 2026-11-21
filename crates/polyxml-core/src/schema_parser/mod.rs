@@ -61,6 +61,22 @@ enum CompositorKind {
     Choice,
 }
 
+type ElementOrderKey = (String, Option<String>);
+type AttrKey = (String, Option<String>);
+
+#[derive(Debug, Clone)]
+struct PendingComplexRestriction {
+    owner: QName,
+    base: Option<QName>,
+    prohibited_attrs: Vec<AttrKey>,
+}
+
+enum AttributeParse {
+    Field(Box<FieldDef>),
+    Prohibited(AttrKey),
+    Skip,
+}
+
 #[derive(Debug, Clone)]
 struct CompositorFrame {
     kind: CompositorKind,
@@ -69,6 +85,7 @@ struct CompositorFrame {
     fields_start: usize,
     choice_branches: Vec<UnionBranch>,
     has_sequence_branch: bool,
+    items: Vec<Vec<ElementOrderKey>>,
 }
 
 /// A pure-Rust XSD 1.0/1.1 Schema Parser.
@@ -78,12 +95,16 @@ pub struct XsdParser {
     file_cache: HashMap<PathBuf, SchemaIR>,
     /// Groups registered by each cached file, replayed on cache hits.
     file_groups: HashMap<PathBuf, Vec<(QName, GroupDef)>>,
+    /// Complex restrictions registered by each cached file, replayed on cache hits.
+    file_restrictions: HashMap<PathBuf, Vec<PendingComplexRestriction>>,
     /// Files currently being parsed (include-cycle guard).
     active_files: HashSet<PathBuf>,
     /// Named model groups visible to the current parse.
     groups: HashMap<QName, GroupDef>,
     /// Group references awaiting expansion at frame end.
     pending_group_refs: Vec<PendingGroupRef>,
+    /// Complex-content restrictions / prohibited attributes awaiting resolution.
+    pending_complex_restrictions: Vec<PendingComplexRestriction>,
     /// Include/import recursion depth; post-passes run in every frame, the
     /// root frame (depth 1 while executing) additionally drops dead refs.
     frame_depth: usize,
@@ -100,9 +121,11 @@ impl XsdParser {
         Self {
             file_cache: HashMap::new(),
             file_groups: HashMap::new(),
+            file_restrictions: HashMap::new(),
             active_files: HashSet::new(),
             groups: HashMap::new(),
             pending_group_refs: Vec::new(),
+            pending_complex_restrictions: Vec::new(),
             frame_depth: 0,
         }
     }
@@ -113,12 +136,16 @@ impl XsdParser {
         let canonical = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
 
         if let Some(cached) = self.file_cache.get(&canonical) {
-            // Cache hit: replay this file's group definitions so includers can
-            // resolve `<xs:group ref>` against them, then return the raw IR.
+            // Cache hit: replay this file's group definitions and restriction
+            // metadata so includers resolve cleanly, then return the raw IR.
             if let Some(registered) = self.file_groups.get(&canonical) {
                 for (qname, def) in registered {
                     self.groups.insert(qname.clone(), def.clone());
                 }
+            }
+            if let Some(restrictions) = self.file_restrictions.get(&canonical) {
+                self.pending_complex_restrictions
+                    .extend(restrictions.iter().cloned());
             }
             return Ok(cached.clone());
         }
@@ -129,6 +156,7 @@ impl XsdParser {
 
         self.active_files.insert(canonical.clone());
         let groups_before: HashSet<QName> = self.groups.keys().cloned().collect();
+        let restr_before = self.pending_complex_restrictions.len();
         let content = fs::read_to_string(path);
         let parsed = match content {
             Ok(content) => {
@@ -155,6 +183,16 @@ impl XsdParser {
                 .entry(canonical.clone())
                 .or_default()
                 .extend(file_owned);
+        }
+        if self.pending_complex_restrictions.len() > restr_before {
+            self.file_restrictions
+                .entry(canonical.clone())
+                .or_default()
+                .extend(
+                    self.pending_complex_restrictions[restr_before..]
+                        .iter()
+                        .cloned(),
+                );
         }
 
         self.file_cache.insert(canonical.clone(), ir.clone());
@@ -184,6 +222,8 @@ impl XsdParser {
         inherit_pattern_facets(&mut ir);
         self.expand_group_refs(&mut ir, self.frame_depth == 0);
         if self.frame_depth == 0 {
+            self.resolve_complex_restriction_attributes(&mut ir);
+            resolve_substitution_group_types(&mut ir);
             resolve_global_field_refs(&mut ir);
             validate_type_references(&ir, xml)?;
             resolve_simple_content_types(&mut ir)?;
@@ -275,6 +315,7 @@ impl XsdParser {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
                                         let pend_before = self.pending_group_refs.len();
+                                        let restr_before = self.pending_complex_restrictions.len();
                                         let mut sub_ir = self.parse_file(&inc_path)?;
                                         // Chameleon include (no targetNamespace in the
                                         // included file): attribute its components to
@@ -282,7 +323,7 @@ impl XsdParser {
                                         if sub_ir.target_namespace.is_none() {
                                             if let Some(ns) = target_namespace.as_deref() {
                                                 rekey_to_namespace(&mut sub_ir, ns);
-                                                self.rekey_new_state(pend_before, ns);
+                                                self.rekey_new_state(pend_before, restr_before, ns);
                                             }
                                         }
                                         merge_ir(&mut ir, sub_ir);
@@ -383,6 +424,7 @@ impl XsdParser {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
                                         let pend_before = self.pending_group_refs.len();
+                                        let restr_before = self.pending_complex_restrictions.len();
                                         let mut sub_ir = self.parse_file(&inc_path)?;
                                         // Chameleon include (no targetNamespace in the
                                         // included file): attribute its components to
@@ -390,7 +432,7 @@ impl XsdParser {
                                         if sub_ir.target_namespace.is_none() {
                                             if let Some(ns) = target_namespace.as_deref() {
                                                 rekey_to_namespace(&mut sub_ir, ns);
-                                                self.rekey_new_state(pend_before, ns);
+                                                self.rekey_new_state(pend_before, restr_before, ns);
                                             }
                                         }
                                         merge_ir(&mut ir, sub_ir);
@@ -527,6 +569,9 @@ impl XsdParser {
         }
         let mut fields = Vec::new();
         let mut base_type = None;
+        let mut complex_restriction_base: Option<QName> = None;
+        let mut prohibited_attrs: Vec<AttrKey> = Vec::new();
+        let mut order_edges: Vec<(ElementOrderKey, ElementOrderKey)> = Vec::new();
         let mut documentation = None;
         let mut in_simple_content = false;
         let mut value_field_pushed = false;
@@ -554,15 +599,19 @@ impl XsdParser {
                         "simpleContent" => {
                             in_simple_content = true;
                         }
-                        "restriction" if in_simple_content => {
+                        "restriction" => {
                             if let Some(base) = get_attr_value(e, "base")? {
                                 let resolved = resolve_qname(&base, target_ns, prefixes);
-                                if resolved != qname {
-                                    base_type = Some(resolved);
-                                }
-                                if !value_field_pushed {
-                                    value_field_pushed = true;
-                                    fields.push(value_field(&base, target_ns, prefixes));
+                                if in_simple_content {
+                                    if resolved != qname {
+                                        base_type = Some(resolved);
+                                    }
+                                    if !value_field_pushed {
+                                        value_field_pushed = true;
+                                        fields.push(value_field(&base, target_ns, prefixes));
+                                    }
+                                } else if resolved != qname {
+                                    complex_restriction_base = Some(resolved);
                                 }
                             }
                         }
@@ -610,6 +659,7 @@ impl XsdParser {
                                 fields_start: fields.len(),
                                 choice_branches: Vec::new(),
                                 has_sequence_branch: false,
+                                items: Vec::new(),
                             });
                         }
                         "choice" => {
@@ -629,6 +679,7 @@ impl XsdParser {
                                 fields_start: fields.len(),
                                 choice_branches: Vec::new(),
                                 has_sequence_branch: false,
+                                items: Vec::new(),
                             });
                         }
                         "element" => {
@@ -654,27 +705,15 @@ impl XsdParser {
                                     reader, e, target_ns, prefixes, &name, &mut field, ir,
                                 )?;
                                 depth -= 1;
-                                if in_choice {
-                                    if let Some(frame) = compositor_stack.last_mut() {
-                                        if frame.kind == CompositorKind::Choice {
-                                            frame.choice_branches.push(UnionBranch {
-                                                variant_name: field.name.clone(),
-                                                xml_name: field.xml_name.clone(),
-                                                namespace: field.namespace.clone(),
-                                                type_ref: field.type_ref.clone(),
-                                                documentation: field.documentation.clone(),
-                                            });
-                                        }
-                                    }
-                                }
+                                record_compositor_element(&mut compositor_stack, in_choice, &field);
                                 fields.push(field);
                             }
                         }
-                        "attribute" => {
-                            if let Some(field) = parse_attribute_field(e, target_ns, prefixes)? {
-                                fields.push(field);
-                            }
-                        }
+                        "attribute" => match parse_attribute_spec(e, target_ns, prefixes)? {
+                            AttributeParse::Field(field) => fields.push(*field),
+                            AttributeParse::Prohibited(key) => prohibited_attrs.push(key),
+                            AttributeParse::Skip => {}
+                        },
                         "any" => {
                             let in_unbounded = compositor_stack.iter().any(|c| c.is_unbounded);
                             let in_choice = compositor_stack
@@ -709,18 +748,20 @@ impl XsdParser {
                     let local = strip_prefix(e.name().into_inner());
 
                     match local {
-                        "extension" | "restriction"
-                            if local == "extension" || in_simple_content =>
-                        {
+                        "extension" | "restriction" => {
                             if let Some(base) = get_attr_value(e, "base")? {
                                 let resolved = resolve_qname(&base, target_ns, prefixes);
-                                if resolved != qname {
-                                    base_type = Some(resolved);
-                                }
-                                // simpleContent extension without children.
-                                if in_simple_content && !value_field_pushed {
-                                    value_field_pushed = true;
-                                    fields.push(value_field(&base, target_ns, prefixes));
+                                if local == "extension" || in_simple_content {
+                                    if resolved != qname {
+                                        base_type = Some(resolved);
+                                    }
+                                    // simpleContent extension without children.
+                                    if in_simple_content && !value_field_pushed {
+                                        value_field_pushed = true;
+                                        fields.push(value_field(&base, target_ns, prefixes));
+                                    }
+                                } else if resolved != qname {
+                                    complex_restriction_base = Some(resolved);
                                 }
                             }
                         }
@@ -747,27 +788,15 @@ impl XsdParser {
                                 in_any_choice,
                                 in_unbounded,
                             )? {
-                                if in_choice {
-                                    if let Some(frame) = compositor_stack.last_mut() {
-                                        if frame.kind == CompositorKind::Choice {
-                                            frame.choice_branches.push(UnionBranch {
-                                                variant_name: field.name.clone(),
-                                                xml_name: field.xml_name.clone(),
-                                                namespace: field.namespace.clone(),
-                                                type_ref: field.type_ref.clone(),
-                                                documentation: field.documentation.clone(),
-                                            });
-                                        }
-                                    }
-                                }
+                                record_compositor_element(&mut compositor_stack, in_choice, &field);
                                 fields.push(field);
                             }
                         }
-                        "attribute" => {
-                            if let Some(field) = parse_attribute_field(e, target_ns, prefixes)? {
-                                fields.push(field);
-                            }
-                        }
+                        "attribute" => match parse_attribute_spec(e, target_ns, prefixes)? {
+                            AttributeParse::Field(field) => fields.push(*field),
+                            AttributeParse::Prohibited(key) => prohibited_attrs.push(key),
+                            AttributeParse::Skip => {}
+                        },
                         "any" => {
                             let in_unbounded = compositor_stack.iter().any(|c| c.is_unbounded);
                             let in_choice = compositor_stack
@@ -802,6 +831,19 @@ impl XsdParser {
                     let local = strip_prefix(e.name().into_inner());
                     if local == "sequence" || local == "choice" || local == "all" {
                         if let Some(frame) = compositor_stack.pop() {
+                            if frame.kind == CompositorKind::Sequence {
+                                for pair in frame.items.windows(2) {
+                                    for u in &pair[0] {
+                                        for v in &pair[1] {
+                                            if u != v {
+                                                order_edges.push((u.clone(), v.clone()));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            let frame_elements: Vec<ElementOrderKey> =
+                                frame.items.into_iter().flatten().collect();
                             if frame.kind == CompositorKind::Sequence {
                                 if frame.is_unbounded
                                     && fields[frame.fields_start..]
@@ -929,6 +971,11 @@ impl XsdParser {
                                     is_top_level_choice = true;
                                 }
                             }
+                            if !frame_elements.is_empty() {
+                                if let Some(parent) = compositor_stack.last_mut() {
+                                    parent.items.push(frame_elements);
+                                }
+                            }
                         }
                     }
                     depth -= 1;
@@ -969,6 +1016,7 @@ impl XsdParser {
             // The same expanded element name may occur in exclusive sequence
             // branches. A single optional field binds either occurrence.
             let mut merged: Vec<FieldDef> = Vec::new();
+            let mut merged_duplicate = false;
             for field in fields {
                 if let Some(existing) = merged.iter_mut().find(|f| {
                     f.cardinality.is_optional()
@@ -983,9 +1031,21 @@ impl XsdParser {
                         .cardinality
                         .min_occurs
                         .min(field.cardinality.min_occurs);
+                    merged_duplicate = true;
                 } else {
                     merged.push(field);
                 }
+            }
+            if merged_duplicate && !order_edges.is_empty() {
+                reorder_choice_elements(&mut merged, &order_edges);
+            }
+            if complex_restriction_base.is_some() || !prohibited_attrs.is_empty() {
+                self.pending_complex_restrictions
+                    .push(PendingComplexRestriction {
+                        owner: qname.clone(),
+                        base: complex_restriction_base,
+                        prohibited_attrs,
+                    });
             }
             Ok(Some(TypeDef::Struct(StructDef {
                 qname,
@@ -1706,10 +1766,77 @@ impl XsdParser {
         Some(fields)
     }
 
+    /// Expand recorded group references and resolve complex-content attribute restrictions.
+    fn resolve_complex_restriction_attributes(&mut self, ir: &mut SchemaIR) {
+        let pending = std::mem::take(&mut self.pending_complex_restrictions);
+        if pending.is_empty() {
+            return;
+        }
+
+        let mut restrictions: HashMap<QName, PendingComplexRestriction> = HashMap::new();
+        for entry in pending {
+            let slot = restrictions.entry(entry.owner.clone()).or_insert_with(|| {
+                PendingComplexRestriction {
+                    owner: entry.owner.clone(),
+                    base: entry.base.clone(),
+                    prohibited_attrs: Vec::new(),
+                }
+            });
+            if entry.base.is_some() {
+                slot.base = entry.base;
+            }
+            for attr in entry.prohibited_attrs {
+                if !slot.prohibited_attrs.contains(&attr) {
+                    slot.prohibited_attrs.push(attr);
+                }
+            }
+        }
+
+        let snapshot = ir.types.clone();
+        for (owner, restr) in &restrictions {
+            let inherited = if let Some(ref base) = restr.base {
+                let mut visited = HashSet::new();
+                collect_effective_attributes(base, &snapshot, &restrictions, &mut visited)
+            } else {
+                Vec::new()
+            };
+
+            let Some(TypeDef::Struct(structure)) = ir.types.get_mut(owner) else {
+                continue;
+            };
+
+            structure.fields.retain(|f| {
+                f.kind != FieldKind::Attribute
+                    || !restr
+                        .prohibited_attrs
+                        .iter()
+                        .any(|(name, ns)| f.xml_name == *name && f.namespace == *ns)
+            });
+
+            for base_attr in inherited {
+                let is_prohibited = restr
+                    .prohibited_attrs
+                    .iter()
+                    .any(|(name, ns)| base_attr.xml_name == *name && base_attr.namespace == *ns);
+                if is_prohibited {
+                    continue;
+                }
+                let already_declared = structure.fields.iter().any(|f| {
+                    f.kind == FieldKind::Attribute
+                        && f.xml_name == base_attr.xml_name
+                        && f.namespace == base_attr.namespace
+                });
+                if !already_declared {
+                    structure.fields.push(base_attr);
+                }
+            }
+        }
+    }
+
     /// Re-namespace parser state created during a chameleon include: newly
-    /// registered groups and carried group refs that still carry no namespace
-    /// adopt the includer's namespace.
-    fn rekey_new_state(&mut self, pend_before: usize, ns: &str) {
+    /// registered groups, group refs, and restriction entries without a
+    /// namespace adopt the includer's namespace.
+    fn rekey_new_state(&mut self, pend_before: usize, restr_before: usize, ns: &str) {
         let stale: Vec<QName> = self
             .groups
             .keys()
@@ -1729,6 +1856,20 @@ impl XsdParser {
             }
             if p.group.namespace.is_none() {
                 p.group = QName::new(Some(ns.to_string()), p.group.local.clone());
+            }
+        }
+        for r in self
+            .pending_complex_restrictions
+            .iter_mut()
+            .skip(restr_before)
+        {
+            if r.owner.namespace.is_none() {
+                r.owner = QName::new(Some(ns.to_string()), r.owner.local.clone());
+            }
+            if let Some(base) = &mut r.base {
+                if base.namespace.is_none() {
+                    *base = QName::new(Some(ns.to_string()), base.local.clone());
+                }
             }
         }
     }
@@ -1966,6 +2107,173 @@ fn resolve_simple_content_types(ir: &mut SchemaIR) -> Result<(), SchemaError> {
         }
     }
     Ok(())
+}
+
+fn record_compositor_element(
+    compositor_stack: &mut [CompositorFrame],
+    in_choice: bool,
+    field: &FieldDef,
+) {
+    if in_choice {
+        if let Some(frame) = compositor_stack.last_mut() {
+            if frame.kind == CompositorKind::Choice {
+                frame.choice_branches.push(UnionBranch {
+                    variant_name: field.name.clone(),
+                    xml_name: field.xml_name.clone(),
+                    namespace: field.namespace.clone(),
+                    type_ref: field.type_ref.clone(),
+                    documentation: field.documentation.clone(),
+                });
+            }
+        }
+    }
+    if let Some(frame) = compositor_stack.last_mut() {
+        frame
+            .items
+            .push(vec![(field.xml_name.clone(), field.namespace.clone())]);
+    }
+}
+
+/// Topologically reorder merged `FieldKind::Element` fields using intra-branch
+/// sequence edges while preserving original field order as a tie-breaker.
+fn reorder_choice_elements(
+    fields: &mut [FieldDef],
+    order_edges: &[(ElementOrderKey, ElementOrderKey)],
+) {
+    let elem_slots: Vec<usize> = fields
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| f.kind == FieldKind::Element)
+        .map(|(i, _)| i)
+        .collect();
+    let count = elem_slots.len();
+    if count <= 1 {
+        return;
+    }
+
+    let mut by_key: HashMap<ElementOrderKey, Vec<usize>> = HashMap::new();
+    for (idx, &slot) in elem_slots.iter().enumerate() {
+        let f = &fields[slot];
+        by_key
+            .entry((f.xml_name.clone(), f.namespace.clone()))
+            .or_default()
+            .push(idx);
+    }
+
+    let mut adj: Vec<Vec<usize>> = vec![Vec::new(); count];
+    let mut in_degree: Vec<usize> = vec![0; count];
+    let mut seen_edges: HashSet<(usize, usize)> = HashSet::new();
+    for (u_key, v_key) in order_edges {
+        if let (Some(us), Some(vs)) = (by_key.get(u_key), by_key.get(v_key)) {
+            for &u in us {
+                for &v in vs {
+                    if u != v && seen_edges.insert((u, v)) {
+                        adj[u].push(v);
+                        in_degree[v] += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut visited = vec![false; count];
+    let mut sorted_indices = Vec::with_capacity(count);
+    while sorted_indices.len() < count {
+        let next = (0..count)
+            .find(|&i| !visited[i] && in_degree[i] == 0)
+            .or_else(|| (0..count).find(|&i| !visited[i]));
+        let Some(u) = next else {
+            break;
+        };
+        visited[u] = true;
+        sorted_indices.push(u);
+        for &v in &adj[u] {
+            in_degree[v] = in_degree[v].saturating_sub(1);
+        }
+    }
+
+    let mut orig_elems: Vec<Option<FieldDef>> = elem_slots
+        .iter()
+        .map(|&slot| Some(fields[slot].clone()))
+        .collect();
+    for (pos, orig_idx) in sorted_indices.into_iter().enumerate() {
+        fields[elem_slots[pos]] = orig_elems[orig_idx].take().unwrap();
+    }
+}
+
+fn collect_effective_attributes(
+    qname: &QName,
+    snapshot: &BTreeMap<QName, TypeDef>,
+    restrictions: &HashMap<QName, PendingComplexRestriction>,
+    visited: &mut HashSet<QName>,
+) -> Vec<FieldDef> {
+    if !visited.insert(qname.clone()) {
+        return Vec::new();
+    }
+    let parent = restrictions
+        .get(qname)
+        .and_then(|r| r.base.as_ref())
+        .or_else(|| match snapshot.get(qname) {
+            Some(TypeDef::Struct(s)) => s.base_type.as_ref(),
+            _ => None,
+        });
+
+    let mut attrs = match parent {
+        Some(base) => collect_effective_attributes(base, snapshot, restrictions, visited),
+        None => Vec::new(),
+    };
+
+    if let Some(TypeDef::Struct(s)) = snapshot.get(qname) {
+        for f in s.fields.iter().filter(|f| f.kind == FieldKind::Attribute) {
+            if let Some(pos) = attrs
+                .iter()
+                .position(|a| a.xml_name == f.xml_name && a.namespace == f.namespace)
+            {
+                attrs[pos] = f.clone();
+            } else {
+                attrs.push(f.clone());
+            }
+        }
+    }
+
+    if let Some(restr) = restrictions.get(qname) {
+        attrs.retain(|a| {
+            !restr
+                .prohibited_attrs
+                .iter()
+                .any(|(name, ns)| a.xml_name == *name && a.namespace == *ns)
+        });
+    }
+
+    attrs
+}
+
+/// Resolve substitution group members without an explicit `type` attribute
+/// to inherit the resolved `TypeRef` of their head element (W3C XSD §3.3.2).
+fn resolve_substitution_group_types(ir: &mut SchemaIR) {
+    let elements = ir.elements.clone();
+    for element in ir.elements.values_mut() {
+        if element.substitution_group.is_none()
+            || element.type_ref != TypeRef::Primitive(PrimitiveType::AnyType)
+        {
+            continue;
+        }
+        let mut current = element.substitution_group.clone();
+        let mut seen = HashSet::new();
+        while let Some(head_qname) = current {
+            if !seen.insert(head_qname.clone()) {
+                break;
+            }
+            let Some(head_elem) = elements.get(&head_qname) else {
+                break;
+            };
+            if head_elem.type_ref != TypeRef::Primitive(PrimitiveType::AnyType) {
+                element.type_ref = head_elem.type_ref.clone();
+                break;
+            }
+            current = head_elem.substitution_group.clone();
+        }
+    }
 }
 
 /// Replace element-reference placeholders with their global element's declared type.
@@ -2234,11 +2542,11 @@ fn parse_element_field(
     }))
 }
 
-fn parse_attribute_field(
+fn parse_attribute_spec(
     e: &BytesStart,
     target_ns: Option<&str>,
     prefixes: &HashMap<String, String>,
-) -> Result<Option<FieldDef>, SchemaError> {
+) -> Result<AttributeParse, SchemaError> {
     let ref_attr = get_attr_value(e, "ref")?;
     let name_attr = get_attr_value(e, "name")?;
 
@@ -2250,11 +2558,16 @@ fn parse_attribute_field(
         (field_name, xml_name, namespace)
     } else {
         let Some(n) = name_attr else {
-            return Ok(None);
+            return Ok(AttributeParse::Skip);
         };
         let xml_name = n.clone();
         (n, xml_name, None)
     };
+
+    let use_attr = get_attr_value(e, "use")?;
+    if use_attr.as_deref() == Some("prohibited") {
+        return Ok(AttributeParse::Prohibited((xml_name, namespace)));
+    }
 
     let type_ref = get_attr_value(e, "type")?
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
@@ -2265,9 +2578,7 @@ fn parse_attribute_field(
         })
         .unwrap_or(TypeRef::Primitive(PrimitiveType::String));
 
-    let is_required = get_attr_value(e, "use")?
-        .map(|u| u == "required")
-        .unwrap_or(false);
+    let is_required = use_attr.as_deref() == Some("required");
 
     let cardinality = if is_required {
         Cardinality::required_one()
@@ -2278,7 +2589,7 @@ fn parse_attribute_field(
     let default_value = get_attr_value(e, "default")?;
     let fixed_value = get_attr_value(e, "fixed")?;
 
-    Ok(Some(FieldDef {
+    Ok(AttributeParse::Field(Box::new(FieldDef {
         name: sanitize_field_name(&name),
         xml_name,
         namespace,
@@ -2291,7 +2602,7 @@ fn parse_attribute_field(
         documentation: None,
         facets: None,
         is_cycle_cut: false,
-    }))
+    })))
 }
 
 fn parse_any_field(
