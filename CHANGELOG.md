@@ -1,3 +1,10 @@
+## [0.41.3](https://github.com/polyxml/PolyXML/compare/v0.41.2...v0.41.3) (2026-11-21)
+
+
+### Bug Fixes
+
+* **tests:** update sample fixture paths in bindings and CI workflow ([1152f41](https://github.com/polyxml/PolyXML/commit/1152f418f1385fc008647040138d0238ccb27fc6))
+
 ## [0.41.2](https://github.com/polyxml/PolyXML/compare/v0.41.1...v0.41.2) (2026-11-21)
 
 
