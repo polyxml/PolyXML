@@ -1,4 +1,4 @@
-//! Regression tests for issue #162: escaped XSD enumeration values and
+//! Tests for escaped XSD enumeration values and
 //! `xsi:nil` scalar children inside mixed-content complex types.
 
 use polyxml::schema::ModelSchema;

@@ -10,10 +10,62 @@ use polyxml::codegen::rust::{RustCodegen, RustOptions};
 use polyxml::ir::{FieldKind, PrimitiveType, QName, TypeDef, TypeRef};
 use polyxml::schema_parser::XsdParser;
 
+const SUB_GROUP_NO_TYPE_XSD: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="HeadType">
+    <xs:sequence>
+      <xs:element name="code" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="head" type="HeadType"/>
+  <xs:element name="member" substitutionGroup="head"/>
+  <xs:complexType name="Container">
+    <xs:sequence>
+      <xs:element ref="head"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>"#;
+
+const PROHIBITED_ATTR_XSD: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="BaseItem">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="legacyCode" type="xs:string" default="LEGACY"/>
+    <xs:attribute name="active" type="xs:boolean" default="true"/>
+  </xs:complexType>
+  <xs:complexType name="ModernItem">
+    <xs:complexContent>
+      <xs:restriction base="BaseItem">
+        <xs:sequence>
+          <xs:element name="name" type="xs:string"/>
+        </xs:sequence>
+        <xs:attribute name="legacyCode" use="prohibited"/>
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>"#;
+
+const CHOICE_SHARED_TAIL_XSD: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="Response">
+    <xs:choice>
+      <xs:sequence>
+        <xs:element name="ok" type="xs:string"/>
+        <xs:element name="detail" type="xs:string"/>
+      </xs:sequence>
+      <xs:sequence>
+        <xs:element name="err" type="xs:string"/>
+        <xs:element name="detail" type="xs:string"/>
+      </xs:sequence>
+    </xs:choice>
+  </xs:complexType>
+</xs:schema>"#;
+
 #[test]
-fn issue_163_substitution_group_inherits_head_type() {
-    let schema = include_str!("../../../tests/fixtures/conformance/wave9/sub_notype.xsd");
-    let ir = XsdParser::new().parse_str(schema).unwrap();
+fn substitution_group_member_without_type_inherits_head_type() {
+    let ir = XsdParser::new().parse_str(SUB_GROUP_NO_TYPE_XSD).unwrap();
 
     let head_q = QName::local("head");
     let member_q = QName::local("member");
@@ -37,7 +89,7 @@ fn issue_163_substitution_group_inherits_head_type() {
 }
 
 #[test]
-fn issue_163_chained_substitution_group_inherits_head_type() {
+fn chained_substitution_group_inherits_head_type() {
     let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="HeadType">
@@ -57,9 +109,57 @@ fn issue_163_chained_substitution_group_inherits_head_type() {
 }
 
 #[test]
-fn issue_164_prohibited_attributes_removed_and_base_attrs_inherited() {
-    let schema = include_str!("../../../tests/fixtures/conformance/wave9/prohibited_attr.xsd");
-    let ir = XsdParser::new().parse_str(schema).unwrap();
+fn substitution_group_inline_anonymous_head_and_polyglot_codegen() {
+    let inline_xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="head">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="code" type="xs:int"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="member" substitutionGroup="head"/>
+</xs:schema>"#;
+
+    let inline_ir = XsdParser::new().parse_str(inline_xsd).unwrap();
+    let head_type = inline_ir.elements[&QName::local("head")].type_ref.clone();
+    assert!(
+        matches!(&head_type, TypeRef::Named(q) if q.local == "headType"),
+        "expected inline anonymous complexType Named(headType), got {head_type:?}"
+    );
+    assert_eq!(
+        inline_ir.elements[&QName::local("member")].type_ref,
+        head_type,
+        "member without explicit type should inherit head's anonymous TypeRef"
+    );
+
+    let sub_ir = XsdParser::new().parse_str(SUB_GROUP_NO_TYPE_XSD).unwrap();
+
+    let go = GoCodegen::new(GoOptions::default()).generate_module(&sub_ir);
+    assert!(
+        go.contains("Member *HeadType") || go.contains("type Member HeadType"),
+        "expected Go codegen to type Member as HeadType:\n{go}"
+    );
+    assert!(
+        !go.contains("Member any") && !go.contains("Member interface{}"),
+        "Go member must not degrade to untyped any/interface{{}}:\n{go}"
+    );
+
+    let py = PythonCodegen::new(PythonOptions::default()).generate_module(&sub_ir);
+    assert!(
+        py.contains("HeadType") && py.contains("Member(HeadType)"),
+        "expected Python codegen to emit typed Member(HeadType) subclass/alias:\n{py}"
+    );
+    assert!(
+        !py.contains("member: Any"),
+        "Python member must not degrade to typing.Any:\n{py}"
+    );
+}
+
+#[test]
+fn complex_restriction_removes_prohibited_attributes_and_inherits_base_attributes() {
+    let ir = XsdParser::new().parse_str(PROHIBITED_ATTR_XSD).unwrap();
 
     let TypeDef::Struct(modern) = &ir.types[&QName::local("ModernItem")] else {
         panic!("expected ModernItem struct");
@@ -112,156 +212,7 @@ fn issue_164_prohibited_attributes_removed_and_base_attrs_inherited() {
 }
 
 #[test]
-fn issue_165_choice_shared_tail_preserves_order_and_round_trips_go() {
-    let schema = include_str!("../../../tests/fixtures/conformance/wave9/choice_shared_tail.xsd");
-    let ir = XsdParser::new().parse_str(schema).unwrap();
-
-    let TypeDef::Struct(response) = &ir.types[&QName::local("Response")] else {
-        panic!("expected Response struct");
-    };
-    let elem_names: Vec<&str> = response
-        .fields
-        .iter()
-        .filter(|f| f.kind == FieldKind::Element)
-        .map(|f| f.xml_name.as_str())
-        .collect();
-    assert_eq!(elem_names, vec!["ok", "err", "detail"]);
-
-    let dir = tempdir().unwrap();
-    fs::write(dir.path().join("go.mod"), "module wave9choice\n\ngo 1.22\n").unwrap();
-    fs::write(
-        dir.path().join("models.go"),
-        GoCodegen::new(GoOptions::default()).generate_module(&ir),
-    )
-    .unwrap();
-    fs::write(
-        dir.path().join("models_test.go"),
-        r#"package models
-import (
-    "encoding/xml"
-    "testing"
-)
-func TestChoiceSharedTailRoundTrip(t *testing.T) {
-    for _, doc := range []string{
-        "<Response><ok>200</ok><detail>done</detail></Response>",
-        "<Response><err>500</err><detail>timeout</detail></Response>",
-    } {
-        var r Response
-        if err := xml.Unmarshal([]byte(doc), &r); err != nil {
-            t.Fatalf("unmarshal %s failed: %v", doc, err)
-        }
-        out, err := xml.Marshal(r)
-        if err != nil {
-            t.Fatalf("marshal %s failed: %v", doc, err)
-        }
-        if string(out) != doc {
-            t.Fatalf("roundtrip mismatch: got %s want %s", string(out), doc)
-        }
-    }
-}
-"#,
-    )
-    .unwrap();
-    let result = Command::new("go")
-        .args(["test", "./..."])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        result.status.success(),
-        "{}\n{}",
-        String::from_utf8_lossy(&result.stdout),
-        String::from_utf8_lossy(&result.stderr)
-    );
-}
-
-#[test]
-fn issue_165_outer_sequence_around_choice_does_not_leapfrog_footer() {
-    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:complexType name="Envelope">
-    <xs:sequence>
-      <xs:element name="header" type="xs:string"/>
-      <xs:choice>
-        <xs:sequence>
-          <xs:element name="ok" type="xs:string"/>
-          <xs:element name="detail" type="xs:string"/>
-        </xs:sequence>
-        <xs:sequence>
-          <xs:element name="err" type="xs:string"/>
-          <xs:element name="detail" type="xs:string"/>
-        </xs:sequence>
-      </xs:choice>
-      <xs:element name="footer" type="xs:string"/>
-    </xs:sequence>
-  </xs:complexType>
-</xs:schema>"#;
-
-    let ir = XsdParser::new().parse_str(xsd).unwrap();
-    let TypeDef::Struct(env) = &ir.types[&QName::local("Envelope")] else {
-        panic!("expected Envelope struct");
-    };
-    let elem_names: Vec<&str> = env
-        .fields
-        .iter()
-        .filter(|f| f.kind == FieldKind::Element)
-        .map(|f| f.xml_name.as_str())
-        .collect();
-    assert_eq!(elem_names, vec!["header", "ok", "err", "detail", "footer"]);
-}
-
-#[test]
-fn issue_163_substitution_group_inline_anonymous_head_and_polyglot_codegen() {
-    let inline_xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:element name="head">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="code" type="xs:int"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="member" substitutionGroup="head"/>
-</xs:schema>"#;
-
-    let inline_ir = XsdParser::new().parse_str(inline_xsd).unwrap();
-    let head_type = inline_ir.elements[&QName::local("head")].type_ref.clone();
-    assert!(
-        matches!(&head_type, TypeRef::Named(q) if q.local == "headType"),
-        "expected inline anonymous complexType Named(headType), got {head_type:?}"
-    );
-    assert_eq!(
-        inline_ir.elements[&QName::local("member")].type_ref,
-        head_type,
-        "member without explicit type should inherit head's anonymous TypeRef"
-    );
-
-    let sub_schema = include_str!("../../../tests/fixtures/conformance/wave9/sub_notype.xsd");
-    let sub_ir = XsdParser::new().parse_str(sub_schema).unwrap();
-
-    let go = GoCodegen::new(GoOptions::default()).generate_module(&sub_ir);
-    assert!(
-        go.contains("Member *HeadType") || go.contains("type Member HeadType"),
-        "expected Go codegen to type Member as HeadType:\n{go}"
-    );
-    assert!(
-        !go.contains("Member any") && !go.contains("Member interface{}"),
-        "Go member must not degrade to untyped any/interface{{}}:\n{go}"
-    );
-
-    let py = PythonCodegen::new(PythonOptions::default()).generate_module(&sub_ir);
-    assert!(
-        py.contains("HeadType") && py.contains("Member(HeadType)"),
-        "expected Python codegen to emit typed Member(HeadType) subclass/alias:\n{py}"
-    );
-    assert!(
-        !py.contains("member: Any"),
-        "Python member must not degrade to typing.Any:\n{py}"
-    );
-}
-
-#[test]
-fn issue_164_multi_level_restriction_chain_propagates_prohibitions_and_overrides() {
+fn multi_level_complex_restriction_propagates_prohibitions_and_overrides() {
     let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="GrandBase">
@@ -328,7 +279,105 @@ fn issue_164_multi_level_restriction_chain_propagates_prohibitions_and_overrides
 }
 
 #[test]
-fn issue_165_choice_conflicting_sequence_order_cycle_is_deterministic() {
+fn choice_branches_with_shared_tail_preserve_order_and_round_trip_go() {
+    let ir = XsdParser::new().parse_str(CHOICE_SHARED_TAIL_XSD).unwrap();
+
+    let TypeDef::Struct(response) = &ir.types[&QName::local("Response")] else {
+        panic!("expected Response struct");
+    };
+    let elem_names: Vec<&str> = response
+        .fields
+        .iter()
+        .filter(|f| f.kind == FieldKind::Element)
+        .map(|f| f.xml_name.as_str())
+        .collect();
+    assert_eq!(elem_names, vec!["ok", "err", "detail"]);
+
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("go.mod"), "module choiceorder\n\ngo 1.22\n").unwrap();
+    fs::write(
+        dir.path().join("models.go"),
+        GoCodegen::new(GoOptions::default()).generate_module(&ir),
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("models_test.go"),
+        r#"package models
+import (
+    "encoding/xml"
+    "testing"
+)
+func TestChoiceSharedTailRoundTrip(t *testing.T) {
+    for _, doc := range []string{
+        "<Response><ok>200</ok><detail>done</detail></Response>",
+        "<Response><err>500</err><detail>timeout</detail></Response>",
+    } {
+        var r Response
+        if err := xml.Unmarshal([]byte(doc), &r); err != nil {
+            t.Fatalf("unmarshal %s failed: %v", doc, err)
+        }
+        out, err := xml.Marshal(r)
+        if err != nil {
+            t.Fatalf("marshal %s failed: %v", doc, err)
+        }
+        if string(out) != doc {
+            t.Fatalf("roundtrip mismatch: got %s want %s", string(out), doc)
+        }
+    }
+}
+"#,
+    )
+    .unwrap();
+    let result = Command::new("go")
+        .args(["test", "./..."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn outer_sequence_around_choice_does_not_leapfrog_footer() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="Envelope">
+    <xs:sequence>
+      <xs:element name="header" type="xs:string"/>
+      <xs:choice>
+        <xs:sequence>
+          <xs:element name="ok" type="xs:string"/>
+          <xs:element name="detail" type="xs:string"/>
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element name="err" type="xs:string"/>
+          <xs:element name="detail" type="xs:string"/>
+        </xs:sequence>
+      </xs:choice>
+      <xs:element name="footer" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>"#;
+
+    let ir = XsdParser::new().parse_str(xsd).unwrap();
+    let TypeDef::Struct(env) = &ir.types[&QName::local("Envelope")] else {
+        panic!("expected Envelope struct");
+    };
+    let elem_names: Vec<&str> = env
+        .fields
+        .iter()
+        .filter(|f| f.kind == FieldKind::Element)
+        .map(|f| f.xml_name.as_str())
+        .collect();
+    assert_eq!(elem_names, vec!["header", "ok", "err", "detail", "footer"]);
+}
+
+#[test]
+fn choice_conflicting_sequence_order_cycle_is_deterministic() {
     let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="CyclicChoice">
