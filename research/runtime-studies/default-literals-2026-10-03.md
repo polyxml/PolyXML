@@ -7,7 +7,7 @@ is `cb041c0`; stricter consumer tests and isolated-target test tooling are
 ## Reproduced failure and fix
 
 The pre-fix CLI successfully generates a model for
-[the fixture](fixtures/default_literal_escaping.xsd), but Python rejects its
+[the fixture](../../tests/fixtures/conformance/default_literal_escaping.xsd), but Python rejects its
 source as an unterminated string literal. The default formatter escaped quotes
 without correctly escaping backslashes, referenced whitespace or source line
 separators. Python default/fixed metadata additionally used Rust Debug Unicode

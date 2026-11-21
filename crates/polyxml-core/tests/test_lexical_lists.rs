@@ -11,7 +11,7 @@ use tempfile::tempdir;
 fn typed_lexical_lists_round_trip_across_codecs() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/list_simple_types.xsd"
+            "../../../tests/fixtures/conformance/list_simple_types.xsd"
         ))
         .unwrap();
     let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();
@@ -101,7 +101,7 @@ try{serializer.Deserialize(new StringReader("<Root><Numbers>one two</Numbers><Wo
 fn named_list_items_enforce_facets_and_enumerations() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/restricted_list_items.xsd"
+            "../../../tests/fixtures/conformance/restricted_list_items.xsd"
         ))
         .unwrap();
     let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();

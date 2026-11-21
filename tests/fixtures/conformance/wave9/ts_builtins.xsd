@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="String">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="A"/>
+      <xs:enumeration value="B"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Error">
+    <xs:sequence>
+      <xs:element name="code" type="xs:int"/>
+      <xs:element name="kind" type="String"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Record">
+    <xs:sequence>
+      <xs:element name="err" type="Error"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

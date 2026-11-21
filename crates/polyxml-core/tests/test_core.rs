@@ -308,7 +308,7 @@ fn test_roundtrip_serialization_with_indentation() {
 fn unbounded_integers_round_trip_and_compare_exact_bounds() {
     let ir = polyxml::schema_parser::XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/wave5/unbounded_integer.xsd"
+            "../../../tests/fixtures/conformance/wave5/unbounded_integer.xsd"
         ))
         .unwrap();
     let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();

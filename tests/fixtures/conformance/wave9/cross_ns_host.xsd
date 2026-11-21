@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:host"
+           xmlns:host="urn:host"
+           xmlns:ext="urn:ext"
+           elementFormDefault="qualified">
+  <xs:import namespace="urn:ext" schemaLocation="cross_ns_ext.xsd"/>
+  <xs:complexType name="Wrapper">
+    <xs:sequence>
+      <xs:element name="localElem" type="xs:string"/>
+      <xs:element ref="ext:extElem"/>
+    </xs:sequence>
+    <xs:attribute ref="ext:extAttr"/>
+  </xs:complexType>
+</xs:schema>

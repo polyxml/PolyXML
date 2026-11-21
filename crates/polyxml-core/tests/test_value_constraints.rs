@@ -6,7 +6,7 @@ use std::sync::Arc;
 #[test]
 fn fixed_constraints_cover_input_and_output_in_value_space() {
     let ir = XsdParser::new()
-        .parse_str(include_str!("../../../research/fixtures/fixed_values.xsd"))
+        .parse_str(include_str!("../../../tests/fixtures/conformance/fixed_values.xsd"))
         .unwrap();
     let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();
     for xml in [
@@ -33,7 +33,7 @@ fn fixed_constraints_cover_input_and_output_in_value_space() {
 fn repeated_particle_cardinality_belongs_to_the_group() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/repeated_sequence.xsd"
+            "../../../tests/fixtures/conformance/repeated_sequence.xsd"
         ))
         .unwrap();
     let model = &ir.content_models[&polyxml::ir::QName::local("RootType")];

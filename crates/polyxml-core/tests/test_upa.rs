@@ -20,7 +20,7 @@ fn check(content: &str, valid: bool) {
 
 #[test]
 fn optional_siblings_and_choice_lookahead_violate_upa() {
-    let repro = include_str!("../../../research/fixtures/wave8/30_upa_violation.xsd");
+    let repro = include_str!("../../../tests/fixtures/conformance/wave8/30_upa_violation.xsd");
     assert!(XsdParser::new()
         .parse_str(repro)
         .unwrap_err()

@@ -15,10 +15,10 @@ use polyxml::schema_parser::XsdParser;
 #[test]
 fn ordered_particles_and_choice_branches_round_trip() {
     for (schema, root, documents) in [
-        (include_str!("../../../research/fixtures/repeated_sequence.xsd"), "Root", vec!["<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>", "<Root/>"]),
-        (include_str!("../../../research/fixtures/substitution_group.xsd"), "Portfolio", vec!["<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"]),
-        (include_str!("../../../research/fixtures/choice_branch_cardinality.xsd"), "Root", vec!["<Root><Timing>A1</Timing><Timing>A2</Timing></Root>", "<Root><Drive>B</Drive></Root>"]),
-        (include_str!("../../../research/fixtures/wave6/duplicate_choice_branch_name.xsd"), "Person", vec!["<Person><MinAge>18</MinAge><MaxAge>25</MaxAge></Person>", "<Person><MaxAge>25</MaxAge></Person>", "<Person/>"]),
+        (include_str!("../../../tests/fixtures/conformance/repeated_sequence.xsd"), "Root", vec!["<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>", "<Root/>"]),
+        (include_str!("../../../tests/fixtures/conformance/substitution_group.xsd"), "Portfolio", vec!["<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"]),
+        (include_str!("../../../tests/fixtures/conformance/choice_branch_cardinality.xsd"), "Root", vec!["<Root><Timing>A1</Timing><Timing>A2</Timing></Root>", "<Root><Drive>B</Drive></Root>"]),
+        (include_str!("../../../tests/fixtures/conformance/wave6/duplicate_choice_branch_name.xsd"), "Person", vec!["<Person><MinAge>18</MinAge><MaxAge>25</MaxAge></Person>", "<Person><MaxAge>25</MaxAge></Person>", "<Person/>"]),
     ] {
         let ir = XsdParser::new().parse_str(schema).unwrap();
         let dir = tempdir().unwrap();
@@ -90,7 +90,7 @@ func TestTemporal(t *testing.T) {
 fn roots_and_union_attributes_round_trip() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/lexical_union_attribute.xsd"
+            "../../../tests/fixtures/conformance/lexical_union_attribute.xsd"
         ))
         .unwrap();
     let dir = tempdir().unwrap();
@@ -1201,7 +1201,7 @@ func TestNamespacedElementRef(t *testing.T) {
 fn separate_choices_enforce_each_group() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/wave6/two_choice_groups.xsd"
+            "../../../tests/fixtures/conformance/wave6/two_choice_groups.xsd"
         ))
         .unwrap();
     assert!(ir
@@ -1246,7 +1246,7 @@ var empty Parameters;if _,err:=xml.Marshal(empty);err==nil{t.Fatal("invalid outp
 fn repeated_sequence_groups_enforce_bounds_and_order() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/repeated_sequence.xsd"
+            "../../../tests/fixtures/conformance/repeated_sequence.xsd"
         ))
         .unwrap();
     let temp = tempdir().unwrap();
@@ -1285,7 +1285,7 @@ func TestSequence(t *testing.T){
 fn repeated_choice_branch_rejects_mixed_and_empty_selections() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/choice_branch_cardinality.xsd"
+            "../../../tests/fixtures/conformance/choice_branch_cardinality.xsd"
         ))
         .unwrap();
     let structure = match ir.types.get(&QName::local("RootType")).unwrap() {
@@ -1336,7 +1336,7 @@ var root Root;if err:=xml.Unmarshal([]byte(`<Root><Timing>a</Timing></Root>`),&r
 fn duplicate_choice_names_reject_invalid_branch_shapes() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/wave6/duplicate_choice_branch_name.xsd"
+            "../../../tests/fixtures/conformance/wave6/duplicate_choice_branch_name.xsd"
         ))
         .unwrap();
     let temp = tempdir().unwrap();
@@ -1371,7 +1371,7 @@ for _,body:=range []string{`<MaxAge>25</MaxAge><MaxAge>30</MaxAge>`,`<MinAge>18<
 
 #[test]
 fn abstract_substitution_heads_are_rejected() {
-    let schema = include_str!("../../../research/fixtures/substitution_group.xsd");
+    let schema = include_str!("../../../tests/fixtures/conformance/substitution_group.xsd");
     let ir = XsdParser::new().parse_str(schema).unwrap();
     assert!(ir
         .abstract_elements
@@ -1415,7 +1415,7 @@ var root Portfolio;if err:=xml.Unmarshal([]byte(`<Portfolio xmlns="urn:audit:sub
 fn unbounded_integer_xml_preserves_digits() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../research/fixtures/wave5/unbounded_integer.xsd"
+            "../../../tests/fixtures/conformance/wave5/unbounded_integer.xsd"
         ))
         .unwrap();
     let dir = tempdir().unwrap();

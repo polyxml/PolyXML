@@ -4,7 +4,7 @@ use polyxml::schema_parser::XsdParser;
 use std::{fs, process::Command};
 use tempfile::tempdir;
 
-const XSD: &str = include_str!("../../../research/fixtures/wave5/date_union.xsd");
+const XSD: &str = include_str!("../../../tests/fixtures/conformance/wave5/date_union.xsd");
 
 fn run(command: &mut Command) {
     let output = command.output().unwrap();

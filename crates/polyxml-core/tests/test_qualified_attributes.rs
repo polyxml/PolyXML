@@ -12,7 +12,7 @@ fn global_attribute_references_round_trip_by_namespace() {
     let ir = parser
         .parse_file(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../research/fixtures/wave6/xlink_shared_attribute/root.xsd"
+            "/../../tests/fixtures/conformance/wave6/xlink_shared_attribute/root.xsd"
         ))
         .unwrap();
     assert_attribute_round_trip(&ir);
@@ -24,7 +24,7 @@ fn imported_inline_global_attribute_enum_round_trips() {
     fs::copy(
         concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../research/fixtures/wave6/xlink_shared_attribute/root.xsd"
+            "/../../tests/fixtures/conformance/wave6/xlink_shared_attribute/root.xsd"
         ),
         fixture.path().join("root.xsd"),
     )

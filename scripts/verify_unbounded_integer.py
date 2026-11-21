@@ -15,7 +15,7 @@ from lxml import etree
 
 REPO = Path(__file__).resolve().parents[1]
 BIN = REPO / "target/debug/polyxml"
-SCHEMA = REPO / "research/fixtures/wave5/unbounded_integer.xsd"
+SCHEMA = REPO / "tests/fixtures/conformance/wave5/unbounded_integer.xsd"
 DIGITS = [
     "1234567890123456789012345678901234567890",
     "9223372036854775807",

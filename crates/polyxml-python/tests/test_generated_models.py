@@ -17,7 +17,7 @@ import polyxml
 def test_generated_abstract_root_preserves_derived_payload(tmp_path, backend):
     schema = (
         pathlib.Path(__file__).resolve().parents[3]
-        / "research/fixtures/wave6/abstract_derived_xsi.xsd"
+        / "tests/fixtures/conformance/wave6/abstract_derived_xsi.xsd"
     )
     subprocess.run(
         [
@@ -585,7 +585,7 @@ def test_codecs_flag_disabled():
 
 @pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
 def test_generated_models_reject_general_entities(tmp_path, backend):
-    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/wave7/xxe_text.xsd"
+    schema = pathlib.Path(__file__).resolve().parents[3] / "tests/fixtures/conformance/wave7/xxe_text.xsd"
     subprocess.run(
         [
             str(_get_polyxml_bin()),
@@ -619,7 +619,7 @@ def test_generated_models_reject_general_entities(tmp_path, backend):
 
 @pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
 def test_element_defaults_preserve_absence(tmp_path, backend):
-    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/element_defaults.xsd"
+    schema = pathlib.Path(__file__).resolve().parents[3] / "tests/fixtures/conformance/element_defaults.xsd"
     subprocess.run(
         [
             str(_get_polyxml_bin()),
@@ -652,7 +652,7 @@ def test_element_defaults_preserve_absence(tmp_path, backend):
 
 @pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
 def test_fixed_values_validate_input_and_output(tmp_path, backend):
-    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/fixed_values.xsd"
+    schema = pathlib.Path(__file__).resolve().parents[3] / "tests/fixtures/conformance/fixed_values.xsd"
     subprocess.run(
         [
             str(_get_polyxml_bin()),
@@ -690,7 +690,7 @@ def test_fixed_values_validate_input_and_output(tmp_path, backend):
 def test_separate_choice_groups_enforce_constraints(tmp_path, backend):
     schema = (
         pathlib.Path(__file__).resolve().parents[3]
-        / "research/fixtures/wave6/two_choice_groups.xsd"
+        / "tests/fixtures/conformance/wave6/two_choice_groups.xsd"
     )
     subprocess.run(
         [
@@ -730,7 +730,7 @@ def test_separate_choice_groups_enforce_constraints(tmp_path, backend):
 
 @pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
 def test_repeated_sequence_constraints(tmp_path, backend):
-    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/repeated_sequence.xsd"
+    schema = pathlib.Path(__file__).resolve().parents[3] / "tests/fixtures/conformance/repeated_sequence.xsd"
     subprocess.run(
         [
             str(_get_polyxml_bin()),
@@ -767,7 +767,7 @@ def test_repeated_sequence_constraints(tmp_path, backend):
 
 @pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
 def test_typed_lexical_lists(tmp_path, backend):
-    schema = pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/list_simple_types.xsd"
+    schema = pathlib.Path(__file__).resolve().parents[3] / "tests/fixtures/conformance/list_simple_types.xsd"
     subprocess.run(
         [
             str(_get_polyxml_bin()),
@@ -801,7 +801,7 @@ def test_typed_lexical_lists(tmp_path, backend):
 @pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
 def test_named_lexical_list_item_constraints(tmp_path, backend):
     schema = (
-        pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/restricted_list_items.xsd"
+        pathlib.Path(__file__).resolve().parents[3] / "tests/fixtures/conformance/restricted_list_items.xsd"
     )
     subprocess.run(
         [
@@ -839,7 +839,7 @@ def test_named_lexical_list_item_constraints(tmp_path, backend):
 def test_repeated_choice_branch_boundaries(tmp_path, backend):
     schema = (
         pathlib.Path(__file__).resolve().parents[3]
-        / "research/fixtures/choice_branch_cardinality.xsd"
+        / "tests/fixtures/conformance/choice_branch_cardinality.xsd"
     )
     subprocess.run(
         [
@@ -885,7 +885,7 @@ def test_repeated_choice_branch_boundaries(tmp_path, backend):
 def test_duplicate_choice_names_validate_branch_shapes(tmp_path, backend):
     schema = (
         pathlib.Path(__file__).resolve().parents[3]
-        / "research/fixtures/wave6/duplicate_choice_branch_name.xsd"
+        / "tests/fixtures/conformance/wave6/duplicate_choice_branch_name.xsd"
     )
     subprocess.run(
         [
@@ -920,7 +920,7 @@ def test_duplicate_choice_names_validate_branch_shapes(tmp_path, backend):
 @pytest.mark.parametrize("backend", ["dataclass", "pydantic"])
 def test_abstract_substitution_head_is_rejected(tmp_path, backend):
     schema = (
-        pathlib.Path(__file__).resolve().parents[3] / "research/fixtures/substitution_group.xsd"
+        pathlib.Path(__file__).resolve().parents[3] / "tests/fixtures/conformance/substitution_group.xsd"
     )
     subprocess.run(
         [
@@ -958,7 +958,7 @@ def test_abstract_substitution_head_is_rejected(tmp_path, backend):
 def test_unbounded_integer_round_trip(tmp_path, backend):
     schema = (
         pathlib.Path(__file__).resolve().parents[3]
-        / "research/fixtures/wave5/unbounded_integer.xsd"
+        / "tests/fixtures/conformance/wave5/unbounded_integer.xsd"
     )
     subprocess.run(
         [

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:main"
+           xmlns:tns="urn:main"
+           elementFormDefault="qualified">
+  <xs:include schemaLocation="chameleon_common.xsd"/>
+  <xs:complexType name="Envelope">
+    <xs:sequence>
+      <xs:element name="item" type="tns:SharedItem"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
