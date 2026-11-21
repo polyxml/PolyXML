@@ -192,7 +192,7 @@ jobs:
         run: cmp crates/polyxml-c/include/polyxml.h bindings/go/polyxml.h
 
       - name: Check Go module fixture
-        run: cmp tests/fixtures/atom_feed.xml bindings/go/testdata/atom_feed.xml
+        run: cmp tests/fixtures/samples/atom_feed.xml bindings/go/testdata/atom_feed.xml
 
       - name: Run Go Tests
         working-directory: bindings/go

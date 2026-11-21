@@ -76,10 +76,10 @@ void test_namespaced_serialization() {
 
 std::string load_fixture(const std::string& name) {
     std::vector<std::string> candidates = {
-        "../../../../tests/fixtures/" + name,
-        "../../../tests/fixtures/" + name,
-        "../../tests/fixtures/" + name,
-        "tests/fixtures/" + name,
+        "../../../../tests/fixtures/samples/" + name,
+        "../../../tests/fixtures/samples/" + name,
+        "../../tests/fixtures/samples/" + name,
+        "tests/fixtures/samples/" + name,
     };
     for (const auto& path : candidates) {
         if (std::filesystem::exists(path)) {

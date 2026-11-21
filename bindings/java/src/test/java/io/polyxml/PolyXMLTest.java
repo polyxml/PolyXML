@@ -99,8 +99,8 @@ public class PolyXMLTest {
     @Test
     public void testConformanceAtomFeed() throws Exception {
         java.nio.file.Path[] candidates = new java.nio.file.Path[] {
-            java.nio.file.Paths.get("../../tests/fixtures/atom_feed.xml"),
-            java.nio.file.Paths.get("tests/fixtures/atom_feed.xml")
+            java.nio.file.Paths.get("../../tests/fixtures/samples/atom_feed.xml"),
+            java.nio.file.Paths.get("tests/fixtures/samples/atom_feed.xml")
         };
         java.nio.file.Path target = null;
         for (java.nio.file.Path p : candidates) {
