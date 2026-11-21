@@ -1,3 +1,10 @@
+## [0.41.2](https://github.com/polyxml/PolyXML/compare/v0.41.1...v0.41.2) (2026-11-21)
+
+
+### Bug Fixes
+
+* **schema-ir:** resolve substitution group types, prohibited attributes, and choice branch ordering ([#163](https://github.com/polyxml/PolyXML/issues/163), [#164](https://github.com/polyxml/PolyXML/issues/164), [#165](https://github.com/polyxml/PolyXML/issues/165)) ([02c0d8f](https://github.com/polyxml/PolyXML/commit/02c0d8f7b26c0e50b358a19a35df6c24841f8ebc))
+
 ## [0.41.1](https://github.com/polyxml/PolyXML/compare/v0.41.0...v0.41.1) (2026-11-21)
 
 

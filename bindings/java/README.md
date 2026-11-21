@@ -36,14 +36,14 @@ contains dependencies and XML-text record configuration.
 <dependency>
     <groupId>io.github.polyxml</groupId>
     <artifactId>polyxml</artifactId>
-    <version>0.41.1</version>
+    <version>0.41.2</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'io.github.polyxml:polyxml:0.41.1'
+implementation 'io.github.polyxml:polyxml:0.41.2'
 ```
 
 ---
