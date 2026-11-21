@@ -5,7 +5,8 @@ use polyxml::schema::ModelSchema;
 use polyxml::schema_parser::XsdParser;
 use polyxml::{deserialize, serialize, PolyValue};
 
-const FIXTURE: &str = include_str!("../../../tests/fixtures/conformance/schema_attribute_entities.xsd");
+const FIXTURE: &str =
+    include_str!("../../../tests/fixtures/conformance/schema_attribute_entities.xsd");
 
 #[test]
 fn attribute_entities_reach_enum_facets_and_defaults_in_value_space() {

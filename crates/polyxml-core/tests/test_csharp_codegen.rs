@@ -1317,7 +1317,9 @@ if(present&&!writer.ToString().Contains("<Flag>false</Flag>"))throw new Exceptio
 #[test]
 fn fixed_values_are_enforced_on_read_and_write() {
     let ir = polyxml::schema_parser::XsdParser::new()
-        .parse_str(include_str!("../../../tests/fixtures/conformance/fixed_values.xsd"))
+        .parse_str(include_str!(
+            "../../../tests/fixtures/conformance/fixed_values.xsd"
+        ))
         .unwrap();
     for use_records in [true, false] {
         let temp = tempdir().unwrap();

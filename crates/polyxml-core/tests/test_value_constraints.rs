@@ -6,7 +6,9 @@ use std::sync::Arc;
 #[test]
 fn fixed_constraints_cover_input_and_output_in_value_space() {
     let ir = XsdParser::new()
-        .parse_str(include_str!("../../../tests/fixtures/conformance/fixed_values.xsd"))
+        .parse_str(include_str!(
+            "../../../tests/fixtures/conformance/fixed_values.xsd"
+        ))
         .unwrap();
     let schema = ModelSchema::from_ir(&ir, Some("Root")).unwrap();
     for xml in [
