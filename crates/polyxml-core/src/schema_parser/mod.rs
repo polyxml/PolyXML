@@ -1766,7 +1766,7 @@ impl XsdParser {
         Some(fields)
     }
 
-    /// Expand recorded group references and resolve complex-content attribute restrictions.
+    /// Resolve complex-content attribute inheritance and prohibited attributes.
     fn resolve_complex_restriction_attributes(&mut self, ir: &mut SchemaIR) {
         let pending = std::mem::take(&mut self.pending_complex_restrictions);
         if pending.is_empty() {
