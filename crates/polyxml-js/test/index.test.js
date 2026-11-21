@@ -68,7 +68,7 @@ test('PolyXML JavaScript bindings', (t) => {
   // Test real-world fixture conformance: atom_feed.xml
   const fs = require('node:fs');
   const path = require('node:path');
-  const atomPath = path.resolve(__dirname, '../../../tests/fixtures/atom_feed.xml');
+  const atomPath = path.resolve(__dirname, '../../../tests/fixtures/samples/atom_feed.xml');
   if (fs.existsSync(atomPath)) {
     const atomXml = fs.readFileSync(atomPath, 'utf-8');
     const atomSchema = {

@@ -25,7 +25,7 @@ fn run(directory: &Path, program: &str, args: &[&str]) {
 fn enum_literals_compile_and_preserve_values_in_all_seven_languages() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/enum_literal_escaping.xsd"
+            "../../../tests/fixtures/xsd/types/enum_literal_escaping.xsd"
         ))
         .unwrap();
     let TypeDef::Enum(status) = &ir.types[&QName::local("Status")] else {

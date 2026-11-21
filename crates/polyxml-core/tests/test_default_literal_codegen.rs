@@ -21,7 +21,7 @@ fn run(directory: &Path, program: &str, args: &[&str]) {
 fn generated_string_defaults_and_fixed_values_preserve_xml_characters() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/default_literal_escaping.xsd"
+            "../../../tests/fixtures/xsd/types/default_literal_escaping.xsd"
         ))
         .unwrap();
     let expected = "\"quoted\"\\path\\u000a\t\n\r\u{85}\u{2028}café 😀";

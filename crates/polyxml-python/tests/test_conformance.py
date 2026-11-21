@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 import polyxml
 
-FIXTURES_DIR = pathlib.Path(__file__).parents[3] / "tests" / "fixtures"
+FIXTURES_DIR = pathlib.Path(__file__).parents[3] / "tests" / "fixtures" / "samples"
 
 
 # -------------------------------------------------------------

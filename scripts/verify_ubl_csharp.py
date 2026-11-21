@@ -33,7 +33,7 @@ def main():
     parser.add_argument("--binary", type=Path)
     options = parser.parse_args()
     schema_dir = options.schema_dir.resolve()
-    manifest = json.loads((REPO / "tests/fixtures/conformance/ubl-2.4/sha256.json").read_text())
+    manifest = json.loads((REPO / "tests/fixtures/xsd/standards/ubl-2.4/sha256.json").read_text())
     for relative, digest in manifest.items():
         path = schema_dir / relative
         if not path.exists():
@@ -101,7 +101,7 @@ def main():
                     '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup></Project>'
                 )
                 (output / "invoice.xml").write_bytes(
-                    (REPO / "tests/fixtures/conformance/ubl-2.4/invoice.xml").read_bytes()
+                    (REPO / "tests/fixtures/xsd/standards/ubl-2.4/invoice.xml").read_bytes()
                 )
                 (output / "Program.cs").write_text(r"""using System.Xml;
 using System.Xml.Schema;

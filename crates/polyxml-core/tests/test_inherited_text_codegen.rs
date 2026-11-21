@@ -22,7 +22,7 @@ fn run(directory: &Path, program: &str, args: &[&str]) {
 fn inherited_scalar_text_compiles_in_all_seven_languages() {
     let ir = XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/inherited_simple_content.xsd"
+            "../../../tests/fixtures/xsd/inheritance/inherited_simple_content.xsd"
         ))
         .unwrap();
     let root = tempfile::tempdir().unwrap();

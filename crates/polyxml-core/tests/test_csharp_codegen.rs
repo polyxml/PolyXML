@@ -83,11 +83,11 @@ fn particle_wire_structure_round_trips() {
         (r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="VehicleType"><xs:simpleContent><xs:extension base="xs:string"/></xs:simpleContent></xs:complexType><xs:complexType name="OtherType"><xs:simpleContent><xs:extension base="xs:string"/></xs:simpleContent></xs:complexType><xs:element name="Root"><xs:complexType mixed="true"><xs:choice minOccurs="0" maxOccurs="unbounded"><xs:element name="Vehicle" type="VehicleType"/><xs:element name="VehicleType" type="OtherType"/></xs:choice></xs:complexType></xs:element></xs:schema>"#, "Root", vec!["<Root><Vehicle>one</Vehicle><VehicleType>two</VehicleType></Root>"]),
         (r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:simpleType name="Phase"><xs:restriction base="xs:string"><xs:enumeration value="on"/><xs:enumeration value="off"/></xs:restriction></xs:simpleType><xs:complexType name="Base" mixed="true"><xs:choice minOccurs="0" maxOccurs="unbounded"><xs:element name="ItemA" type="xs:string"/><xs:element name="item_a" type="xs:string"/></xs:choice><xs:attribute name="code" type="xs:string"/><xs:attribute name="enabled" type="xs:boolean" use="required"/><xs:attribute name="phase" type="Phase" use="required"/></xs:complexType><xs:complexType name="Derived" mixed="true"><xs:complexContent mixed="true"><xs:extension base="Base"><xs:attribute name="extra" type="xs:string"/></xs:extension></xs:complexContent></xs:complexType><xs:element name="Root" type="Derived"/></xs:schema>"#, "Root", vec![r#"<Root code="base" extra="leaf" enabled="true" phase="on">before<ItemA>A</ItemA>between<item_a>B</item_a>after</Root>"#]),
         (r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="Query"><xs:complexType><xs:sequence><xs:element name="Equals" type="xs:string"/><xs:element name="EqualsValue" type="xs:string"/><xs:element name="GetHashCode" type="xs:string"/><xs:element name="ToString" type="xs:string"/></xs:sequence></xs:complexType></xs:element></xs:schema>"#, "Query", vec!["<Query><Equals>a</Equals><EqualsValue>b</EqualsValue><GetHashCode>c</GetHashCode><ToString>d</ToString></Query>"]),
-        (include_str!("../../../tests/fixtures/conformance/nested_sequence_choice.xsd"), "Root", vec!["<Root><First>A</First><Second>B</Second></Root>", "<Root><Alternative>C</Alternative></Root>"]),
-        (include_str!("../../../tests/fixtures/conformance/repeated_sequence.xsd"), "Root", vec!["<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>"]),
-        (include_str!("../../../tests/fixtures/conformance/substitution_group.xsd"), "Portfolio", vec!["<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"]),
-        (include_str!("../../../tests/fixtures/conformance/choice_branch_cardinality.xsd"), "Root", vec!["<Root><Timing>A1</Timing><Timing>A2</Timing></Root>"]),
-        (include_str!("../../../tests/fixtures/conformance/wave6/duplicate_choice_branch_name.xsd"), "Person", vec!["<Person><MinAge>18</MinAge><MaxAge>25</MaxAge></Person>", "<Person><MaxAge>25</MaxAge></Person>"]),
+        (include_str!("../../../tests/fixtures/xsd/compositors/nested_sequence_choice.xsd"), "Root", vec!["<Root><First>A</First><Second>B</Second></Root>", "<Root><Alternative>C</Alternative></Root>"]),
+        (include_str!("../../../tests/fixtures/xsd/compositors/repeated_sequence.xsd"), "Root", vec!["<Root><First>A1</First><Second>B1</Second><First>A2</First><Second>B2</Second></Root>"]),
+        (include_str!("../../../tests/fixtures/xsd/inheritance/substitution_group.xsd"), "Portfolio", vec!["<Portfolio xmlns='urn:audit:substitution'><Bond>A1</Bond><Equity>B1</Equity><Bond>A2</Bond></Portfolio>"]),
+        (include_str!("../../../tests/fixtures/xsd/compositors/choice_branch_cardinality.xsd"), "Root", vec!["<Root><Timing>A1</Timing><Timing>A2</Timing></Root>"]),
+        (include_str!("../../../tests/fixtures/xsd/compositors/duplicate_choice_branch_name.xsd"), "Person", vec!["<Person><MinAge>18</MinAge><MaxAge>25</MaxAge></Person>", "<Person><MaxAge>25</MaxAge></Person>"]),
     ] {
         let ir = polyxml::schema_parser::XsdParser::new().parse_str(schema).unwrap();
         for use_records in [true, false] {
@@ -119,7 +119,7 @@ foreach (var document in new [] {{ {documents} }}) {{
 fn lexical_union_attributes_round_trip() {
     let ir = polyxml::schema_parser::XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/lexical_union_attribute.xsd"
+            "../../../tests/fixtures/xsd/types/lexical_union_attribute.xsd"
         ))
         .unwrap();
     for use_records in [true, false] {
@@ -163,7 +163,7 @@ try { serializer.Deserialize(new StringReader("<Root count='invalid'/>")); throw
 fn nillable_enum_collection_round_trips() {
     let ir = polyxml::schema_parser::XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/nillable_enum_collection.xsd"
+            "../../../tests/fixtures/xsd/types/nillable_enum_collection.xsd"
         ))
         .unwrap();
     for use_records in [true, false] {
@@ -179,7 +179,7 @@ fn nillable_enum_collection_round_trips() {
         fs::write(temp.path().join("Models.cs"), code).unwrap();
         let strict_ir = polyxml::schema_parser::XsdParser::new()
             .parse_str(
-                &include_str!("../../../tests/fixtures/conformance/nillable_enum_collection.xsd")
+                &include_str!("../../../tests/fixtures/xsd/types/nillable_enum_collection.xsd")
                     .replace("nillable=\"true\"", "nillable=\"false\""),
             )
             .unwrap();
@@ -1272,7 +1272,7 @@ fn test_csharp_sequence_nested_inside_choice_codegen() {
 fn element_defaults_preserve_absence_and_empty_presence() {
     let ir = polyxml::schema_parser::XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/element_defaults.xsd"
+            "../../../tests/fixtures/xsd/types/element_defaults.xsd"
         ))
         .unwrap();
     for use_records in [true, false] {
@@ -1318,7 +1318,7 @@ if(present&&!writer.ToString().Contains("<Flag>false</Flag>"))throw new Exceptio
 fn fixed_values_are_enforced_on_read_and_write() {
     let ir = polyxml::schema_parser::XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/fixed_values.xsd"
+            "../../../tests/fixtures/xsd/types/fixed_values.xsd"
         ))
         .unwrap();
     for use_records in [true, false] {
@@ -1364,7 +1364,7 @@ try{serializer.Deserialize(new StringReader(xml));throw new Exception("invalid i
 fn unbounded_integer_xml_preserves_digits() {
     let ir = polyxml::schema_parser::XsdParser::new()
         .parse_str(include_str!(
-            "../../../tests/fixtures/conformance/wave5/unbounded_integer.xsd"
+            "../../../tests/fixtures/xsd/types/unbounded_integer.xsd"
         ))
         .unwrap();
     for records in [true, false] {

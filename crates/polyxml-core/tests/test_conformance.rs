@@ -10,7 +10,7 @@ use polyxml::{deserialize, serialize_with_options, XmlItemStream};
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures")
+        .join("../../tests/fixtures/samples")
         .join(name)
 }
 

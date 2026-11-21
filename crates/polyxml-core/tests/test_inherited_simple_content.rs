@@ -5,7 +5,7 @@ use polyxml::{deserialize, serialize, PolyValue};
 use std::sync::Arc;
 
 const FIXTURE: &str =
-    include_str!("../../../tests/fixtures/conformance/inherited_simple_content.xsd");
+    include_str!("../../../tests/fixtures/xsd/inheritance/inherited_simple_content.xsd");
 
 #[test]
 fn inherited_text_resolves_terminal_type_without_losing_struct_bases_or_aliases() {

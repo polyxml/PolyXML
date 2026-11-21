@@ -3308,7 +3308,7 @@ fn unsupported_xsd_alternatives_fail_explicitly() {
     let schema = temp.path().join("alternative.xsd");
     fs::write(
         &schema,
-        include_str!("../../../tests/fixtures/conformance/wave5/alternative_xsd11.xsd"),
+        include_str!("../../../tests/fixtures/xsd/validation/alternative_xsd11.xsd"),
     )
     .unwrap();
     for arguments in [
@@ -3344,7 +3344,7 @@ fn validate_and_generate_reject_upa_violations() {
     let schema = dir.path().join("ambiguous.xsd");
     fs::write(
         &schema,
-        include_str!("../../../tests/fixtures/conformance/wave8/30_upa_violation.xsd"),
+        include_str!("../../../tests/fixtures/xsd/compositors/upa_violation.xsd"),
     )
     .unwrap();
     for command in ["validate", "generate"] {

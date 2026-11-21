@@ -46,7 +46,7 @@ def model(depth):
 
 def main():
     cases = [
-        (REPO / "tests/fixtures/conformance/wave8/30_upa_violation.xsd").read_text(),
+        (REPO / "tests/fixtures/xsd/compositors/upa_violation.xsd").read_text(),
         wrap(
             '<xs:sequence><xs:element name="a" type="xs:string"/><xs:element name="a" type="xs:string"/></xs:sequence>'
         ),
