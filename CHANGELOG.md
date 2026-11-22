@@ -1,3 +1,10 @@
+# [0.44.0](https://github.com/polyxml/PolyXML/compare/v0.43.0...v0.44.0) (2026-11-22)
+
+
+### Features
+
+* **playground:** add live syntax highlighting for XSD, XML, and JSON editors ([3008777](https://github.com/polyxml/PolyXML/commit/300877701473febf0e9b92be5d1917ae9af90b7b))
+
 # [0.43.0](https://github.com/polyxml/PolyXML/compare/v0.42.1...v0.43.0) (2026-11-22)
 
 
