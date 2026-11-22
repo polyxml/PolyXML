@@ -1,3 +1,10 @@
+## [0.42.1](https://github.com/polyxml/PolyXML/compare/v0.42.0...v0.42.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **playground:** prevent hidden panel click occlusion and clarify UPA preset diagnostic ([5cae70a](https://github.com/polyxml/PolyXML/commit/5cae70ad923a967683dba8d7a2ccf9241d2af214))
+
 # [0.42.0](https://github.com/polyxml/PolyXML/compare/v0.41.3...v0.42.0) (2026-11-22)
 
 
