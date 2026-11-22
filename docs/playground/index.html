@@ -46,7 +46,10 @@
         </div>
 
         <div class="action-buttons">
-          <button type="button" id="share-btn" class="btn btn-secondary">Share URL</button>
+          <span class="copy-control">
+            <button type="button" id="share-btn" class="btn btn-secondary">Share URL</button>
+            <span id="share-tip" class="copy-tip" role="status"></span>
+          </span>
           <button type="button" id="reset-btn" class="btn btn-secondary">Reset</button>
         </div>
       </div>
@@ -102,10 +105,19 @@
                   <div id="file-tabs" class="file-tabs" aria-label="Generated files" hidden></div>
                   <div class="output-actions">
                     <span id="compile-timing" class="meta-pill"></span>
-                    <button type="button" id="copy-code-btn" class="btn btn-primary">Copy code</button>
+                    <span class="copy-control">
+                      <button
+                        type="button"
+                        id="copy-code-btn"
+                        class="btn btn-primary"
+                        command="--copy"
+                        commandfor="generated-code"
+                      >Copy code</button>
+                      <span id="copy-code-tip" class="copy-tip" role="status"></span>
+                    </span>
                   </div>
                 </div>
-                <pre class="code-output"><code id="generated-code">Compiling in WebAssembly…</code></pre>
+                <pre id="code-output" class="code-output" tabindex="0"><code id="generated-code">Compiling in WebAssembly…</code></pre>
               </div>
             </div>
 

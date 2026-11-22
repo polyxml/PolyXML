@@ -335,6 +335,57 @@ select {
   background: var(--surface-alt);
 }
 
+.btn[data-copied] {
+  border-color: #15803d;
+}
+
+.btn[data-failed] {
+  border-color: var(--danger-border);
+}
+
+.copy-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Opacity-only hide keeps the role="status" node in the accessibility tree */
+.copy-tip {
+  position: absolute;
+  inset-block-start: calc(100% + 0.35rem);
+  inset-inline-end: 0;
+  z-index: 20;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--border);
+  background: var(--text);
+  color: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.action-buttons .copy-tip {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+}
+
+.copy-control .btn:is([data-copied], [data-failed]) + .copy-tip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-tip {
+    transform: none;
+    transition: opacity 0.15s ease;
+  }
+}
+
 @media (pointer: coarse) {
   .btn,
   select,
@@ -406,6 +457,8 @@ select {
   flex: 1;
   inline-size: 100%;
   min-block-size: 26rem;
+  max-block-size: min(72dvh, 45rem);
+  overflow: auto;
   border: 0;
   margin: 0;
   padding: 0.85rem;
@@ -513,6 +566,7 @@ select {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -616,12 +670,76 @@ select {
   border-radius: 0.45rem;
   border: 1px solid var(--border);
   background: var(--surface-alt);
+  color: var(--text);
   overflow: auto;
-  max-block-size: 34rem;
+  max-block-size: min(68dvh, 42rem);
   min-block-size: 22rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8rem;
   line-height: 1.5;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.code-output code {
+  display: block;
+  white-space: pre;
+  tab-size: 2;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Syntax highlighting via CSS Custom Highlight API + span fallback (WCAG AA >= 6:1) */
+::highlight(tok-keyword) { color: #6b21a8; }
+::highlight(tok-type) { color: #0f5e8c; }
+::highlight(tok-string) { color: #166534; }
+::highlight(tok-comment) { color: #5c5675; }
+::highlight(tok-number) { color: #9a3412; }
+::highlight(tok-attr) { color: #9d174d; }
+::highlight(tok-fn) { color: #3730a3; }
+
+.tok-keyword { color: #6b21a8; }
+.tok-type { color: #0f5e8c; }
+.tok-string { color: #166534; }
+.tok-comment { color: #5c5675; font-style: italic; }
+.tok-number { color: #9a3412; }
+.tok-attr { color: #9d174d; }
+.tok-fn { color: #3730a3; }
+
+@media (prefers-color-scheme: dark) {
+  ::highlight(tok-keyword) { color: #d8b4fe; }
+  ::highlight(tok-type) { color: #7dd3fc; }
+  ::highlight(tok-string) { color: #86efac; }
+  ::highlight(tok-comment) { color: #a79fc4; }
+  ::highlight(tok-number) { color: #fdba74; }
+  ::highlight(tok-attr) { color: #f9a8d4; }
+  ::highlight(tok-fn) { color: #a5b4fc; }
+
+  .tok-keyword { color: #d8b4fe; }
+  .tok-type { color: #7dd3fc; }
+  .tok-string { color: #86efac; }
+  .tok-comment { color: #a79fc4; }
+  .tok-number { color: #fdba74; }
+  .tok-attr { color: #f9a8d4; }
+  .tok-fn { color: #a5b4fc; }
+}
+
+@media (forced-colors: active) {
+  ::highlight(tok-keyword),
+  ::highlight(tok-type),
+  ::highlight(tok-string),
+  ::highlight(tok-comment),
+  ::highlight(tok-number),
+  ::highlight(tok-attr),
+  ::highlight(tok-fn) {
+    color: CanvasText;
+    background-color: Canvas;
+  }
+
+  .tok-comment {
+    color: GrayText;
+  }
 }
 
 .transcode-inner {

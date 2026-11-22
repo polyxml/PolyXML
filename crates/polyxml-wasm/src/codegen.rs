@@ -6,10 +6,17 @@ use polyxml::codegen::{
 };
 use polyxml::ir::{SchemaIR, TypeDef};
 use polyxml::schema_parser::XsdParser;
+use quick_xml::events::Event;
+use quick_xml::Reader;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 use crate::{error, validate_inline_xsd};
+
+/// Maximum XSD byte size accepted by the browser playground compiler.
+pub const MAX_CODEGEN_XSD_BYTES: usize = 256 * 1024;
+/// Maximum XML element count accepted by the browser playground compiler.
+pub const MAX_CODEGEN_XSD_ELEMENTS: usize = 4_000;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,9 +80,53 @@ fn unknown_variant(lang: &str, variant: &str) -> String {
     format!("Unknown variant '{variant}' for language '{lang}'")
 }
 
+fn validate_codegen_xsd(xsd: &str) -> Result<(), String> {
+    if xsd.trim().is_empty() {
+        return Err("Input is empty — paste a W3C XSD <xs:schema> document.".into());
+    }
+    if xsd.len() > MAX_CODEGEN_XSD_BYTES {
+        return Err(format!(
+            "Schema exceeds browser playground limit (256 KiB; got {:.1} KiB). For multi-megabyte schemas, use the native CLI: polyxml generate",
+            xsd.len() as f64 / 1024.0
+        ));
+    }
+
+    validate_inline_xsd(xsd)?;
+
+    let mut reader = Reader::from_str(xsd);
+    let mut element_count = 0usize;
+    let mut saw_root = false;
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(tag) | Event::Empty(tag)) => {
+                if !saw_root {
+                    saw_root = true;
+                    if tag.local_name().as_ref() != "schema" {
+                        return Err("Expected a W3C XSD <xs:schema> root element.".into());
+                    }
+                }
+                element_count += 1;
+                if element_count > MAX_CODEGEN_XSD_ELEMENTS {
+                    return Err(format!(
+                        "Schema exceeds browser playground limit ({MAX_CODEGEN_XSD_ELEMENTS} XML elements). Use the native CLI: polyxml generate"
+                    ));
+                }
+            }
+            Ok(Event::Eof) => {
+                if !saw_root {
+                    return Err("Expected a W3C XSD <xs:schema> root element.".into());
+                }
+                return Ok(());
+            }
+            Err(err) => return Err(err.to_string()),
+            _ => {}
+        }
+    }
+}
+
 /// Compile an inline XSD into generated source files and IR metadata serialized as JSON.
 pub fn compile_xsd_json(xsd: &str, lang: &str, variant: Option<&str>) -> Result<String, String> {
-    validate_inline_xsd(xsd)?;
+    validate_codegen_xsd(xsd)?;
     let ir = XsdParser::new().parse_str(xsd).map_err(|e| e.to_string())?;
     let stats = collect_stats(&ir);
 
@@ -397,8 +448,29 @@ mod tests {
                 .unwrap()
                 .contains("public class PaymentTransfer")));
 
+        let java_jackson3 = parse_response("java", Some("jackson3"));
+        assert!(java_jackson3["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["content"]
+                .as_str()
+                .unwrap()
+                .contains("jakarta.validation")));
+
         let go_sonic = parse_response("go", Some("sonic"));
         assert_eq!(go_sonic["variant"], "sonic");
+        assert!(go_sonic["files"][0]["content"]
+            .as_str()
+            .unwrap()
+            .contains("sonic:\""));
+
+        let go_easyjson = parse_response("go", Some("easyjson"));
+        assert_eq!(go_easyjson["variant"], "easyjson");
+        assert!(go_easyjson["files"][0]["content"]
+            .as_str()
+            .unwrap()
+            .contains("//easyjson:json"));
 
         let ts_zod = parse_response("typescript", Some("zod"));
         assert!(ts_zod["files"][0]["content"]
@@ -457,5 +529,41 @@ mod tests {
 
         let err = compile_xsd_json(SAMPLE_XSD, "rust", Some("unknown")).unwrap_err();
         assert!(err.contains("Unknown variant"), "{err}");
+    }
+
+    #[test]
+    fn enforces_playground_size_depth_element_and_grammar_guardrails() {
+        let err = compile_xsd_json("   \n\t ", "rust", None).unwrap_err();
+        assert!(err.contains("Input is empty"), "{err}");
+
+        let err = compile_xsd_json("<root/>", "rust", None).unwrap_err();
+        assert!(err.contains("<xs:schema> root element"), "{err}");
+
+        let doctype = r#"<!DOCTYPE xs:schema [<!ENTITY xxe "boom">]>
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"/>"#;
+        let err = compile_xsd_json(doctype, "rust", None).unwrap_err();
+        assert!(err.contains("DOCTYPE"), "{err}");
+
+        let huge_payload = format!(
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><!-- {} --></xs:schema>"#,
+            "a".repeat(MAX_CODEGEN_XSD_BYTES + 128)
+        );
+        let err = compile_xsd_json(&huge_payload, "rust", None).unwrap_err();
+        assert!(err.contains("256 KiB"), "{err}");
+
+        let many_elements = format!(
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">{}</xs:schema>"#,
+            r#"<xs:element name="e" type="xs:string"/>"#.repeat(MAX_CODEGEN_XSD_ELEMENTS + 1)
+        );
+        let err = compile_xsd_json(&many_elements, "rust", None).unwrap_err();
+        assert!(err.contains("XML elements"), "{err}");
+
+        let deep_open = "<xs:sequence>".repeat(crate::MAX_XSD_DEPTH + 1);
+        let deep_close = "</xs:sequence>".repeat(crate::MAX_XSD_DEPTH + 1);
+        let deeply_nested = format!(
+            r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="T">{deep_open}{deep_close}</xs:complexType></xs:schema>"#
+        );
+        let err = compile_xsd_json(&deeply_nested, "rust", None).unwrap_err();
+        assert!(err.contains("nesting depth"), "{err}");
     }
 }

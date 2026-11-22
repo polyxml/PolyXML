@@ -298,3 +298,80 @@ fn test_polymorphic_xsi_type_xml_json_xml_roundtrip() {
         "unexpected error: {err}"
     );
 }
+
+#[test]
+fn test_ir_schema_recursive_extension_and_choice_roundtrip() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:example:telemetry"
+           xmlns:tns="urn:example:telemetry"
+           elementFormDefault="qualified">
+  <xs:complexType name="TelemetryHeader">
+    <xs:sequence>
+      <xs:element name="PlatformId" type="xs:string"/>
+      <xs:element name="Seq" type="xs:unsignedLong"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TrackNode">
+    <xs:complexContent>
+      <xs:extension base="tns:TelemetryHeader">
+        <xs:sequence>
+          <xs:choice>
+            <xs:element name="BearingDeg" type="xs:double"/>
+            <xs:element name="LostSignal" type="xs:boolean"/>
+          </xs:choice>
+          <xs:element name="Child" type="tns:TrackNode" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="TrackNode" type="tns:TrackNode"/>
+</xs:schema>"#;
+
+    let xml = br#"<TrackNode xmlns="urn:example:telemetry">
+  <PlatformId>UAV-ALPHA</PlatformId>
+  <Seq>9012</Seq>
+  <BearingDeg>137.5</BearingDeg>
+  <Child>
+    <PlatformId>RELAY-02</PlatformId>
+    <Seq>9013</Seq>
+    <LostSignal>false</LostSignal>
+  </Child>
+</TrackNode>"#;
+
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(xsd)
+        .expect("parse telemetry xsd");
+    let schema = ModelSchema::from_ir(&ir, Some("TrackNode")).expect("ModelSchema::from_ir");
+
+    let json_bytes =
+        xml_to_json(xml, Some(Arc::clone(&schema)), Some(2), true).expect("xml_to_json");
+    let parsed: serde_json::Value = serde_json::from_slice(&json_bytes).expect("valid json");
+    assert_eq!(parsed["PlatformId"], "UAV-ALPHA");
+    assert_eq!(parsed["Seq"], 9012);
+    assert_eq!(parsed["BearingDeg"], 137.5);
+    assert_eq!(parsed["Child"][0]["PlatformId"], "RELAY-02");
+    assert_eq!(parsed["Child"][0]["Seq"], 9013);
+    assert_eq!(parsed["Child"][0]["LostSignal"], false);
+
+    let rt_xml = json_to_xml(
+        &json_bytes,
+        Some(Arc::clone(&schema)),
+        Some("TrackNode"),
+        Some(2),
+        None,
+        None,
+    )
+    .expect("json_to_xml");
+    let rt_str = String::from_utf8(rt_xml).expect("utf8");
+    for snippet in [
+        "<ns0:PlatformId>UAV-ALPHA</ns0:PlatformId>",
+        "<ns0:Seq>9012</ns0:Seq>",
+        "<ns0:BearingDeg>137.5</ns0:BearingDeg>",
+        "<ns0:PlatformId>RELAY-02</ns0:PlatformId>",
+        "<ns0:Seq>9013</ns0:Seq>",
+        "<ns0:LostSignal>false</ns0:LostSignal>",
+    ] {
+        assert!(rt_str.contains(snippet), "missing {snippet} in:\n{rt_str}");
+    }
+}

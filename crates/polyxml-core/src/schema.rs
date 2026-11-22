@@ -228,19 +228,11 @@ impl ModelSchema {
         use crate::ir::{PrimitiveType, TypeDef, TypeRef};
         use std::collections::HashSet;
 
-        let (name, qname_opt, type_ref) = if let Some(target) = root_name {
-            if let Some((qname, elem)) = ir.elements.iter().find(|(q, _)| q.local == target) {
-                (
-                    elem.qname.local.clone(),
-                    Some(qname.clone()),
-                    elem.type_ref.clone(),
-                )
+        let (name, type_ref) = if let Some(target) = root_name {
+            if let Some((_, elem)) = ir.elements.iter().find(|(q, _)| q.local == target) {
+                (elem.qname.local.clone(), elem.type_ref.clone())
             } else if let Some((qname, _)) = ir.types.iter().find(|(q, _)| q.local == target) {
-                (
-                    qname.local.clone(),
-                    Some(qname.clone()),
-                    TypeRef::Named(qname.clone()),
-                )
+                (qname.local.clone(), TypeRef::Named(qname.clone()))
             } else {
                 return Err(crate::error::PolyXmlError::SchemaError(format!(
                     "Root element or type '{}' not found in schema",
@@ -248,22 +240,18 @@ impl ModelSchema {
                 )));
             }
         } else if let Some((_, elem)) = ir.elements.iter().next() {
-            (
-                elem.qname.local.clone(),
-                Some(elem.qname.clone()),
-                elem.type_ref.clone(),
-            )
+            (elem.qname.local.clone(), elem.type_ref.clone())
         } else if let Some((qname, _)) = ir.types.iter().next() {
-            (
-                qname.local.clone(),
-                Some(qname.clone()),
-                TypeRef::Named(qname.clone()),
-            )
+            (qname.local.clone(), TypeRef::Named(qname.clone()))
         } else {
             return Err(crate::error::PolyXmlError::SchemaError(
                 "SchemaIR contains no elements or types".into(),
             ));
         };
+
+        const MAX_CYCLE_DEPTH: usize = 6;
+        type MemoKey = (crate::ir::QName, usize);
+        type MemoMap = HashMap<MemoKey, Arc<ModelSchema>>;
 
         fn map_primitive(prim: PrimitiveType) -> ScalarType {
             match prim {
@@ -315,32 +303,56 @@ impl ModelSchema {
         fn build_type(
             tr: &TypeRef,
             ir: &crate::ir::SchemaIR,
-            visited: &mut HashSet<crate::ir::QName>,
+            active: &mut HashSet<crate::ir::QName>,
+            budget: usize,
+            memo: &mut MemoMap,
         ) -> ValueType {
             match tr {
                 TypeRef::Primitive(prim) => ValueType::Scalar(map_primitive(*prim)),
-                TypeRef::List(inner) => match build_type(inner, ir, visited) {
+                TypeRef::List(inner) => match build_type(inner, ir, active, budget, memo) {
                     ValueType::Scalar(scalar) => {
                         ValueType::Scalar(ScalarType::List(Box::new(scalar)))
                     }
                     _ => ValueType::Scalar(ScalarType::Any),
                 },
-                TypeRef::Boxed(inner) => build_type(inner, ir, visited),
+                TypeRef::Boxed(inner) => build_type(inner, ir, active, budget, memo),
                 TypeRef::Named(qname) => {
                     if let Some(type_def) = ir.types.get(qname) {
                         match type_def {
                             TypeDef::Struct(s) => {
-                                if visited.contains(&s.qname) {
-                                    ValueType::Nested(ModelSchema::builder(&s.qname.local).build())
+                                if active.contains(&s.qname) {
+                                    if budget == 0 {
+                                        ValueType::Nested(
+                                            ModelSchema::builder(&s.qname.local).build(),
+                                        )
+                                    } else {
+                                        let next_budget = budget - 1;
+                                        if let Some(cached) =
+                                            memo.get(&(s.qname.clone(), next_budget))
+                                        {
+                                            return ValueType::Nested(Arc::clone(cached));
+                                        }
+                                        let mut fresh_active = HashSet::new();
+                                        let child_schema = build_struct(
+                                            s,
+                                            ir,
+                                            &mut fresh_active,
+                                            next_budget,
+                                            memo,
+                                        );
+                                        memo.insert(
+                                            (s.qname.clone(), next_budget),
+                                            Arc::clone(&child_schema),
+                                        );
+                                        ValueType::Nested(child_schema)
+                                    }
                                 } else {
-                                    visited.insert(s.qname.clone());
-                                    let child_schema = build_struct(s, ir, visited);
-                                    visited.remove(&s.qname);
+                                    let child_schema = build_struct(s, ir, active, budget, memo);
                                     ValueType::Nested(child_schema)
                                 }
                             }
                             TypeDef::Simple(sim) => {
-                                let base = build_type(&sim.base_type, ir, visited);
+                                let base = build_type(&sim.base_type, ir, active, budget, memo);
                                 if sim.facets.is_empty() {
                                     base
                                 } else if let ValueType::Scalar(scalar) = base {
@@ -359,9 +371,12 @@ impl ModelSchema {
                                 ValueType::Scalar(ScalarType::Union(
                                     u.branches
                                         .iter()
-                                        .map(|b| match build_type(&b.type_ref, ir, visited) {
-                                            ValueType::Scalar(scalar) => scalar,
-                                            _ => ScalarType::Any,
+                                        .map(|b| {
+                                            match build_type(&b.type_ref, ir, active, budget, memo)
+                                            {
+                                                ValueType::Scalar(scalar) => scalar,
+                                                _ => ScalarType::Any,
+                                            }
                                         })
                                         .collect(),
                                 ))
@@ -378,7 +393,9 @@ impl ModelSchema {
         fn build_field(
             f: &crate::ir::FieldDef,
             ir: &crate::ir::SchemaIR,
-            visited: &mut HashSet<crate::ir::QName>,
+            active: &mut HashSet<crate::ir::QName>,
+            budget: usize,
+            memo: &mut MemoMap,
         ) -> FieldSchema {
             let kind = match f.kind {
                 crate::ir::FieldKind::Attribute => FieldKind::Attribute,
@@ -388,7 +405,7 @@ impl ModelSchema {
                 crate::ir::FieldKind::Any => FieldKind::Any,
             };
 
-            let mut val_type = build_type(&f.type_ref, ir, visited);
+            let mut val_type = build_type(&f.type_ref, ir, active, budget, memo);
             if f.cardinality.is_list() && !matches!(val_type, ValueType::List(_)) {
                 val_type = ValueType::List(Box::new(val_type));
             }
@@ -403,6 +420,48 @@ impl ModelSchema {
                 field_schema = field_schema.required();
             }
             field_schema
+        }
+
+        fn add_field_or_choice_branches(
+            mut builder: ModelSchemaBuilder,
+            f: &crate::ir::FieldDef,
+            ir: &crate::ir::SchemaIR,
+            active: &mut HashSet<crate::ir::QName>,
+            budget: usize,
+            memo: &mut MemoMap,
+        ) -> ModelSchemaBuilder {
+            if f.xml_name.is_empty() && f.kind == crate::ir::FieldKind::Element {
+                if let TypeRef::Named(qname) = &f.type_ref {
+                    if let Some(TypeDef::Union(union)) = ir.types.get(qname) {
+                        if !union.is_lexical() && !union.is_mixed_content() {
+                            for branch in &union.branches {
+                                if branch.xml_name.is_empty() || branch.xml_name == "#text" {
+                                    continue;
+                                }
+                                let mut val_type =
+                                    build_type(&branch.type_ref, ir, active, budget, memo);
+                                if f.cardinality.is_list()
+                                    && !matches!(val_type, ValueType::List(_))
+                                {
+                                    val_type = ValueType::List(Box::new(val_type));
+                                }
+                                let mut fs = FieldSchema::new(
+                                    &branch.xml_name,
+                                    branch.xml_name.as_bytes(),
+                                    FieldKind::Element,
+                                    val_type,
+                                );
+                                if let Some(ref ns) = branch.namespace {
+                                    fs = fs.namespace(ns);
+                                }
+                                builder = builder.field(fs);
+                            }
+                            return builder;
+                        }
+                    }
+                }
+            }
+            builder.field(build_field(f, ir, active, budget, memo))
         }
 
         /// Whether `d` transitively extends `base` via `xs:extension`.
@@ -431,8 +490,11 @@ impl ModelSchema {
         fn build_struct(
             s: &crate::ir::StructDef,
             ir: &crate::ir::SchemaIR,
-            visited: &mut HashSet<crate::ir::QName>,
+            active: &mut HashSet<crate::ir::QName>,
+            budget: usize,
+            memo: &mut MemoMap,
         ) -> Arc<ModelSchema> {
+            active.insert(s.qname.clone());
             let mut builder = ModelSchema::builder(&s.qname.local);
             if let Some(ref ns) = s.qname.namespace {
                 builder = builder.namespace(ns);
@@ -474,11 +536,11 @@ impl ModelSchema {
                     if has_own_text && f.kind == crate::ir::FieldKind::Text {
                         continue;
                     }
-                    builder = builder.field(build_field(f, ir, visited));
+                    builder = add_field_or_choice_branches(builder, f, ir, active, budget, memo);
                 }
             }
             for f in &s.fields {
-                builder = builder.field(build_field(f, ir, visited));
+                builder = add_field_or_choice_branches(builder, f, ir, active, budget, memo);
             }
 
             let mut schema = builder.build();
@@ -508,7 +570,7 @@ impl ModelSchema {
                                 variant_name: branch.variant_name.clone(),
                                 xml_name: branch.xml_name.as_bytes().to_vec(),
                                 namespace: branch.namespace.clone(),
-                                val_type: build_type(&branch.type_ref, ir, visited),
+                                val_type: build_type(&branch.type_ref, ir, active, budget, memo),
                             })
                             .collect();
                         Arc::get_mut(&mut schema).expect("new schema").mixed_content =
@@ -534,38 +596,35 @@ impl ModelSchema {
                 .collect();
             let mut variants = Vec::with_capacity(derived.len());
             for dq in derived {
-                if visited.contains(&dq) {
+                if active.contains(&dq) {
                     continue;
                 }
-                visited.insert(dq.clone());
                 if let Some(TypeDef::Struct(d)) = ir.types.get(&dq) {
-                    variants.push(build_struct(d, ir, visited));
+                    variants.push(build_struct(d, ir, active, budget, memo));
                 }
-                visited.remove(&dq);
             }
             if !variants.is_empty() {
                 schema.set_variants(variants);
             }
 
+            active.remove(&s.qname);
             schema
         }
 
-        let mut visited = HashSet::new();
-        if let Some(qn) = qname_opt.as_ref() {
-            visited.insert(qn.clone());
-        }
+        let mut active = HashSet::new();
+        let mut memo = HashMap::new();
 
         match type_ref {
             TypeRef::Named(ref qname) if ir.types.contains_key(qname) => {
                 if let Some(TypeDef::Struct(s)) = ir.types.get(qname) {
-                    Ok(build_struct(s, ir, &mut visited))
+                    Ok(build_struct(s, ir, &mut active, MAX_CYCLE_DEPTH, &mut memo))
                 } else {
                     let mut b = ModelSchema::builder(name);
                     b = b.field(FieldSchema::new(
                         "value",
                         b"value",
                         FieldKind::Text,
-                        build_type(&type_ref, ir, &mut visited),
+                        build_type(&type_ref, ir, &mut active, MAX_CYCLE_DEPTH, &mut memo),
                     ));
                     Ok(b.build())
                 }
@@ -576,7 +635,7 @@ impl ModelSchema {
                     "value",
                     b"value",
                     FieldKind::Text,
-                    build_type(&type_ref, ir, &mut visited),
+                    build_type(&type_ref, ir, &mut active, MAX_CYCLE_DEPTH, &mut memo),
                 ));
                 Ok(b.build())
             }

@@ -11,6 +11,8 @@ mod codegen;
 #[cfg(feature = "codegen")]
 pub use codegen::compile_xsd;
 
+pub(crate) const MAX_XSD_DEPTH: usize = 128;
+
 fn error(message: impl ToString) -> JsValue {
     JsValue::from_str(&message.to_string())
 }
@@ -68,15 +70,43 @@ impl WasmSchema {
     }
 }
 
+#[cfg(feature = "codegen")]
+#[wasm_bindgen]
+impl WasmSchema {
+    /// Transcode JSON into pretty-printed XML using this schema's root element.
+    pub fn json_to_xml_pretty(&self, json: &[u8], indent: usize) -> Result<Vec<u8>, JsValue> {
+        let clamped = indent.min(8);
+        polyxml::json_to_xml(
+            json,
+            Some(Arc::clone(&self.schema)),
+            Some(&self.root_name),
+            Some(clamped),
+            None,
+            None,
+        )
+        .map_err(error)
+    }
+}
+
 fn reject_external_schema_references(xsd: &str) -> Result<(), JsValue> {
     validate_inline_xsd(xsd).map_err(error)
 }
 
 pub(crate) fn validate_inline_xsd(xsd: &str) -> Result<(), String> {
     let mut reader = Reader::from_str(xsd);
+    let mut depth = 0usize;
     loop {
         match reader.read_event() {
-            Ok(Event::Start(tag) | Event::Empty(tag)) => {
+            Ok(Event::DocType(_)) => {
+                return Err("Inline XSD must not contain DOCTYPE declarations".into());
+            }
+            Ok(Event::Start(tag)) => {
+                depth += 1;
+                if depth > MAX_XSD_DEPTH {
+                    return Err(format!(
+                        "Schema exceeds maximum XML nesting depth ({MAX_XSD_DEPTH})"
+                    ));
+                }
                 let name = tag.local_name();
                 if matches!(
                     name.as_ref(),
@@ -84,6 +114,23 @@ pub(crate) fn validate_inline_xsd(xsd: &str) -> Result<(), String> {
                 ) {
                     return Err("Inline XSD must not use include/import/redefine/override".into());
                 }
+            }
+            Ok(Event::Empty(tag)) => {
+                if depth + 1 > MAX_XSD_DEPTH {
+                    return Err(format!(
+                        "Schema exceeds maximum XML nesting depth ({MAX_XSD_DEPTH})"
+                    ));
+                }
+                let name = tag.local_name();
+                if matches!(
+                    name.as_ref(),
+                    "include" | "import" | "redefine" | "override"
+                ) {
+                    return Err("Inline XSD must not use include/import/redefine/override".into());
+                }
+            }
+            Ok(Event::End(_)) => {
+                depth = depth.saturating_sub(1);
             }
             Ok(Event::Eof) => return Ok(()),
             Err(err) => return Err(err.to_string()),
