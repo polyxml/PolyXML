@@ -1,3 +1,10 @@
+# [0.43.0](https://github.com/polyxml/PolyXML/compare/v0.42.1...v0.43.0) (2026-11-22)
+
+
+### Features
+
+* **playground:** add syntax highlighting, guardrails, and fix transcoding/UI bugs ([e8f14df](https://github.com/polyxml/PolyXML/commit/e8f14df59a258f7d2a9d2de887ef6d5d332c65c9))
+
 ## [0.42.1](https://github.com/polyxml/PolyXML/compare/v0.42.0...v0.42.1) (2026-11-22)
 
 
