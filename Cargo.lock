@@ -678,6 +678,8 @@ version = "0.41.3"
 dependencies = [
  "polyxml",
  "quick-xml",
+ "serde",
+ "serde_json",
  "wasm-bindgen",
 ]
 

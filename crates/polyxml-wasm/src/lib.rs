@@ -6,6 +6,11 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "codegen")]
+mod codegen;
+#[cfg(feature = "codegen")]
+pub use codegen::compile_xsd;
+
 fn error(message: impl ToString) -> JsValue {
     JsValue::from_str(&message.to_string())
 }
@@ -64,6 +69,10 @@ impl WasmSchema {
 }
 
 fn reject_external_schema_references(xsd: &str) -> Result<(), JsValue> {
+    validate_inline_xsd(xsd).map_err(error)
+}
+
+pub(crate) fn validate_inline_xsd(xsd: &str) -> Result<(), String> {
     let mut reader = Reader::from_str(xsd);
     loop {
         match reader.read_event() {
@@ -73,13 +82,11 @@ fn reject_external_schema_references(xsd: &str) -> Result<(), JsValue> {
                     name.as_ref(),
                     "include" | "import" | "redefine" | "override"
                 ) {
-                    return Err(error(
-                        "Inline XSD must not use include/import/redefine/override",
-                    ));
+                    return Err("Inline XSD must not use include/import/redefine/override".into());
                 }
             }
             Ok(Event::Eof) => return Ok(()),
-            Err(err) => return Err(error(err)),
+            Err(err) => return Err(err.to_string()),
             _ => {}
         }
     }

@@ -10,6 +10,7 @@ extra_css = ["stylesheets/brand.css"]
 nav = [
     { "Overview" = "index.md" },
     { "Quickstart" = "quickstart.md" },
+    { "Playground" = "https://polyxml.github.io/PolyXML/playground/" },
     { "Why PolyXML?" = "why-polyxml.md" },
     { "Languages" = [
         { "Overview" = "languages/index.md" },

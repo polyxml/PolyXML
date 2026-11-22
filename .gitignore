@@ -37,6 +37,7 @@ site/
 node_modules/
 *.node
 /crates/polyxml-wasm/pkg/
+/docs/playground/pkg/
 
 # CMake / C++
 bindings/cpp/build/

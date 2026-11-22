@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Playground | PolyXML</title>
+  <meta name="description" content="Compile W3C XSD schemas to Rust, Python, C++20, Java, Go, TypeScript, and C# directly in your browser via WebAssembly.">
+  <link rel="icon" type="image/png" href="../assets/brand/logo_polyxml_icon.png">
+  <link rel="stylesheet" href="playground.css">
+</head>
+<body>
+  <a href="#playground-main" class="skip-link visually-hidden">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="../" class="brand-link">
+        <img src="../assets/brand/logo_polyxml_icon.png" alt="" width="32" height="32" class="brand-icon">
+        <span class="brand-name">PolyXML</span>
+      </a>
+      <nav aria-label="Primary" class="primary-nav">
+        <a href="../">Overview</a>
+        <a href="../quickstart/">Quickstart</a>
+        <a href="../why-polyxml/">Why PolyXML?</a>
+        <a href="https://github.com/polyxml/PolyXML">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="playground-main" tabindex="-1" class="playground-main">
+    <section class="toolbar" aria-label="Schema controls">
+      <div class="title-block">
+        <h1>XSD Compiler &amp; Streaming Playground</h1>
+        <p class="subtitle">Compiles W3C XSD 1.0/1.1 schemas directly in WebAssembly — zero server round trips.</p>
+      </div>
+
+      <div class="controls-row">
+        <div class="control-group">
+          <label for="preset-select">Preset schema</label>
+          <select id="preset-select">
+            <option value="iso20022">ISO 20022 Payment (pacs.008-style)</option>
+            <option value="defense">Defense Telemetry (C++20 / Tarjan SCC)</option>
+            <option value="ubl">UBL Invoice &amp; Decimal Totals</option>
+            <option value="upa">W3C UPA Ambiguity Diagnostic</option>
+          </select>
+        </div>
+
+        <div class="action-buttons">
+          <button type="button" id="share-btn" class="btn btn-secondary">Share URL</button>
+          <button type="button" id="reset-btn" class="btn btn-secondary">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="status-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="workspace-shell">
+      <div class="split-grid">
+        <!-- Left Pane: Schema Input -->
+        <section class="pane editor-pane" aria-labelledby="xsd-label">
+          <div class="pane-header">
+            <label id="xsd-label" for="xsd-input" class="pane-title">Input W3C Schema (<code>.xsd</code>)</label>
+            <span id="ir-stats" class="meta-pill">Loading WASM…</span>
+          </div>
+          <textarea
+            id="xsd-input"
+            class="code-editor"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+          ></textarea>
+        </section>
+
+        <!-- Right Pane: Generated Output & Live XML↔JSON -->
+        <section class="pane output-pane" aria-label="Compiler output">
+          <div class="tabs-bar">
+            <div class="tablist scroller" focusgroup="tablist nomemory" role="tablist" aria-label="Output target">
+              <button type="button" role="tab" id="tab-rust" data-tab="rust" aria-selected="true" focusgroupstart tabindex="0">Rust</button>
+              <button type="button" role="tab" id="tab-python" data-tab="python" aria-selected="false" tabindex="-1">Python</button>
+              <button type="button" role="tab" id="tab-cpp" data-tab="cpp" aria-selected="false" tabindex="-1">C++20</button>
+              <button type="button" role="tab" id="tab-java" data-tab="java" aria-selected="false" tabindex="-1">Java 22+</button>
+              <button type="button" role="tab" id="tab-go" data-tab="go" aria-selected="false" tabindex="-1">Go</button>
+              <button type="button" role="tab" id="tab-typescript" data-tab="typescript" aria-selected="false" tabindex="-1">TypeScript</button>
+              <button type="button" role="tab" id="tab-csharp" data-tab="csharp" aria-selected="false" tabindex="-1">C# 12</button>
+              <button type="button" role="tab" id="tab-transcode" data-tab="transcode" aria-selected="false" tabindex="-1">XML ↔ JSON</button>
+            </div>
+          </div>
+
+          <div class="error-banner" id="error-banner" role="alert" hidden></div>
+
+          <div class="panels-stage">
+            <div id="panel-code" role="tabpanel" aria-labelledby="tab-rust" tabindex="0">
+              <div class="panel-inner">
+                <div class="pane-subbar">
+                  <div class="variant-control">
+                    <label for="variant-select">Backend / Style</label>
+                    <select id="variant-select"></select>
+                  </div>
+                  <div id="file-tabs" class="file-tabs" aria-label="Generated files" hidden></div>
+                  <div class="output-actions">
+                    <span id="compile-timing" class="meta-pill"></span>
+                    <button type="button" id="copy-code-btn" class="btn btn-primary">Copy code</button>
+                  </div>
+                </div>
+                <pre class="code-output"><code id="generated-code">Compiling in WebAssembly…</code></pre>
+              </div>
+            </div>
+
+            <div id="panel-transcode" role="tabpanel" aria-labelledby="tab-transcode" hidden="until-found">
+              <div class="panel-inner transcode-inner">
+                <div class="transcode-block">
+                  <div class="pane-subbar">
+                    <label for="xml-input" class="pane-title">Sample XML Document</label>
+                    <div class="output-actions">
+                      <button type="button" id="xml-to-json-btn" class="btn btn-primary">XML → JSON</button>
+                    </div>
+                  </div>
+                  <textarea
+                    id="xml-input"
+                    class="code-editor transcode-editor"
+                    spellcheck="false"
+                    autocomplete="off"
+                    autocapitalize="off"
+                  ></textarea>
+                </div>
+
+                <div class="transcode-block">
+                  <div class="pane-subbar">
+                    <label for="json-input" class="pane-title">Schema-Typed JSON</label>
+                    <div class="output-actions">
+                      <button type="button" id="json-to-xml-btn" class="btn btn-secondary">JSON → XML</button>
+                    </div>
+                  </div>
+                  <textarea
+                    id="json-input"
+                    class="code-editor transcode-editor"
+                    spellcheck="false"
+                    autocomplete="off"
+                    autocapitalize="off"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      PolyXML compiles 100% locally in your browser using <code>polyxml-wasm</code> (MIT License).
+      <a href="https://github.com/polyxml/PolyXML">Star on GitHub</a> ·
+      <a href="../quickstart/">CLI Quickstart</a>
+    </p>
+  </footer>
+
+  <script type="module" src="playground.js"></script>
+</body>
+</html>

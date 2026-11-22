@@ -38,11 +38,30 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Install Rust and Wasm target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Install Zensical
         run: uv pip install --system zensical
 
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.15.0 --locked
+
       - name: Build Docs
         run: zensical build --clean --strict
+
+      - name: Build Playground WASM Bundle
+        run: |
+          wasm-pack build crates/polyxml-wasm --target web --release --out-dir "${{ github.workspace }}/site/playground/pkg" -- --features codegen
+          rm -f site/playground/pkg/.gitignore site/playground/pkg/package.json site/playground/pkg/README.md
+          test -f site/playground/index.html
+          test -f site/playground/pkg/polyxml_wasm.js
+          test -f site/playground/pkg/polyxml_wasm_bg.wasm
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v5
