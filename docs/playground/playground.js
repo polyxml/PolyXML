@@ -180,6 +180,14 @@ const xsdInput = document.getElementById("xsd-input");
 const irStats = document.getElementById("ir-stats");
 const statusLive = document.getElementById("status-live");
 const errorBanner = document.getElementById("error-banner");
+const errorText = document.getElementById("error-text");
+const fixUpaBtn = document.getElementById("fix-upa-btn");
+
+const UPA_AMBIGUOUS_SNIPPET =
+  '        <xs:element name="Item" type="xs:string" minOccurs="0"/>\n' +
+  '        <xs:element name="Item" type="xs:string"/>';
+const UPA_FIXED_SNIPPET =
+  '        <xs:element name="Item" type="xs:string" minOccurs="1" maxOccurs="2"/>';
 
 const tablist = document.querySelector(".tablist");
 const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
@@ -211,13 +219,15 @@ function announce(message) {
   statusLive.textContent = message;
 }
 
-function showError(message) {
+function showError(message, { showUpaFix = false } = {}) {
   if (!message) {
-    errorBanner.textContent = "";
+    errorText.textContent = "";
+    fixUpaBtn.hidden = true;
     errorBanner.hidden = true;
     return;
   }
-  errorBanner.textContent = message;
+  errorText.textContent = message;
+  fixUpaBtn.hidden = !showUpaFix;
   errorBanner.hidden = false;
 }
 
@@ -318,12 +328,30 @@ function runCompile() {
     renderActiveFile();
   } catch (err) {
     const elapsed = (performance.now() - start).toFixed(1);
+    const msg = String(err);
     compileTiming.textContent = `${elapsed} ms`;
-    irStats.textContent = "Compile error";
     activeFiles = [];
     renderFileTabs();
-    generatedCode.textContent = "";
-    showError(String(err));
+
+    if (msg.includes("Unique Particle Attribution")) {
+      irStats.textContent = "UPA violation caught";
+      const hasPresetFix = xsdInput.value.includes(UPA_AMBIGUOUS_SNIPPET);
+      showError(msg, { showUpaFix: hasPresetFix });
+      generatedCode.textContent =
+        "// PolyXML intentionally rejected this schema before generating codecs.\n" +
+        "//\n" +
+        "// Why: Under W3C XSD 1.0 Unique Particle Attribution (UPA), when a parser sees\n" +
+        "// the first <Item>, it cannot tell without lookahead whether that element matches\n" +
+        "// the optional first particle (minOccurs=\"0\") or the required second particle.\n" +
+        "//\n" +
+        "// Fix: Collapse the adjacent elements into a single bounded particle:\n" +
+        "//   <xs:element name=\"Item\" type=\"xs:string\" minOccurs=\"1\" maxOccurs=\"2\"/>\n" +
+        (hasPresetFix ? "//\n// Click \"Apply valid UPA fix\" above to fix the schema and generate code.\n" : "");
+    } else {
+      irStats.textContent = "Compile error";
+      generatedCode.textContent = "";
+      showError(msg);
+    }
   }
 }
 
@@ -373,15 +401,11 @@ function selectTab(nextId, { focusTab = false } = {}) {
 
   if (nextId === "transcode") {
     codePanel.hidden = "until-found";
-    codePanel.removeAttribute("tabindex");
     transcodePanel.hidden = false;
-    transcodePanel.tabIndex = 0;
     runXmlToJson();
   } else {
     transcodePanel.hidden = "until-found";
-    transcodePanel.removeAttribute("tabindex");
     codePanel.hidden = false;
-    codePanel.tabIndex = 0;
     if (selectedBtn) {
       codePanel.setAttribute("aria-labelledby", selectedBtn.id);
     }
@@ -531,6 +555,13 @@ shareBtn.addEventListener("click", async () => {
 
 xmlToJsonBtn.addEventListener("click", runXmlToJson);
 jsonToXmlBtn.addEventListener("click", runJsonToXml);
+fixUpaBtn.addEventListener("click", () => {
+  if (xsdInput.value.includes(UPA_AMBIGUOUS_SNIPPET)) {
+    xsdInput.value = xsdInput.value.replace(UPA_AMBIGUOUS_SNIPPET, UPA_FIXED_SNIPPET);
+    runCompile();
+    announce("Applied UPA fix and compiled schema cleanly.");
+  }
+});
 
 setupScrollFadeFallback();
 

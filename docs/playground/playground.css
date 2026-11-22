@@ -513,6 +513,21 @@ select {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8rem;
   white-space: pre-wrap;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.btn-sm {
+  min-block-size: 2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+[hidden]:not([hidden="until-found"]) {
+  display: none !important;
 }
 
 .panels-stage {
@@ -525,6 +540,17 @@ select {
 [role="tabpanel"] {
   grid-area: 1 / 1;
   min-inline-size: 0;
+}
+
+[role="tabpanel"][hidden] {
+  pointer-events: none;
+  align-self: start;
+  z-index: -1;
+}
+
+[role="tabpanel"]:not([hidden]) {
+  position: relative;
+  z-index: 1;
 }
 
 .panel-inner {

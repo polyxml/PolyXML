@@ -41,7 +41,7 @@
             <option value="iso20022">ISO 20022 Payment (pacs.008-style)</option>
             <option value="defense">Defense Telemetry (C++20 / Tarjan SCC)</option>
             <option value="ubl">UBL Invoice &amp; Decimal Totals</option>
-            <option value="upa">W3C UPA Ambiguity Diagnostic</option>
+            <option value="upa">W3C UPA Violation (Intentional Error Demo)</option>
           </select>
         </div>
 
@@ -86,10 +86,13 @@
             </div>
           </div>
 
-          <div class="error-banner" id="error-banner" role="alert" hidden></div>
+          <div class="error-banner" id="error-banner" role="alert" hidden>
+            <span id="error-text"></span>
+            <button type="button" id="fix-upa-btn" class="btn btn-secondary btn-sm" hidden>Apply valid UPA fix</button>
+          </div>
 
           <div class="panels-stage">
-            <div id="panel-code" role="tabpanel" aria-labelledby="tab-rust" tabindex="0">
+            <div id="panel-code" role="tabpanel" aria-labelledby="tab-rust">
               <div class="panel-inner">
                 <div class="pane-subbar">
                   <div class="variant-control">
