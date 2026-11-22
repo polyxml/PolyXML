@@ -1,3 +1,10 @@
+# [0.42.0](https://github.com/polyxml/PolyXML/compare/v0.41.3...v0.42.0) (2026-11-22)
+
+
+### Features
+
+* **playground,docs:** add WASM browser playground, refresh README, and add social preview ([c28406c](https://github.com/polyxml/PolyXML/commit/c28406cc63aad7e31a1a08647568a4e381ad3784))
+
 ## [0.41.3](https://github.com/polyxml/PolyXML/compare/v0.41.2...v0.41.3) (2026-11-21)
 
 
