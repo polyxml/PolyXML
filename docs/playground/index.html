@@ -65,13 +65,17 @@
             <label id="xsd-label" for="xsd-input" class="pane-title">Input W3C Schema (<code>.xsd</code>)</label>
             <span id="ir-stats" class="meta-pill">Loading WASM…</span>
           </div>
-          <textarea
-            id="xsd-input"
-            class="code-editor"
-            spellcheck="false"
-            autocomplete="off"
-            autocapitalize="off"
-          ></textarea>
+          <div class="editor-stack">
+            <pre class="editor-backdrop" aria-hidden="true"><code id="xsd-highlight"></code></pre>
+            <textarea
+              id="xsd-input"
+              class="code-editor"
+              wrap="off"
+              spellcheck="false"
+              autocomplete="off"
+              autocapitalize="off"
+            ></textarea>
+          </div>
         </section>
 
         <!-- Right Pane: Generated Output & Live XML↔JSON -->
@@ -130,13 +134,17 @@
                       <button type="button" id="xml-to-json-btn" class="btn btn-primary">XML → JSON</button>
                     </div>
                   </div>
-                  <textarea
-                    id="xml-input"
-                    class="code-editor transcode-editor"
-                    spellcheck="false"
-                    autocomplete="off"
-                    autocapitalize="off"
-                  ></textarea>
+                  <div class="editor-stack transcode-stack">
+                    <pre class="editor-backdrop" aria-hidden="true"><code id="xml-highlight"></code></pre>
+                    <textarea
+                      id="xml-input"
+                      class="code-editor transcode-editor"
+                      wrap="off"
+                      spellcheck="false"
+                      autocomplete="off"
+                      autocapitalize="off"
+                    ></textarea>
+                  </div>
                 </div>
 
                 <div class="transcode-block">
@@ -146,13 +154,17 @@
                       <button type="button" id="json-to-xml-btn" class="btn btn-secondary">JSON → XML</button>
                     </div>
                   </div>
-                  <textarea
-                    id="json-input"
-                    class="code-editor transcode-editor"
-                    spellcheck="false"
-                    autocomplete="off"
-                    autocapitalize="off"
-                  ></textarea>
+                  <div class="editor-stack transcode-stack">
+                    <pre class="editor-backdrop" aria-hidden="true"><code id="json-highlight"></code></pre>
+                    <textarea
+                      id="json-input"
+                      class="code-editor transcode-editor"
+                      wrap="off"
+                      spellcheck="false"
+                      autocomplete="off"
+                      autocapitalize="off"
+                    ></textarea>
+                  </div>
                 </div>
               </div>
             </div>

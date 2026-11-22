@@ -309,6 +309,7 @@ const presetSelect = document.getElementById("preset-select");
 const shareBtn = document.getElementById("share-btn");
 const resetBtn = document.getElementById("reset-btn");
 const xsdInput = document.getElementById("xsd-input");
+const xsdHighlight = document.getElementById("xsd-highlight");
 const irStats = document.getElementById("ir-stats");
 const statusLive = document.getElementById("status-live");
 const errorBanner = document.getElementById("error-banner");
@@ -327,13 +328,16 @@ const codeOutput = document.getElementById("code-output");
 const generatedCode = document.getElementById("generated-code");
 
 const xmlInput = document.getElementById("xml-input");
+const xmlHighlight = document.getElementById("xml-highlight");
 const jsonInput = document.getElementById("json-input");
+const jsonHighlight = document.getElementById("json-highlight");
 const xmlToJsonBtn = document.getElementById("xml-to-json-btn");
 const jsonToXmlBtn = document.getElementById("json-to-xml-btn");
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const buttonTimers = new WeakMap();
+const highlightStore = new Map();
 
 let wasm = null;
 let wasmError = null;
@@ -487,7 +491,171 @@ function scanQuoted(code, start, quote, allowMultiline) {
   return code.length;
 }
 
+function isXmlNameChar(ch) {
+  const c = ch.charCodeAt(0);
+  return (
+    isIdentChar(ch) ||
+    c === 58 || // :
+    c === 45 || // -
+    c === 46    // .
+  );
+}
+
+function tokenizeXml(code) {
+  const tokens = [];
+  const n = code.length;
+  let i = 0;
+
+  while (i < n) {
+    if (code[i] === "<") {
+      if (code.startsWith("<!--", i)) {
+        const close = code.indexOf("-->", i + 4);
+        const end = close === -1 ? n : close + 3;
+        tokens.push({ type: "comment", start: i, end });
+        i = end;
+        if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+        continue;
+      }
+
+      if (code.startsWith("<![CDATA[", i)) {
+        const close = code.indexOf("]]>", i + 9);
+        const end = close === -1 ? n : close + 3;
+        tokens.push({ type: "string", start: i, end });
+        i = end;
+        if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+        continue;
+      }
+
+      const isPi = code[i + 1] === "?";
+      const isDecl = !isPi && code[i + 1] === "!";
+      let cursor = i + (isPi || isDecl || code[i + 1] === "/" ? 2 : 1);
+      if (cursor < n && (isIdentStart(code[cursor]) || code[cursor] === ":")) {
+        let nameEnd = cursor + 1;
+        while (nameEnd < n && isXmlNameChar(code[nameEnd])) nameEnd++;
+        tokens.push({
+          type: isPi || isDecl ? "attr" : "keyword",
+          start: isPi ? i : cursor,
+          end: nameEnd,
+        });
+        cursor = nameEnd;
+        if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+      }
+
+      while (cursor < n) {
+        const c = code[cursor];
+        if (c === "<") break;
+        if (isPi && c === "?" && code[cursor + 1] === ">") {
+          tokens.push({ type: "attr", start: cursor, end: cursor + 2 });
+          cursor += 2;
+          if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+          break;
+        }
+        if (c === ">") {
+          cursor++;
+          break;
+        }
+        if (c === '"' || c === "'") {
+          const close = code.indexOf(c, cursor + 1);
+          const nl = code.indexOf("\n", cursor + 1);
+          const end =
+            close !== -1 && (nl === -1 || close < nl)
+              ? close + 1
+              : nl === -1
+                ? n
+                : nl;
+          tokens.push({ type: "string", start: cursor, end });
+          cursor = end;
+          if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+          continue;
+        }
+        if (isIdentStart(c) || c === ":") {
+          let attrEnd = cursor + 1;
+          while (attrEnd < n && isXmlNameChar(code[attrEnd])) attrEnd++;
+          tokens.push({ type: "type", start: cursor, end: attrEnd });
+          cursor = attrEnd;
+          if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+          continue;
+        }
+        cursor++;
+      }
+      i = cursor;
+      continue;
+    }
+
+    if (code[i] === "&") {
+      const semi = code.indexOf(";", i + 1);
+      if (semi !== -1 && semi - i <= 16 && /^&(?:#x?[0-9a-fA-F]+|[A-Za-z][\w.-]*);$/.test(code.slice(i, semi + 1))) {
+        tokens.push({ type: "number", start: i, end: semi + 1 });
+        i = semi + 1;
+        if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+        continue;
+      }
+    }
+
+    i++;
+  }
+
+  return tokens;
+}
+
+function tokenizeJson(code) {
+  const tokens = [];
+  const n = code.length;
+  let i = 0;
+
+  while (i < n) {
+    const ch = code[i];
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") {
+      i++;
+      continue;
+    }
+
+    if (ch === '"') {
+      const end = scanQuoted(code, i, '"', false);
+      let lookahead = end;
+      while (lookahead < n && /\s/.test(code[lookahead])) lookahead++;
+      const isKey = code[lookahead] === ":";
+      tokens.push({ type: isKey ? "type" : "string", start: i, end });
+      i = end;
+      if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+      continue;
+    }
+
+    if (isDigit(ch) || (ch === "-" && i + 1 < n && isDigit(code[i + 1]))) {
+      let end = i + (ch === "-" ? 2 : 1);
+      while (end < n && /[0-9.eE+-]/.test(code[end])) {
+        if ((code[end] === "+" || code[end] === "-") && code[end - 1] !== "e" && code[end - 1] !== "E") {
+          break;
+        }
+        end++;
+      }
+      tokens.push({ type: "number", start: i, end });
+      i = end;
+      if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+      continue;
+    }
+
+    if (isIdentStart(ch)) {
+      let end = i + 1;
+      while (end < n && isIdentChar(code[end])) end++;
+      const word = code.slice(i, end);
+      if (word === "true" || word === "false" || word === "null") {
+        tokens.push({ type: "keyword", start: i, end });
+        if (tokens.length >= MAX_HIGHLIGHT_TOKENS) return null;
+      }
+      i = end;
+      continue;
+    }
+
+    i++;
+  }
+
+  return tokens;
+}
+
 function tokenizeCode(code, lang) {
+  if (lang === "xml") return tokenizeXml(code);
+  if (lang === "json") return tokenizeJson(code);
   const spec = LANG_SYNTAX[lang];
   if (!spec) return null;
   const tokens = [];
@@ -772,34 +940,52 @@ function tokenizeCode(code, lang) {
   return tokens;
 }
 
-function clearCodeHighlights() {
-  if (typeof CSS !== "undefined" && CSS.highlights) {
-    for (const bucket of HIGHLIGHT_BUCKETS) {
+function syncCssHighlights() {
+  if (typeof CSS === "undefined" || !CSS.highlights || typeof Highlight !== "function") {
+    return;
+  }
+  for (const bucket of HIGHLIGHT_BUCKETS) {
+    const hl = new Highlight();
+    for (const targetMap of highlightStore.values()) {
+      const ranges = targetMap.get(bucket);
+      if (ranges) {
+        for (const range of ranges) hl.add(range);
+      }
+    }
+    if (hl.size > 0) {
+      CSS.highlights.set(`tok-${bucket}`, hl);
+    } else {
       CSS.highlights.delete(`tok-${bucket}`);
     }
   }
 }
 
-function renderCodeText(code, lang, { resetScroll = false } = {}) {
-  clearCodeHighlights();
-  generatedCode.textContent = code;
-  if (resetScroll) {
-    codeOutput.scrollTo(0, 0);
-  }
+function applyCodeHighlight(codeEl, code, lang) {
+  highlightStore.delete(codeEl);
+  codeEl.textContent = code;
 
   if (!code || !lang || code.length > MAX_HIGHLIGHT_CHARS) {
-    return;
+    syncCssHighlights();
+    return false;
   }
 
   const tokens = tokenizeCode(code, lang);
-  if (!tokens || tokens.length === 0) {
-    return;
+  if (!tokens) {
+    syncCssHighlights();
+    return false;
+  }
+  if (tokens.length === 0) {
+    syncCssHighlights();
+    return true;
   }
 
   if (typeof CSS !== "undefined" && CSS.highlights && typeof Highlight === "function") {
-    const walker = document.createTreeWalker(generatedCode, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(codeEl, NodeFilter.SHOW_TEXT);
     const textNode = walker.nextNode();
-    if (!textNode) return;
+    if (!textNode) {
+      syncCssHighlights();
+      return true;
+    }
 
     const groups = new Map();
     for (const bucket of HIGHLIGHT_BUCKETS) groups.set(bucket, []);
@@ -809,12 +995,9 @@ function renderCodeText(code, lang, { resetScroll = false } = {}) {
       range.setEnd(textNode, tok.end);
       groups.get(tok.type).push(range);
     }
-    for (const [bucket, ranges] of groups) {
-      if (ranges.length > 0) {
-        CSS.highlights.set(`tok-${bucket}`, new Highlight(...ranges));
-      }
-    }
-    return;
+    highlightStore.set(codeEl, groups);
+    syncCssHighlights();
+    return true;
   }
 
   // Fallback for browsers without CSS Custom Highlight API: textContent spans only.
@@ -833,8 +1016,55 @@ function renderCodeText(code, lang, { resetScroll = false } = {}) {
   if (cursor < code.length) {
     frag.append(document.createTextNode(code.slice(cursor)));
   }
-  generatedCode.replaceChildren(frag);
+  codeEl.replaceChildren(frag);
+  return true;
 }
+
+function renderCodeText(code, lang, { resetScroll = false } = {}) {
+  applyCodeHighlight(generatedCode, code, lang);
+  if (resetScroll) {
+    codeOutput.scrollTo(0, 0);
+  }
+}
+
+function createHighlightedEditor(textarea, codeEl, lang) {
+  const stack = textarea.closest(".editor-stack");
+  const backdrop = codeEl.parentElement;
+
+  function syncScroll() {
+    if (!backdrop) return;
+    backdrop.scrollTop = textarea.scrollTop;
+    backdrop.scrollLeft = textarea.scrollLeft;
+  }
+
+  function refresh() {
+    const raw = textarea.value;
+    if (!raw || raw.length > MAX_HIGHLIGHT_CHARS) {
+      stack?.classList.remove("is-highlighted");
+      highlightStore.delete(codeEl);
+      codeEl.textContent = "";
+      syncCssHighlights();
+      return;
+    }
+    const display = raw.endsWith("\n") ? `${raw} ` : raw;
+    const highlighted = applyCodeHighlight(codeEl, display, lang);
+    if (highlighted) {
+      stack?.classList.add("is-highlighted");
+      syncScroll();
+    } else {
+      stack?.classList.remove("is-highlighted");
+      codeEl.textContent = "";
+    }
+  }
+
+  textarea.addEventListener("scroll", syncScroll, { passive: true });
+  textarea.addEventListener("input", refresh);
+  return { refresh, syncScroll };
+}
+
+const xsdEditor = createHighlightedEditor(xsdInput, xsdHighlight, "xml");
+const xmlEditor = createHighlightedEditor(xmlInput, xmlHighlight, "xml");
+const jsonEditor = createHighlightedEditor(jsonInput, jsonHighlight, "json");
 
 function populateVariantSelect(lang) {
   const options = VARIANTS[lang] || [];
@@ -1079,6 +1309,7 @@ function runXmlToJson() {
     const out = schema.xml_to_json(encoder.encode(xmlInput.value));
     const parsed = JSON.parse(decoder.decode(out));
     jsonInput.value = JSON.stringify(parsed, null, 2);
+    jsonEditor.refresh();
     announce("Converted XML to schema-typed JSON.");
   }, preferredRoot);
 }
@@ -1104,6 +1335,7 @@ function runJsonToXml() {
         ? schema.json_to_xml_pretty(payload, 2)
         : schema.json_to_xml(payload);
     xmlInput.value = decoder.decode(out);
+    xmlEditor.refresh();
     announce("Converted JSON to XML.");
   }, preferredRoot);
 }
@@ -1124,6 +1356,8 @@ function selectTab(nextId, { focusTab = false, scroll = true } = {}) {
   if (nextId === "transcode") {
     codePanel.hidden = "until-found";
     transcodePanel.hidden = false;
+    xmlEditor.syncScroll();
+    jsonEditor.syncScroll();
     runXmlToJson();
   } else {
     transcodePanel.hidden = "until-found";
@@ -1159,6 +1393,9 @@ function loadPreset(key) {
   xsdInput.value = preset.xsd;
   xmlInput.value = preset.xml;
   jsonInput.value = "";
+  xsdEditor.refresh();
+  xmlEditor.refresh();
+  jsonEditor.refresh();
   activeFileIndex = 0;
   activeFileName = "";
   runCompile({ resetScroll: true });
@@ -1320,6 +1557,7 @@ fixUpaBtn.addEventListener("click", () => {
       UPA_AMBIGUOUS_RE,
       '$1<xs:element name="Item" type="xs:string" minOccurs="1" maxOccurs="2"/>'
     );
+    xsdEditor.refresh();
     runCompile({ resetScroll: true });
     announce("Applied UPA fix and compiled schema cleanly.");
   }
@@ -1335,6 +1573,9 @@ function applyStateFromHash() {
     xmlInput.value =
       typeof shared.xml === "string" ? shared.xml : PRESETS.iso20022.xml;
     jsonInput.value = "";
+    xsdEditor.refresh();
+    xmlEditor.refresh();
+    jsonEditor.refresh();
     if (shared.tab && (shared.tab in VARIANTS || shared.tab === "transcode")) {
       activeTab = shared.tab;
       if (
@@ -1363,6 +1604,9 @@ async function init() {
     presetSelect.value = "iso20022";
     xsdInput.value = PRESETS.iso20022.xsd;
     xmlInput.value = PRESETS.iso20022.xml;
+    xsdEditor.refresh();
+    xmlEditor.refresh();
+    jsonEditor.refresh();
   }
 
   populateVariantSelect(activeTab === "transcode" ? "rust" : activeTab);

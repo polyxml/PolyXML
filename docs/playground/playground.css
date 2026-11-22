@@ -453,7 +453,45 @@ select {
   white-space: nowrap;
 }
 
+.editor-stack {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-inline-size: 0;
+  background: var(--surface);
+}
+
+.editor-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0.85rem;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+  font-kerning: none;
+  font-variant-ligatures: none;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.editor-backdrop code {
+  display: inline-block;
+  min-inline-size: 100%;
+  padding-inline-end: 2rem;
+  padding-block-end: 2rem;
+  white-space: pre;
+  font: inherit;
+}
+
 .code-editor {
+  position: relative;
+  z-index: 1;
   flex: 1;
   inline-size: 100%;
   min-block-size: 26rem;
@@ -468,7 +506,27 @@ select {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.82rem;
   line-height: 1.5;
+  letter-spacing: 0;
+  font-kerning: none;
+  font-variant-ligatures: none;
   tab-size: 2;
+  white-space: pre;
+}
+
+.code-editor:focus-visible {
+  outline-offset: -3px;
+}
+
+.editor-stack.is-highlighted > .code-editor {
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--text);
+}
+
+.editor-stack.is-highlighted > .code-editor::selection {
+  background: rgba(85, 71, 173, 0.28);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 /* Accessible single-row scrolling tabs with scroll-driven fade edges */
@@ -702,7 +760,7 @@ select {
 .tok-keyword { color: #6b21a8; }
 .tok-type { color: #0f5e8c; }
 .tok-string { color: #166534; }
-.tok-comment { color: #5c5675; font-style: italic; }
+.tok-comment { color: #5c5675; }
 .tok-number { color: #9a3412; }
 .tok-attr { color: #9d174d; }
 .tok-fn { color: #3730a3; }
@@ -726,6 +784,17 @@ select {
 }
 
 @media (forced-colors: active) {
+  .editor-backdrop {
+    display: none;
+  }
+
+  .editor-stack.is-highlighted > .code-editor {
+    background: Canvas;
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
+    caret-color: CanvasText;
+  }
+
   ::highlight(tok-keyword),
   ::highlight(tok-type),
   ::highlight(tok-string),
@@ -754,10 +823,17 @@ select {
   gap: 0.4rem;
 }
 
-.transcode-editor {
-  min-block-size: 10.5rem;
+.transcode-stack {
   border: 1px solid var(--border);
   border-radius: 0.45rem;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+
+.transcode-editor {
+  min-block-size: 10.5rem;
+  border: 0;
+  border-radius: inherit;
   background: var(--surface-alt);
 }
 
